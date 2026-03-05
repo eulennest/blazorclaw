@@ -50,8 +50,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
         ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
     // Only loopback proxies are allowed by default.
     // Clear that restriction because forwarders are being enabled by explicit configuration.
-    options.KnownNetworks.Clear();
-    options.KnownProxies.Clear();
+    options.KnownNetworks.Add(IPNetwork.Parse("192.168.0.0/16"));
     options.ForwardLimit = 2;
 });
 
