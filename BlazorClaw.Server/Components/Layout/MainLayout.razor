@@ -18,9 +18,17 @@
         <div class="top-row px-4">
             <AuthorizeView>
                 <Authorized>
-                    <span class="me-3">Hello, @context.User.Identity?.Name!</span>
-                    <a href="/Account/Logout">Logout</a>
+                    <a href="Account/Manage" class="me-3 text-decoration-none">@context.User.Identity?.Name</a>
+                    <form action="Account/Logout" method="post" class="d-inline">
+                        <AntiforgeryToken />
+                        <button type="submit" class="btn btn-link p-0 text-dark" title="Logout">
+                            <span class="bi bi-box-arrow-right"></span>
+                        </button>
+                    </form>
                 </Authorized>
+                <NotAuthorized>
+                    <a href="Account/Login">Login</a>
+                </NotAuthorized>
             </AuthorizeView>
         </div>
 
@@ -28,10 +36,4 @@
             @Body
         </article>
     </main>
-</div>
-
-<div id="blazor-error-ui">
-    An unhandled error has occurred.
-    <a href="" class="reload">Reload</a>
-    <a class="dismiss">🗙</a>
 </div>
