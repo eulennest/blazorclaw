@@ -1,0 +1,74 @@
+# Temporary directory
+tmp/
+
+# Sub-repositories (external projects) — BUT projects/*.md is tracked!
+repos/
+
+# Environment & secrets
+.env
+.env.local
+*.key
+*.pem
+
+# Node/npm
+node_modules/
+package-lock.json
+npm-debug.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+
+# System files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Build artifacts
+dist/
+build/
+*.o
+
+# Logs
+*.log
+
+# .NET
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
+*.cache
+*.log
+
+# Visual Studio
+.vs/
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+# NuGet
+*.nupkg
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Rider
+.idea/
+
+# Secrets (appsettings can contain sensitive data)
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
