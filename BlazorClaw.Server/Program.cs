@@ -1,9 +1,10 @@
+using BlazorClaw.Server.Components;
+using BlazorClaw.Server.Components.Account;
+using BlazorClaw.Server.Data;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using BlazorClaw.Server.Components;
-using BlazorClaw.Server.Data;
-using BlazorClaw.Server.Components.Account;
-using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -43,6 +44,18 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Only loopback proxies are allowed by default.
+    // Clear that restriction because forwarders are being enabled by explicit configuration.
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+    options.ForwardLimit = 2;
+});
+
+
 var app = builder.Build();
 
 // Initialize database
@@ -53,7 +66,7 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
 }
-
+app.UseForwardedHeaders();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
