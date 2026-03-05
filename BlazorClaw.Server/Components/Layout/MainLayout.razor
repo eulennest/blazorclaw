@@ -18,8 +18,8 @@
         <div class="top-row px-4">
             <AuthorizeView>
                 <Authorized>
-                    <span class="me-3">Hello, @context.User.Identity?.Name!</span>
-                    <a href="/Account/Logout">Logout</a>
+                    <a class="me-3 text-decoration-none" href="Account/Manage">@context.User.Identity?.Name</a>
+                    <a href="Account/Logout" title="Logout"><span class="bi bi-box-arrow-right"></span></a>
                 </Authorized>
             </AuthorizeView>
         </div>
