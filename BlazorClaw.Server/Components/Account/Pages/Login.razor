@@ -97,7 +97,7 @@
                 && user.Identity.IsAuthenticated)
             {
                 await SignInManager.SignOutAsync();
-                RedirectManager.RedirectTo("");
+                RedirectManager.RedirectTo("/");
             }
         }
     }
