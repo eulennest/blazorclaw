@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace BlazorClaw.Server.Models;
+namespace BlazorClaw.Server.Data;
 
 public class ApplicationUser : IdentityUser
 {

@@ -1,57 +1,53 @@
+using BlazorClaw.Server.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
-using System.Web;
 
 namespace BlazorClaw.Server.Components.Account;
-
-internal sealed class IdentityRedirectManager
+internal sealed class IdentityRedirectManager(NavigationManager navigationManager)
 {
-    private readonly NavigationManager _navigationManager;
-    private readonly ILogger<IdentityRedirectManager> _logger;
+    public const string StatusCookieName = "Identity.StatusMessage";
 
-    public IdentityRedirectManager(NavigationManager navigationManager, ILogger<IdentityRedirectManager> logger)
+    private static readonly CookieBuilder StatusCookieBuilder = new()
     {
-        _navigationManager = navigationManager;
-        _logger = logger;
-    }
+        SameSite = SameSiteMode.Strict,
+        HttpOnly = true,
+        IsEssential = true,
+        MaxAge = TimeSpan.FromSeconds(5),
+    };
 
-    public void RedirectTo(string uri)
+    public void RedirectTo(string? uri)
     {
-        _logger.LogInformation("Redirecting to {Uri}", uri);
-        _navigationManager.NavigateTo(uri, forceLoad: true);
+        uri ??= "";
+
+        // Prevent open redirects.
+        if (!Uri.IsWellFormedUriString(uri, UriKind.Relative))
+        {
+            uri = navigationManager.ToBaseRelativePath(uri);
+        }
+
+        navigationManager.NavigateTo(uri);
     }
 
     public void RedirectTo(string uri, Dictionary<string, object?> queryParameters)
     {
-        var uriWithQuery = _navigationManager.GetUriWithQueryParameters(uri, queryParameters);
-        RedirectTo(uriWithQuery);
+        var uriWithoutQuery = navigationManager.ToAbsoluteUri(uri).GetLeftPart(UriPartial.Path);
+        var newUri = navigationManager.GetUriWithQueryParameters(uriWithoutQuery, queryParameters);
+        RedirectTo(newUri);
     }
 
     public void RedirectToWithStatus(string uri, string message, HttpContext context)
     {
-        context.Response.Cookies.Append("Identity.External", message, new CookieOptions
-        {
-            Path = "/",
-            SameSite = SameSiteMode.Lax
-        });
+        context.Response.Cookies.Append(StatusCookieName, message, StatusCookieBuilder.Build(context));
         RedirectTo(uri);
     }
 
-    public event EventHandler<RedirectedEventArgs>? Redirected;
+    private string CurrentPath => navigationManager.ToAbsoluteUri(navigationManager.Uri).GetLeftPart(UriPartial.Path);
 
-    internal void OnRedirected(string message)
-    {
-        Redirected?.Invoke(this, new RedirectedEventArgs(message));
-    }
+    public void RedirectToCurrentPage() => RedirectTo(CurrentPath);
 
-    internal class RedirectedEventArgs : EventArgs
-    {
-        public string Message { get; }
+    public void RedirectToCurrentPageWithStatus(string message, HttpContext context)
+        => RedirectToWithStatus(CurrentPath, message, context);
 
-        public RedirectedEventArgs(string message)
-        {
-            Message = message;
-        }
-    }
+    public void RedirectToInvalidUser(UserManager<ApplicationUser> userManager, HttpContext context)
+        => RedirectToWithStatus("Account/InvalidUser", $"Error: Unable to load user with ID '{userManager.GetUserId(context.User)}'.", context);
 }

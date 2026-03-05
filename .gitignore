@@ -42,3 +42,6 @@ Thumbs.db
 # Temp
 tmp/
 *.tmp
+*.db
+*.db-shm
+*.db-wal

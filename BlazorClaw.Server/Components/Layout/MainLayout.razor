@@ -1,26 +1,26 @@
 @inherits LayoutComponentBase
+@using BlazorClaw.Server.Data
 @using Microsoft.AspNetCore.Identity
 
 @inject SignInManager<ApplicationUser> SignInManager
 @inject NavigationManager NavigationManager
 
 <div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+    <AuthorizeView>
+        <Authorized>
+            <div class="sidebar">
+                <NavMenu />
+            </div>
+        </Authorized>
+    </AuthorizeView>
 
     <main>
         <div class="top-row px-4">
             <AuthorizeView>
                 <Authorized>
                     <span class="me-3">Hello, @context.User.Identity?.Name!</span>
-                    <form method="post" action="/Account/Logout" class="d-inline">
-                        <button type="submit" class="btn btn-link p-0">Log out</button>
-                    </form>
+                    <a href="/Account/Login">Logout</a>
                 </Authorized>
-                <NotAuthorized>
-                    <a href="/Account/Login">Log in</a>
-                </NotAuthorized>
             </AuthorizeView>
         </div>
 

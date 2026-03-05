@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using BlazorClaw.Server.Models;
 
 namespace BlazorClaw.Server.Data;
 
