@@ -28,7 +28,6 @@ artifacts/
 # Secrets
 appsettings.*.json
 !appsettings.json
-!appsettings.Development.json
 
 # Build
 [Dd]ebug/

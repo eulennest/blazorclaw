@@ -1,7 +1,5 @@
 @layout BlazorClaw.Server.Components.Account.Shared.MinimalLayout
 @page "/Account/Login"
-@rendermode InteractiveServer
-
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Authentication
 @using Microsoft.AspNetCore.Identity
@@ -46,7 +44,7 @@
 
                         <div class="checkbox mb-3">
                             <label class="form-label">
-                                <InputCheckbox @bind-Value="Input.RememberMe" class="darker-border-checkbox form-check-input" />
+                                <InputCheckbox @bind-Value="Input.RememberMe" class="form-check-input" />
                                 Remember me
                             </label>
                         </div>
@@ -111,12 +109,6 @@
         {
             Logger.LogInformation("User logged in.");
             RedirectManager.RedirectTo(ReturnUrl);
-        }
-        else if (result.RequiresTwoFactor)
-        {
-            RedirectManager.RedirectTo(
-                "Account/LoginWith2fa",
-                new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
         }
         else if (result.IsLockedOut)
         {
