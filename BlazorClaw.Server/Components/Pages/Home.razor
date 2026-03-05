@@ -1,7 +1,9 @@
-﻿@page "/"
+@page "/"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Home - BlazorClaw</PageTitle>
 
-<h1>Hello, world!</h1>
+<h1>Welcome to BlazorClaw!</h1>
 
-Welcome to your new app.
+<p>You are logged in.</p>

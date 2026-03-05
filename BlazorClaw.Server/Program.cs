@@ -33,6 +33,13 @@ builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 // Add IdentityRedirectManager
 builder.Services.AddScoped<BlazorClaw.Server.Components.Account.IdentityRedirectManager>();
 
+// Configure authorization to redirect to login
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.LoginPath = "/Account/Login";
+    options.AccessDeniedPath = "/Account/AccessDenied";
+});
+
 var app = builder.Build();
 
 // Initialize database
