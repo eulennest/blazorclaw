@@ -1,0 +1,19 @@
+﻿@page "/Account/Logout"
+
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+
+@inject IHttpContextAccessor httpContextAccessor
+
+<h3>Logout...</h3>
+
+@code {
+    protected override void OnInitialized()
+    {
+        httpContextAccessor.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+        httpContextAccessor.HttpContext.Response.Redirect("/");
+        base.OnInitialized();
+    }
+
+
+}
