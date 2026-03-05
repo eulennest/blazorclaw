@@ -19,7 +19,9 @@
             <AuthorizeView>
                 <Authorized>
                     <a class="me-3 text-decoration-none" href="Account/Manage">@context.User.Identity?.Name</a>
-                    <a href="Account/Logout" title="Logout"><span class="bi bi-arrow-bar-left-nav-menu"></span></a>
+                    <a href="Account/Logout" title="Logout">
+                        <i class="bi bi-arrow-bar-right"></i>
+                    </a>
                 </Authorized>
             </AuthorizeView>
         </div>
