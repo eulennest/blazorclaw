@@ -67,6 +67,15 @@
     display: block;
 }
 
+.bi {
+    display: inline-block;
+    position: relative;
+    width: 1.25rem;
+    margin-right: 0.75rem;
+    top: -1px;
+    background-size: cover;
+}
+
 @media (min-width: 641px) {
     .navbar-toggler {
         display: none;
