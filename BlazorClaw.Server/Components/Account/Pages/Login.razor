@@ -27,6 +27,7 @@
                     <StatusMessage Message="@errorMessage" />
 
                     <EditForm Model="Input" method="post" OnValidSubmit="LoginUser" FormName="login">
+                        <AntiforgeryToken />
                         <DataAnnotationsValidator />
                         <ValidationSummary class="text-danger" role="alert" />
 
