@@ -44,11 +44,9 @@ if (!app.Environment.IsDevelopment())
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseAntiforgery();
 
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
-
+app.MapRazorComponents<App>();
+app.MapRazorPages();
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
