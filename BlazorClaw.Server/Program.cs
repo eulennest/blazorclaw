@@ -2,11 +2,11 @@ using BlazorClaw.Server.Components;
 using BlazorClaw.Server.Components.Account;
 using BlazorClaw.Server.Data;
 using BlazorClaw.Server.Security;
+using BlazorClaw.Server.Security.Vault;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Memory;
 using BlazorClaw.Core.Plugins;
-using BlazorClaw.Server.Security.Vault;
 using BlazorClaw.Core.Security.Vault;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -33,6 +33,7 @@ builder.Services.AddSingleton<IToolRegistry>(sp => new ToolRegistry(PluginUtils.
 builder.Services.AddScoped<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));
 builder.Services.AddScoped<IMessagePolicyProvider>(sp => new MessagePolicyAggregator(PluginUtils.BuildPlugins<IMessagePolicyProvider>(sp, typeof(MessagePolicyAggregator))));
 builder.Services.AddScoped<IVaultProvider, JsonVaultProvider>();
+builder.Services.AddSingleton<IMemorySearchProvider>(new BlazorClaw.Server.Memory.FileSystemMemorySearchProvider("./memory"));
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
