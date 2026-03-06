@@ -12,6 +12,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddControllers();
+builder.Services.AddHttpClient();
+
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -74,5 +77,6 @@ app.UseAuthorization();
 app.UseAntiforgery();
 
 app.MapRazorComponents<App>();
+app.MapControllers();
 
 app.Run();
