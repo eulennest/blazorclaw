@@ -11,7 +11,7 @@ public class ChatCompletionRequest
     public List<ChatMessage> Messages { get; set; } = new();
 
     [JsonPropertyName("tools")]
-    public List<ToolDefinition>? Tools { get; set; }
+    public List<FunctionMessage>? Tools { get; set; }
 
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
@@ -61,8 +61,6 @@ public class FunctionCall
 
 public class ToolDefinition
 {
-    [JsonPropertyName("type")]
-    public string Type { get; set; } = "function";
 
     [JsonPropertyName("parameters")]
     public object Parameters { get; set; } = new();
@@ -76,6 +74,18 @@ public class ToolDefinition
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 }
+public class FunctionMessage
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "function";
+
+    [JsonPropertyName("function")]
+    public required ToolDefinition Function { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
+}
+
 
 public class ChatCompletionResponse
 {

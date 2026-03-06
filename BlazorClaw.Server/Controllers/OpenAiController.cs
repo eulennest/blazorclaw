@@ -53,11 +53,14 @@ public class OpenAiController : ControllerBase
             request.Tools ??= [];
             foreach (var tool in tools)
             {
-                request.Tools.Add(new ToolDefinition { Name = tool.Name, Description = tool.Description, Parameters = tool.GetSchema() });
+                request.Tools.Add(
+                    new()
+                    {
+                        Function = new() { Name = tool.Name, Description = tool.Description, Parameters = tool.GetSchema() }
+                    });
             }
         }
 
-        return Ok(request);
 
         // 3. OpenAI Request
         var response = await _httpClient.PostAsJsonAsync("chat/completions", request);
