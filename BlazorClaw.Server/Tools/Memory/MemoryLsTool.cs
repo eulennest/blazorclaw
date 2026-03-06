@@ -18,13 +18,15 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
         if (!Directory.Exists(_memoryPath))
             return Task.FromResult("Memory-Ordner existiert nicht.");
 
-        var files = Directory.GetFiles(_memoryPath, "*.md")
-                             .Select(Path.GetFileName)
-                             .ToList();
+        var directory = new DirectoryInfo(_memoryPath);
+        var files = directory.GetFiles("*.md");
 
-        if (files.Count == 0)
+        if (files.Length == 0)
             return Task.FromResult("Keine Memory-Dateien gefunden.");
 
-        return Task.FromResult("Memory-Dateien:\n- " + string.Join("\n- ", files));
+        var fileInfoList = files.Select(f => 
+            $"- {f.Name} (Größe: {f.Length} Bytes, Letzte Änderung: {f.LastWriteTime:yyyy-MM-dd HH:mm:ss}, Attribute: {f.Attributes})");
+
+        return Task.FromResult("Memory-Dateien:\n" + string.Join("\n", fileInfoList));
     }
 }
