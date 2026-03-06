@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BlazorClaw.Server.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("v1")]
 public class OpenAiController : ControllerBase
