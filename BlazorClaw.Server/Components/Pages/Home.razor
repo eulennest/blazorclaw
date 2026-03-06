@@ -31,10 +31,14 @@
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+    let chatHistory = [];
+
     document.getElementById('send-btn').addEventListener('click', async () => {
         const input = document.getElementById('user-input');
         const content = input.value;
         if (!content) return;
+        
+        chatHistory.push({ role: 'user', content: content });
         
         const msgDiv = document.createElement('div');
         msgDiv.className = 'message user';
@@ -47,14 +51,17 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 model: 'mistralai/mistral-large', 
-                messages: [{ role: 'user', content: content }] 
+                messages: chatHistory
             })
         });
         
         const data = await response.json();
+        const assistantMsg = data.choices[0].message.content;
+        chatHistory.push({ role: 'assistant', content: assistantMsg });
+
         const aiDiv = document.createElement('div');
         aiDiv.className = 'message assistant';
-        aiDiv.innerHTML = marked.parse(data.choices[0].message.content);
+        aiDiv.innerHTML = marked.parse(assistantMsg);
         document.getElementById('messages').appendChild(aiDiv);
     });
 </script>
