@@ -1,5 +1,6 @@
 using BlazorClaw.Server.Data;
 using Microsoft.AspNetCore.Identity;
+using System.Collections.Concurrent;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -8,10 +9,11 @@ namespace BlazorClaw.Server.Services
 {
     public record TelegramBotInstance(string Id, string Token, TelegramBotClient Client);
 
+
     public class TelegramBotHostedService(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger) : IHostedService
     {
         private readonly List<TelegramBotInstance> _bots = [];
-
+        public ConcurrentDictionary<string, Guid> sessIds=[];
         public Task StartAsync(CancellationToken cancellationToken)
         {
             var telegramConfigs = configuration.GetSection("Channels:Telegram").GetChildren();
@@ -63,9 +65,23 @@ namespace BlazorClaw.Server.Services
 
             var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
 
-            var uid = user != null ? Guid.Parse(user.Id) : Guid.NewGuid();
-
-            var sess = await sm.GetOrCreateSessionAsync(uid, "openrouter/google/gemini-3.1-flash-lite-preview");
+          
+            Guid? uid = user != null ? Guid.Parse(user.Id) : null;
+            if (uid == null)
+            {
+                if (!sessIds.TryGetValue(telegramId, out var existingUid))
+                {
+                    uid = Guid.NewGuid();
+                    sessIds[telegramId] = uid.Value;
+                    logger.LogInformation("No user found for Telegram ID {TelegramId}. Assigned temporary session ID: {SessionId}", telegramId, uid);
+                }
+                else
+                {
+                    uid = existingUid;
+                    logger.LogInformation("No user found for Telegram ID {TelegramId}. Using existing temporary session ID: {SessionId}", telegramId, uid);
+                }
+            }
+            var sess = await sm.GetOrCreateSessionAsync(uid.Value, "openrouter/google/gemini-3.1-flash-lite-preview");
 
             sess.MessageHistory.Add(new() { Role = "user", Content = update.Message.Text });
 
