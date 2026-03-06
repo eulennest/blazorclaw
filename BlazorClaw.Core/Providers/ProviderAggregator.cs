@@ -1,26 +1,32 @@
-using System.Collections.Generic;
-using BlazorClaw.Core.Providers;
-
 namespace BlazorClaw.Core.Providers
 {
-    public interface IProviderAggregator
-    {
-        void RegisterProvider(IProviderConfiguration provider);
-        IEnumerable<IProviderConfiguration> GetProviders();
-    }
 
-    public class ProviderAggregator : IProviderAggregator
+    public class ProviderAggregator(IEnumerable<IProviderManager> providers) : IProviderManager
     {
-        private readonly List<IProviderConfiguration> _providers = new();
+        private readonly List<IProviderManager> _providers = [.. providers];
 
-        public void RegisterProvider(IProviderConfiguration provider)
+        public IAsyncEnumerable<string> GetModelsAsync(string provider)
         {
-            _providers.Add(provider);
+            provider = SplitProviderFromModel(provider);
+            var prov = _providers.FirstOrDefault( o=> o.GetProviders().Contains(provider));
+            return prov?.GetModelsAsync(provider) ?? AsyncEnumerable.Empty<string>();
         }
 
-        public IEnumerable<IProviderConfiguration> GetProviders()
+        public IProviderConfiguration? GetProviderConfig(string provider)
         {
-            return _providers;
+            provider = SplitProviderFromModel(provider);
+            var prov = _providers.FirstOrDefault(o => o.GetProviders().Contains(provider));
+            return prov?.GetProviderConfig(provider);
+        }
+
+        public IEnumerable<string> GetProviders()
+        {
+            return _providers.SelectMany(o => o.GetProviders());
+        }
+        public static string SplitProviderFromModel(string model)
+        {
+            var parts = model.Split('/', 2);
+            return parts?.FirstOrDefault() ?? "default";
         }
     }
 }

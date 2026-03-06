@@ -8,7 +8,7 @@ public class ChatCompletionRequest
     public string Model { get; set; } = string.Empty;
 
     [JsonPropertyName("messages")]
-    public List<ChatMessage> Messages { get; set; } = new();
+    public List<ChatMessage> Messages { get; set; } = [];
 
     [JsonPropertyName("tools")]
     public List<FunctionMessage>? Tools { get; set; }
@@ -93,7 +93,7 @@ public class ChatCompletionResponse
     public string Id { get; set; } = string.Empty;
 
     [JsonPropertyName("choices")]
-    public List<ChatChoice> Choices { get; set; } = new();
+    public List<ChatChoice> Choices { get; set; } = [];
 
     [JsonPropertyName("error")]
     public ApiError? Error { get; set; }

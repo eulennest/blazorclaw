@@ -8,23 +8,13 @@ namespace BlazorClaw.Server.Services
 {
     public record TelegramBotInstance(string Id, string Token, TelegramBotClient Client);
 
-    public class TelegramBotHostedService : IHostedService
+    public class TelegramBotHostedService(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger) : IHostedService
     {
-        private readonly List<TelegramBotInstance> _bots = new();
-        private readonly IConfiguration _configuration;
-        private readonly IServiceProvider _serviceProvider;
-        private readonly ILogger<TelegramBotHostedService> logger;
-
-        public TelegramBotHostedService(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger)
-        {
-            _configuration = configuration;
-            _serviceProvider = serviceProvider;
-            this.logger = logger;
-        }
+        private readonly List<TelegramBotInstance> _bots = [];
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            var telegramConfigs = _configuration.GetSection("Channels:Telegram").GetChildren();
+            var telegramConfigs = configuration.GetSection("Channels:Telegram").GetChildren();
             foreach (var botConfig in telegramConfigs)
             {
                 var id = botConfig.Key; // Use Key (e.g. main/alerts)
@@ -62,7 +52,7 @@ namespace BlazorClaw.Server.Services
             if (update.Message?.Text == null) return;
             logger.LogInformation("Telegram Bot '{BotId}' update received: {Message}", botClient.BotId, update.Message);
 
-            using var scope = _serviceProvider.CreateScope();
+            using var scope = serviceProvider.CreateScope();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 
             var telegramId = update.Message.From!.Id.ToString();
@@ -71,12 +61,22 @@ namespace BlazorClaw.Server.Services
             // Suche User via Provider "Telegram"
             var user = await userManager.FindByLoginAsync("Telegram", telegramId);
 
-            string reply = user != null
-                ? $"Hallo {user.FirstName}, ich habe dich erkannt!"
-                : "Ich kenne dich leider noch nicht. Bitte registriere dich.";
+            var sm = scope.ServiceProvider.GetRequiredService<SessionManager>();
 
-            logger.LogInformation("Sending reply to {ChatId}: {Reply}", update.Message.Chat.Id, reply);
-            await botClient.SendMessage(update.Message.Chat.Id, reply, cancellationToken: cancellationToken);
+            var uid = user != null ? Guid.Parse(user.Id) : Guid.NewGuid();
+
+            var sess = await sm.GetOrCreateSessionAsync(uid, "openrouter/google/gemini-3.1-flash-lite-preview");
+
+            sess.MessageHistory.Add(new() { Role = "user", Content = update.Message.Text });
+
+            await foreach (var msg in sm.DispatchToLLMAsync(sess))
+            {
+                if (msg.Content is string content && !string.IsNullOrWhiteSpace(content))
+                {
+                    logger.LogInformation("Sending reply to {ChatId}: {Reply}", update.Message.Chat.Id, content);
+                    await botClient.SendMessage(update.Message.Chat.Id, content, cancellationToken: cancellationToken);
+                }
+            }
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;

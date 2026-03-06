@@ -16,6 +16,9 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
+using BlazorClaw.Core.Providers;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using BlazorClaw.Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,16 +49,19 @@ foreach (var plugin in plugins)
 builder.Services.AddSingleton<IToolRegistry>(sp => new ToolRegistry(PluginUtils.BuildPlugins<ITool>(sp)));
 
 // Security
-builder.Services.AddScoped<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));
-builder.Services.AddScoped<IMessagePolicyProvider>(sp => new MessagePolicyAggregator(PluginUtils.BuildPlugins<IMessagePolicyProvider>(sp, typeof(MessagePolicyAggregator))));
-builder.Services.AddScoped<IVaultProvider, JsonVaultProvider>();
+builder.Services.TryAddSingleton<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));
+builder.Services.TryAddSingleton<IMessagePolicyProvider>(sp => new MessagePolicyAggregator(PluginUtils.BuildPlugins<IMessagePolicyProvider>(sp, typeof(MessagePolicyAggregator))));
+builder.Services.TryAddSingleton<IVaultProvider, JsonVaultProvider>();
 
 // Memory Search
 builder.Services.Configure<FileSystemMemoryOptions>(builder.Configuration.GetSection(FileSystemMemoryOptions.Section));
-builder.Services.AddSingleton<IMemorySearchProvider, FileSystemMemorySearchProvider>();
+builder.Services.TryAddSingleton<IMemorySearchProvider, FileSystemMemorySearchProvider>();
 
 // Providers
-builder.Services.AddSingleton<IProviderManager>(sp => new ProviderAggregator(PluginUtils.BuildPlugins<IProviderManager>(sp, typeof(ProviderAggregator))));
+builder.Services.TryAddSingleton<IProviderManager>(sp => new ProviderAggregator(PluginUtils.BuildPlugins<IProviderManager>(sp, typeof(ProviderAggregator))));
+
+builder.Services.TryAddSingleton<ISessionManager, SessionManager>();
+
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -63,7 +69,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 
 // Add IdentityRedirectManager
-builder.Services.AddScoped<BlazorClaw.Server.Components.Account.IdentityRedirectManager>();
+builder.Services.TryAddScoped<BlazorClaw.Server.Components.Account.IdentityRedirectManager>();
 
 
 builder.Services.AddCascadingAuthenticationState();

@@ -1,14 +1,20 @@
+using BlazorClaw.Core.DTOs;
+using BlazorClaw.Core.Providers;
+using BlazorClaw.Core.Security;
+using BlazorClaw.Core.Tools;
 using BlazorClaw.Server.Models;
 using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
 {
     public class ChatSessionState
     {
         public ChatSession Session { get; set; } = default!;
-        public List<BlazorClaw.Core.DTOs.ChatMessage> MessageHistory { get; set; } = new();
-        public List<BlazorClaw.Core.DTOs.ChatMessage> SystemPrompts { get; set; } = new();
-        public List<BlazorClaw.Core.DTOs.ToolDefinition> Tools { get; set; } = new();
+        public required IProviderConfiguration Provider { get; set; }
+        public List<ChatMessage> MessageHistory { get; set; } = [];
+        public List<ChatMessage> SystemPrompts { get; set; } = [];
+        public List<FunctionMessage> Tools { get; set; } = [];
     }
 
     public interface ISessionManager
@@ -19,40 +25,64 @@ namespace BlazorClaw.Server.Services
         Task AppendMessageAsync(Guid sessionId, BlazorClaw.Core.DTOs.ChatMessage message);
     }
 
-    public class SessionManager : ISessionManager
+    public class SessionManager(IProviderManager providerManager, IServiceScopeFactory scopeFactory) : ISessionManager
     {
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
-        private readonly IServiceProvider _serviceProvider;
 
-        public SessionManager(IServiceProvider serviceProvider)
+        public Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string model)
         {
-            _serviceProvider = serviceProvider;
-        }
-
-        public async Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string model)
-        {
-            if (_sessions.TryGetValue(sessionId, out var state)) return state;
-
-            // Hier später Datenbank-Lookup implementieren
-            var newState = new ChatSessionState
+            if (!_sessions.TryGetValue(sessionId, out var state))
             {
-                Session = new ChatSession { Id = sessionId, CurrentModel = model }
-            };
-            
-            _sessions.TryAdd(sessionId, newState);
-            return newState;
-        }
+                var prov = providerManager.GetProviderConfig(model) ?? throw new Exception($"No provider found for model {model}");
 
-        public Task<ChatSessionState?> GetSessionAsync(Guid sessionId)
-        {
-            _sessions.TryGetValue(sessionId, out var state);
+                // Hier später Datenbank-Lookup implementieren
+                state = new ChatSessionState
+                {
+                    Session = new ChatSession { Id = sessionId, CurrentModel = model },
+                    Provider = prov
+                };
+
+                _sessions.TryAdd(sessionId, state);
+            }
             return Task.FromResult(state);
         }
 
-        public Task SaveToDiskAsync(Guid sessionId)
+        public async Task<ChatSessionState?> GetSessionAsync(Guid sessionId)
         {
-            // TODO: Implementierung von session_*.json Persistenz
-            return Task.CompletedTask;
+            _sessions.TryGetValue(sessionId, out var state);
+
+            if (state == null && File.Exists("session_{sessionId}.json"))
+            {
+                using var jsonStream = File.OpenRead($"session_{sessionId}.json");
+                var store = await JsonSerializer.DeserializeAsync<JsonSessionStorage>(jsonStream).ConfigureAwait(false);
+                if (store != null)
+                {
+                    var prov = providerManager.GetProviderConfig(store.Session.CurrentModel) ?? throw new Exception($"No provider found for model {store.Session.CurrentModel}");
+                    state = new ChatSessionState
+                    {
+                        Session = store.Session,
+                        Provider = prov,
+                        MessageHistory = store.MessageHistory
+                    };
+                    _sessions.TryAdd(sessionId, state);
+                    return state;
+                }
+            }
+
+            return state;
+        }
+
+        public async Task SaveToDiskAsync(Guid sessionId)
+        {
+            if (!_sessions.TryGetValue(sessionId, out var sessionState)) throw new Exception("Session not found");
+
+            var store = new JsonSessionStorage
+            {
+                Session = sessionState.Session,
+                MessageHistory = sessionState.MessageHistory
+            };
+            using var jsonStream = File.Create($"session_{sessionId}.json");
+            await JsonSerializer.SerializeAsync(jsonStream, store).ConfigureAwait(false);
         }
 
         public Task AppendSystemPromptAsync(Guid sessionId, BlazorClaw.Core.DTOs.ChatMessage message)
@@ -81,5 +111,125 @@ namespace BlazorClaw.Server.Services
             }
             return Task.CompletedTask;
         }
+
+
+        public async IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sessionState)
+        {
+            using var scope = scopeFactory.CreateScope();
+            using var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
+            httpClient.BaseAddress = new Uri(sessionState.Provider.Uri.TrimEnd('/') + "/");
+
+            // Context für Security/Policies
+            var context = new ToolContext
+            {
+                SessionId = sessionState.Session.Id,
+                ServiceProvider = scope.ServiceProvider,
+                UserId = sessionState.Session.Participants.First().UserId,
+                HttpContext = scope.ServiceProvider.GetService<IHttpContextAccessor>()?.HttpContext
+            };
+
+            var toolRegistry = scope.ServiceProvider.GetRequiredService<IToolRegistry>();
+            var policyProvider = scope.ServiceProvider.GetRequiredService<IToolPolicyProvider>();
+
+            if ((sessionState.Tools?.Count ?? 0) == 0)
+            {
+
+                // 2. Tools filtern und hinzufügen
+                var tools = policyProvider.FilterTools(toolRegistry.GetAllTools(), context);
+                if (tools.Any())
+                {
+                    sessionState.Tools ??= [];
+                    foreach (var tool in tools)
+                    {
+                        sessionState.Tools.Add(
+                            new()
+                            {
+                                Function = new() { Name = tool.Name, Description = tool.Description, Parameters = tool.GetSchema() }
+                            });
+                    }
+                }
+            }
+
+            int count;
+            int iterations = 0;
+            do
+            {
+                iterations++;
+                count = 0;
+                await foreach (var msg in InternalDispatchToLLMAsync(sessionState, context, httpClient, toolRegistry, policyProvider))
+                {
+                    count++;
+                    yield return msg;
+                }
+            }
+            while (count > 1 && iterations < 10);
+        }
+
+        private static async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, ToolContext context, HttpClient httpClient, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider)
+        {
+            var request = new ChatCompletionRequest
+            {
+                Model = sessionState.Session.CurrentModel.Split('/', 2)[1],
+                Messages = [.. sessionState.SystemPrompts, .. sessionState.MessageHistory],
+                Tools = sessionState.Tools
+            };
+
+            // 3. OpenAI Request
+            var response = await httpClient.PostAsJsonAsync("chat/completions", request);
+            var content = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>();
+            if (content == null) throw new ArgumentNullException(nameof(content), "Invalid response");
+
+            if (content.Choices != null)
+            {
+                // 4. Tool Handling Loop
+                foreach (var choice in content.Choices)
+                {
+                    var message = choice.Message;
+                    sessionState.MessageHistory.Add(message); // Assistant Call
+                    yield return message;
+
+                    if (message.ToolCalls != null && message.ToolCalls.Count != 0)
+                    {
+                        foreach (var call in message.ToolCalls)
+                        {
+                            ChatMessage msg;
+                            try
+                            {
+                                var tool = toolRegistry.GetTool(call.Function.Name) ?? throw new ToolNotFoundException(call.Function.Name);
+                                var args = tool.BuidlArguments(call.Function.Arguments);
+
+                                policyProvider.BeforeTool(tool, args, context);
+                                var result = await tool.ExecuteAsync(args, context);
+                                result = policyProvider.AfterTool(tool, args, result, context);
+
+                                msg = new ChatMessage
+                                {
+                                    Role = "tool",
+                                    Content = result,
+                                    ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
+                                };
+                            }
+                            catch (Exception ex)
+                            {
+                                msg = new ChatMessage
+                                {
+                                    Role = "tool",
+                                    Content = ToolErrorHandler.ToProblemDetailsJson(ex, call.Function.Name),
+                                    ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
+                                };
+                            }
+                            sessionState.MessageHistory.Add(msg); // Tool Result
+                            yield return msg;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public class JsonSessionStorage
+    {
+        public ChatSession Session { get; set; } = default!;
+        public List<BlazorClaw.Core.DTOs.ChatMessage> MessageHistory { get; set; } = [];
     }
 }

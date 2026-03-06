@@ -12,26 +12,15 @@ namespace BlazorClaw.Server.Controllers;
 [ApiController]
 [Route("v1")]
 [IgnoreAntiforgeryToken]
-public class OpenAiController : ControllerBase
+public class OpenAiController(IHttpClientFactory httpClientFactory, IToolRegistry toolRegistry, IConfiguration configuration, IToolPolicyProvider policyProvider) : ControllerBase
 {
-    private readonly HttpClient _httpClient;
-    private readonly IToolRegistry _toolRegistry;
-    private readonly IConfiguration _configuration;
-    private readonly IToolPolicyProvider _policyProvider;
-
-    public OpenAiController(IHttpClientFactory httpClientFactory, IToolRegistry toolRegistry, IConfiguration configuration, IToolPolicyProvider policyProvider)
-    {
-        _httpClient = httpClientFactory.CreateClient("OpenRouter");
-        _toolRegistry = toolRegistry;
-        _configuration = configuration;
-        _policyProvider = policyProvider;
-    }
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient("OpenRouter");
 
     [HttpPost("chat/completions")]
     public async Task<IActionResult> ChatCompletions([FromBody] ChatCompletionRequest request)
     {
         // 1. System Prompt nur beim ersten Aufruf
-        var systemPrompt = _configuration["Llm:SystemPrompt"] ?? "Du bist ein hilfreicher KI-Assistent.";
+        var systemPrompt = configuration["Llm:SystemPrompt"] ?? "Du bist ein hilfreicher KI-Assistent.";
         if (!request.Messages.Any(m => m.Role == "system"))
         {
             request.Messages.Insert(0, new ChatMessage { Role = "system", Content = systemPrompt });
@@ -47,7 +36,7 @@ public class OpenAiController : ControllerBase
         };
 
         // 2. Tools filtern und hinzufügen
-        var tools = _policyProvider.FilterTools(_toolRegistry.GetAllTools(), context);
+        var tools = policyProvider.FilterTools(toolRegistry.GetAllTools(), context);
         if (tools.Any())
         {
             request.Tools ??= [];
@@ -83,12 +72,12 @@ public class OpenAiController : ControllerBase
                     {
                         try
                         {
-                            var tool = _toolRegistry.GetTool(call.Function.Name) ?? throw new ToolNotFoundException(call.Function.Name);
+                            var tool = toolRegistry.GetTool(call.Function.Name) ?? throw new ToolNotFoundException(call.Function.Name);
                             var args = tool.BuidlArguments(call.Function.Arguments);
 
-                            _policyProvider.BeforeTool(tool, args, context);
+                            policyProvider.BeforeTool(tool, args, context);
                             var result = await tool.ExecuteAsync(args, context);
-                            result = _policyProvider.AfterTool(tool, args, result, context);
+                            result = policyProvider.AfterTool(tool, args, result, context);
 
                             request.Messages.Add(new ChatMessage
                             {
