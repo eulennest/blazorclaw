@@ -22,18 +22,16 @@ builder.Services.AddHttpClient("OpenRouter", client =>
 
 // Tool registry & Security
 var toolRegistry = new BlazorClaw.Core.Tools.ToolRegistry();
-// Registriere Tools aus ALLEN Assemblies, die 'BlazorClaw' im Namen tragen
-var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies()
-    .Where(a => a.FullName != null && a.FullName.Contains("BlazorClaw"));
-
-foreach (var assembly in loadedAssemblies)
+foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Where(a => a.FullName != null && a.FullName.Contains("BlazorClaw")))
 {
     toolRegistry.RegisterFromAssembly(assembly);
 }
-
 builder.Services.AddSingleton<BlazorClaw.Core.Tools.IToolRegistry>(toolRegistry);
-builder.Services.AddSingleton<BlazorClaw.Core.Security.IToolPolicyProvider, BlazorClaw.Core.Security.ToolPolicyAggregator>();
-builder.Services.AddSingleton<BlazorClaw.Core.Security.IMessagePolicyProvider, BlazorClaw.Core.Security.MessagePolicyAggregator>();
+
+// Hier registrieren wir unsere Security Provider
+var sandboxProvider = new BlazorClaw.Server.Security.SandboxSecurityProvider("./");
+builder.Services.AddSingleton<BlazorClaw.Core.Security.IToolPolicyProvider>(sandboxProvider);
+builder.Services.AddSingleton<BlazorClaw.Core.Security.IMessagePolicyProvider>(sandboxProvider);
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
