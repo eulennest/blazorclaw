@@ -5,6 +5,9 @@ using BlazorClaw.Server.Security;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Memory;
+using BlazorClaw.Core.Plugins;
+using BlazorClaw.Server.Security.Vault;
+using BlazorClaw.Core.Security.Vault;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -25,23 +28,11 @@ builder.Services.AddHttpClient("OpenRouter", client =>
     client.DefaultRequestHeaders.Add("Authorization", $"Bearer {llmConfig["ApiKey"]}");
 });
 
-// Tool registry
-var toolTypes = AppDomain.CurrentDomain.GetAssemblies()
-    .Where(a => a.FullName != null && a.FullName.Contains("BlazorClaw"))
-    .SelectMany(a => a.GetTypes())
-    .Where(t => typeof(ITool).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
-
-var tools = toolTypes.Select(t => (ITool)Activator.CreateInstance(t)!);
-builder.Services.AddSingleton<IToolRegistry>(new ToolRegistry(tools));
-
-// Security
-var sandboxProvider = new SandboxSecurityProvider("./");
-builder.Services.AddSingleton<IToolPolicyProvider>(sandboxProvider);
-builder.Services.AddSingleton<IMessagePolicyProvider>((IMessagePolicyProvider)sandboxProvider);
-
-// Memory Search
-var memoryProvider = new BlazorClaw.Server.Memory.FileSystemMemorySearchProvider("./memory");
-builder.Services.AddSingleton<IMemorySearchProvider>(memoryProvider);
+// Tool registry & Security
+builder.Services.AddSingleton<IToolRegistry>(sp => new ToolRegistry(PluginUtils.BuildPlugins<ITool>(sp)));
+builder.Services.AddScoped<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));
+builder.Services.AddScoped<IMessagePolicyProvider>(sp => new MessagePolicyAggregator(PluginUtils.BuildPlugins<IMessagePolicyProvider>(sp, typeof(MessagePolicyAggregator))));
+builder.Services.AddScoped<IVaultProvider, JsonVaultProvider>();
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
