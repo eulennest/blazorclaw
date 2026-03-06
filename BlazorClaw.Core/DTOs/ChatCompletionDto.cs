@@ -23,7 +23,7 @@ public class ChatMessage
     public string Role { get; set; } = string.Empty;
 
     [JsonPropertyName("content")]
-    public string? Content { get; set; }
+    public object? Content { get; set; }
 
     [JsonPropertyName("tool_calls")]
     public List<ToolCall>? ToolCalls { get; set; }
@@ -42,6 +42,9 @@ public class ToolCall
 
     [JsonPropertyName("function")]
     public FunctionCall Function { get; set; } = new();
+    
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
 }
 
 public class FunctionCall
@@ -51,6 +54,9 @@ public class FunctionCall
 
     [JsonPropertyName("arguments")]
     public string Arguments { get; set; } = string.Empty;
+    
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
 }
 
 public class ToolDefinition
@@ -60,6 +66,9 @@ public class ToolDefinition
 
     [JsonPropertyName("function")]
     public object Function { get; set; } = new();
+    
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
 }
 
 public class ChatCompletionResponse
