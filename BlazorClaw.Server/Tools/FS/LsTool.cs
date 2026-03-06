@@ -31,7 +31,9 @@ public class LsTool : BaseTool<LsParams>
         var entries = Directory.GetFileSystemEntries(p.Path, p.Pattern ?? "*", searchOption);
         
         if (p.Details != true)
-            return Task.FromResult(entries.Length > 0 ? string.Join("\n", entries.Select(Path.GetFileName)) : "Keine Dateien gefunden");
+            return Task.FromResult(entries.Length > 0 ? string.Join("\n", entries.Select(
+                o => Directory.Exists(o) ? $"{Path.GetFileName(o)}/" : Path.GetFileName(o)
+                )) : "Keine Dateien gefunden");
 
         var details = entries.Select(f => {
             var info = new FileInfo(f);
