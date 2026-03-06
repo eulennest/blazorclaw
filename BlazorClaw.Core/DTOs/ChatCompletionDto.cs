@@ -96,6 +96,9 @@ public class ChatChoice
 
     [JsonPropertyName("finish_reason")]
     public string? FinishReason { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
 }
 
 public class ApiError
