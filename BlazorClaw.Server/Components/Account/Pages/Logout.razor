@@ -8,11 +8,14 @@
 <h3>Logout...</h3>
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        httpContextAccessor.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
-        httpContextAccessor.HttpContext.Response.Redirect("/");
-        base.OnInitialized();
+        if (httpContextAccessor.HttpContext != null)
+        {
+            await httpContextAccessor.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+            httpContextAccessor.HttpContext.Response.Redirect("/");
+        }
+        await base.OnInitializedAsync();
     }
 
 }

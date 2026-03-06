@@ -124,12 +124,14 @@
         if (info is null)
         {
             RedirectManager.RedirectToCurrentPageWithStatus("Error: Could not load external login info.", HttpContext);
+            return;
         }
 
         var result = await UserManager.AddLoginAsync(user, info);
         if (!result.Succeeded)
         {
             RedirectManager.RedirectToCurrentPageWithStatus("Error: The external login was not added. External logins can only be associated with one account.", HttpContext);
+            return;
         }
 
         // Clear the existing external cookie to ensure a clean login process
