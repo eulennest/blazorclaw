@@ -15,7 +15,7 @@
 <PageTitle>Login - BlazorClaw</PageTitle>
 
 <div class="container">
-    <div class="row justify-content-center" style="margin-top: 10vh;">
+    <div class="row justify-content-center">
         <div class="col-10 col-lg-6 col-xxl-5">
             <div class="card shadow-lg">
                 <div class="card-body p-5">
@@ -62,19 +62,22 @@
                     </EditForm>
                 </div>
             </div>
-            
-            <div class="card mt-4">
-                <div class="card-body">
-                    <h3>Use another service</h3>
-                    <ExternalLoginPicker />
+            @if (externalLoginsCount > 0)
+            {
+                <div class="card mt-4">
+                    <div class="card-body">
+                        <h3>Use another service</h3>
+                        <ExternalLoginPicker />
+                    </div>
                 </div>
-            </div>
+            }
         </div>
     </div>
 </div>
 
 @code {
     private string? errorMessage;
+    private int externalLoginsCount;
 
     [CascadingParameter]
     private HttpContext HttpContext { get; set; } = default!;
@@ -90,7 +93,7 @@
         if (HttpMethods.IsGet(HttpContext.Request.Method))
         {
             AuthenticationState authState = await AuthState.GetAuthenticationStateAsync();
-            var  user = authState.User;
+            var user = authState.User;
 
             if (user is not null
                 && user.Identity is not null
@@ -101,6 +104,7 @@
                 await base.OnInitializedAsync();
             }
         }
+        externalLoginsCount = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Count();
     }
 
     public async Task LoginUser()
