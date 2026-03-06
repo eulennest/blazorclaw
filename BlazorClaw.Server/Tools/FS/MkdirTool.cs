@@ -1,0 +1,24 @@
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+using BlazorClaw.Core.Tools;
+
+namespace BlazorClaw.Server.Tools.FS;
+
+public class MkdirParams
+{
+    [Description("Pfad des neuen Verzeichnisses")]
+    [Required]
+    public string Path { get; set; } = string.Empty;
+}
+
+public class MkdirTool : BaseTool<MkdirParams>
+{
+    public override string Name => "fs_mkdir";
+    public override string Description => "Erstellt ein neues Verzeichnis";
+
+    protected override Task<string> ExecuteInternalAsync(MkdirParams p, ToolContext context)
+    {
+        Directory.CreateDirectory(p.Path);
+        return Task.FromResult($"Verzeichnis {p.Path} erstellt.");
+    }
+}
