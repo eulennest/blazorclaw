@@ -67,20 +67,11 @@ public class OpenAiController : ControllerBase
 
             foreach (var call in message.ToolCalls)
             {
-                var tool = _toolRegistry.GetTool(call.Function.Name);
-                if (tool == null)
-                {
-                    request.Messages.Add(new ChatMessage
-                    {
-                        Role = "tool",
-                        Content = ToolErrorHandler.ToNotFoundJson(call.Function.Name),
-                        ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
-                    });
-                    continue;
-                }
-
                 try
                 {
+                    var tool = _toolRegistry.GetTool(call.Function.Name);
+                    if (tool == null) throw new ToolNotFoundException(call.Function.Name);
+
                     _policyProvider.BeforeTool(tool, call.Function.Arguments, context);
                     var result = await tool.ExecuteAsync(call.Function.Arguments, context);
                     result = _policyProvider.AfterTool(tool, call.Function.Arguments, result, context);
@@ -94,10 +85,11 @@ public class OpenAiController : ControllerBase
                 }
                 catch (Exception ex)
                 {
+                    int status = ex is ToolNotFoundException ? 404 : 500;
                     request.Messages.Add(new ChatMessage
                     {
                         Role = "tool",
-                        Content = ToolErrorHandler.ToProblemDetailsJson(ex, call.Function.Name),
+                        Content = ToolErrorHandler.ToProblemDetailsJson(ex, call.Function.Name, status),
                         ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
                     });
                 }

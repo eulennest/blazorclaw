@@ -2,6 +2,15 @@ using System.Text.Json;
 
 namespace BlazorClaw.Core.Tools;
 
+public class ToolNotFoundException : Exception
+{
+    public string ToolName { get; }
+    public ToolNotFoundException(string toolName) : base($"Tool '{toolName}' not found.")
+    {
+        ToolName = toolName;
+    }
+}
+
 public static class ToolErrorHandler
 {
     public static string ToProblemDetailsJson(Exception ex, string toolName, int status = 500)
