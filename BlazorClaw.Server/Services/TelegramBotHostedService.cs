@@ -13,7 +13,7 @@ namespace BlazorClaw.Server.Services
     public class TelegramBotHostedService(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger) : IHostedService
     {
         private readonly List<TelegramBotInstance> _bots = [];
-        public ConcurrentDictionary<string, Guid> sessIds=[];
+        public ConcurrentDictionary<string, Guid> sessIds = [];
         public Task StartAsync(CancellationToken cancellationToken)
         {
             var telegramConfigs = configuration.GetSection("Channels:Telegram").GetChildren();
@@ -64,8 +64,8 @@ namespace BlazorClaw.Server.Services
             var user = await userManager.FindByLoginAsync("Telegram", telegramId);
 
             var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
+            await botClient.SendChatAction(update.Message.Chat.Id, Telegram.Bot.Types.Enums.ChatAction.Typing);
 
-          
             Guid? uid = user != null ? Guid.Parse(user.Id) : null;
             if (uid == null)
             {
@@ -87,6 +87,7 @@ namespace BlazorClaw.Server.Services
 
             await foreach (var msg in sm.DispatchToLLMAsync(sess))
             {
+                if (!"assistent".Equals(msg.Role)) continue;
                 var content = Convert.ToString(msg.Content);
                 if (!string.IsNullOrWhiteSpace(content))
                 {
