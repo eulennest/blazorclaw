@@ -125,7 +125,7 @@ namespace BlazorClaw.Server.Services
             {
                 SessionId = sessionState.Session.Id,
                 ServiceProvider = scope.ServiceProvider,
-                UserId = sessionState.Session.Participants.First().UserId,
+                UserId = sessionState.Session.Participants.FirstOrDefault()?.UserId,
                 HttpContext = scope.ServiceProvider.GetService<IHttpContextAccessor>()?.HttpContext
             };
 

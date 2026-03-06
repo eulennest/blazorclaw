@@ -8,7 +8,7 @@ public class ToolContext
 {
     public Guid SessionId { get; set; }
     public HttpContext? HttpContext { get; set; }
-    public string UserId { get; set; } = string.Empty;
+    public string? UserId { get; set; }
     public IServiceProvider ServiceProvider { get; set; } = default!;
 }
 
