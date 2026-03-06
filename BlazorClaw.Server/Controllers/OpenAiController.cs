@@ -63,33 +63,28 @@ public class OpenAiController : ControllerBase
         var message = content.Choices[0].Message;
         if (message.ToolCalls != null && message.ToolCalls.Any())
         {
+            request.Messages.Add(message); // Assistant Call
+
             foreach (var call in message.ToolCalls)
             {
                 var tool = _toolRegistry.GetTool(call.Function.Name);
                 if (tool == null)
                 {
-                    request.Messages.Add(message);
                     request.Messages.Add(new ChatMessage
                     {
                         Role = "tool",
                         Content = ToolErrorHandler.ToNotFoundJson(call.Function.Name),
                         ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
                     });
-                    
-                    return await ChatCompletions(request);
+                    continue;
                 }
 
                 try
                 {
-                    // SECURITY Hooks
                     _policyProvider.BeforeTool(tool, call.Function.Arguments, context);
-
                     var result = await tool.ExecuteAsync(call.Function.Arguments, context);
-
-                    // SECURITY Hooks
                     result = _policyProvider.AfterTool(tool, call.Function.Arguments, result, context);
 
-                    request.Messages.Add(message); // Assistant Call
                     request.Messages.Add(new ChatMessage
                     {
                         Role = "tool",
@@ -99,7 +94,6 @@ public class OpenAiController : ControllerBase
                 }
                 catch (Exception ex)
                 {
-                    request.Messages.Add(message);
                     request.Messages.Add(new ChatMessage
                     {
                         Role = "tool",
@@ -107,10 +101,10 @@ public class OpenAiController : ControllerBase
                         ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
                     });
                 }
-
-                // Rufe LLM erneut auf, damit es Tool-Result interpretiert
-                return await ChatCompletions(request);
             }
+
+            // Rekursion nach der gesamten Tool-Loop
+            return await ChatCompletions(request);
         }
 
         return Ok(content);
