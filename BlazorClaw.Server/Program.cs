@@ -13,7 +13,11 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddControllers();
-builder.Services.AddHttpClient();
+builder.Services.AddHttpClient("OpenRouter", client =>
+{
+    client.BaseAddress = new Uri(builder.Configuration["OpenRouterBaseUri"] ?? "https://openrouter.ai/api/v1/");
+    client.DefaultRequestHeaders.Add("Authorization", $"Bearer {builder.Configuration["OpenRouterApiKey"]}");
+});
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
