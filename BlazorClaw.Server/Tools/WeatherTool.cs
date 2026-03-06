@@ -21,7 +21,7 @@ public class WeatherTool : BaseTool<WeatherParams>
     public override string Name => "get_weather";
     public override string Description => "Ruft das aktuelle Wetter für eine Stadt ab";
 
-    protected override Task<string> ExecuteInternalAsync(WeatherParams p)
+    protected override Task<string> ExecuteInternalAsync(WeatherParams p, ToolContext context)
     {
         // Hier würde die API-Logik folgen
         return Task.FromResult($"Das Wetter in {p.City} ist angenehm in {p.Unit}.");
