@@ -64,9 +64,15 @@ public class ToolDefinition
     [JsonPropertyName("type")]
     public string Type { get; set; } = "function";
 
-    [JsonPropertyName("function")]
-    public object Function { get; set; } = new();
+    [JsonPropertyName("parameters")]
+    public object Parameters { get; set; } = new();
+
+    [JsonPropertyName("name")]
+    public required string Name { get; set; }
     
+    [JsonPropertyName("description")]
+    public required string Description { get; set; }
+
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 }

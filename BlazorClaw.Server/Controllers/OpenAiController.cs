@@ -53,7 +53,7 @@ public class OpenAiController : ControllerBase
             request.Tools ??= [];
             foreach (var tool in tools)
             {
-                request.Tools.Add(new ToolDefinition { Function = tool.GetSchema() });
+                request.Tools.Add(new ToolDefinition { Name = tool.Name, Description = tool.Description, Parameters = tool.GetSchema() });
             }
         }
 
