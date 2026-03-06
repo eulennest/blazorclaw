@@ -1,25 +1,63 @@
+using BlazorClaw.Core.Security.Vault;
+using Microsoft.Extensions.Options;
 using System.Text.Json;
 
-namespace BlazorClaw.Core.Security.Vault;
+namespace BlazorClaw.Server.Security.Vault;
 
-public class JsonVaultProvider : IVaultProvider
+public class JsonVaultProvider(IOptions<JsonVaultOptions> options) : IVaultProvider
 {
-    private readonly string _filePath;
-    private Dictionary<string, string>? _secrets;
+    private Dictionary<string, object>? _secrets;
 
-    public JsonVaultProvider(string filePath)
+    private string GetFilePath()
     {
-        _filePath = filePath;
+        return options.Value.FilePath;
     }
-
-    public string? GetSecret(string key)
+    public async IAsyncEnumerable<string> GetKeysAsync()
     {
         if (_secrets == null)
         {
-            if (!File.Exists(_filePath)) return null;
-            var json = File.ReadAllText(_filePath);
-            _secrets = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+            var filePath = GetFilePath();
+            if (!File.Exists(filePath)) yield break;
+            var json = await File.ReadAllTextAsync(filePath);
+            _secrets = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
         }
-        return _secrets?.GetValueOrDefault(key);
+        if (_secrets != null)
+            foreach (var item in _secrets.Keys)
+            {
+                yield return item;
+            }
+    }
+
+    public async Task SetSecretAsync(string key, string value)
+    {
+        var filePath = GetFilePath();
+        if (File.Exists(filePath))
+        {
+            var json = await File.ReadAllTextAsync(filePath);
+            _secrets = JsonSerializer.Deserialize<Dictionary<string, object>>(json) ?? [];
+        }
+        else
+        {
+            _secrets = [];
+        }
+
+        _secrets[key] = value;
+        var updatedJson = JsonSerializer.Serialize(_secrets);
+        await File.WriteAllTextAsync(filePath, updatedJson);
+    }
+
+
+    public async Task<string> GetSecretAsync(string key)
+    {
+        if (_secrets == null)
+        {
+            var filePath = GetFilePath();
+            if (!File.Exists(filePath)) throw new KeyNotFoundException();
+            var json = await File.ReadAllTextAsync(filePath);
+            _secrets = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+        }
+        if (_secrets != null && _secrets.TryGetValue(key, out var val))
+            return Convert.ToString(val) ?? string.Empty;
+        throw new KeyNotFoundException();
     }
 }

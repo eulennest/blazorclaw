@@ -16,23 +16,23 @@ public interface ITool
 {
     string Name { get; }
     string Description { get; }
-    object GetSchema(); 
-    Task<string> ExecuteAsync(string argumentsJson, ToolContext context);
+    object GetSchema();
+    object BuidlArguments(string arguments);
+    Task<string> ExecuteAsync(object arguments, ToolContext context);
 }
 
 public abstract class BaseTool<TParams> : ITool where TParams : class
 {
+    protected JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
     public abstract string Name { get; }
     public abstract string Description { get; }
     
     public object GetSchema() => SchemaGenerator.Generate(typeof(TParams));
+    public object BuidlArguments(string arguments) => JsonSerializer.Deserialize<TParams>(arguments, JsonOptions)!;
 
-    public async Task<string> ExecuteAsync(string argumentsJson, ToolContext context)
+    public async Task<string> ExecuteAsync(object arguments, ToolContext context)
     {
-        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-        var deserializedParams = JsonSerializer.Deserialize<TParams>(argumentsJson, options);
-        
-        if (deserializedParams == null)
+        if (arguments is not TParams deserializedParams)
             throw new ArgumentException("Invalid arguments provided.");
 
         // Modell-Validierung (DataAnnotations)
@@ -44,3 +44,5 @@ public abstract class BaseTool<TParams> : ITool where TParams : class
 
     protected abstract Task<string> ExecuteInternalAsync(TParams parameters, ToolContext context);
 }
+
+public class EmptyParams { }

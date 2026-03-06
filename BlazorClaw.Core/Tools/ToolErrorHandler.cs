@@ -2,40 +2,23 @@ using System.Text.Json;
 
 namespace BlazorClaw.Core.Tools;
 
-public class ToolNotFoundException : Exception
+public class ToolNotFoundException(string toolName) : Exception($"Tool '{toolName}' not found.")
 {
-    public string ToolName { get; }
-    public ToolNotFoundException(string toolName) : base($"Tool '{toolName}' not found.")
-    {
-        ToolName = toolName;
-    }
+    public string ToolName { get; } = toolName;
 }
 
 public static class ToolErrorHandler
 {
-    public static string ToProblemDetailsJson(Exception ex, string toolName, int status = 500)
+    public static string ToProblemDetailsJson(Exception ex, string toolName, int? status = null)
     {
         var typeName = ex.GetType().Name;
+        status ??= typeName.Contains("NotFound") ? 404 : 500;
         var problemDetails = new Dictionary<string, object>
         {
-            { "type", $"https://tools.blazorclaw.dev/errors/{typeName}#{typeName}" },
+            { "type", $"https://tools.blazorclaw.dev/tool-error#{typeName}" },
             { "title", "Tool error" },
             { "status", status },
             { "detail", ex.Message },
-            { "tool", toolName }
-        };
-
-        return JsonSerializer.Serialize(problemDetails);
-    }
-
-    public static string ToNotFoundJson(string toolName)
-    {
-        var problemDetails = new Dictionary<string, object>
-        {
-            { "type", "https://tools.blazorclaw.dev/errors/tool-not-found" },
-            { "title", "Tool not found" },
-            { "status", 404 },
-            { "detail", $"The tool '{toolName}' was not found in the registry." },
             { "tool", toolName }
         };
 

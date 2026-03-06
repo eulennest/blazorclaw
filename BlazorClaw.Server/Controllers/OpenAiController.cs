@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Authorization;
 using BlazorClaw.Core.DTOs;
-using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Security;
+using BlazorClaw.Core.Tools;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace BlazorClaw.Server.Controllers;
 
@@ -30,7 +31,7 @@ public class OpenAiController : ControllerBase
     {
         // 1. System Prompt nur beim ersten Aufruf
         var systemPrompt = _configuration["Llm:SystemPrompt"] ?? "Du bist ein hilfreicher KI-Assistent.";
-        if (request.Messages.Count(m => m.Role == "system") == 0)
+        if (!request.Messages.Any(m => m.Role == "system"))
         {
             request.Messages.Insert(0, new ChatMessage { Role = "system", Content = systemPrompt });
         }
@@ -47,7 +48,7 @@ public class OpenAiController : ControllerBase
         var tools = _policyProvider.FilterTools(_toolRegistry.GetAllTools(), context);
         if (tools.Any())
         {
-            request.Tools ??= new List<ToolDefinition>();
+            request.Tools ??= [];
             foreach (var tool in tools)
             {
                 request.Tools.Add(new ToolDefinition { Function = tool.GetSchema() });
@@ -61,7 +62,7 @@ public class OpenAiController : ControllerBase
 
         // 4. Tool Handling Loop
         var message = content.Choices[0].Message;
-        if (message.ToolCalls != null && message.ToolCalls.Any())
+        if (message.ToolCalls != null && message.ToolCalls.Count != 0)
         {
             request.Messages.Add(message); // Assistant Call
 
@@ -69,18 +70,12 @@ public class OpenAiController : ControllerBase
             {
                 try
                 {
-                    var tool = _toolRegistry.GetTool(call.Function.Name);
-                    if (tool == null) throw new ToolNotFoundException(call.Function.Name);
+                    var tool = _toolRegistry.GetTool(call.Function.Name) ?? throw new ToolNotFoundException(call.Function.Name);
+                    var args = tool.BuidlArguments(call.Function.Arguments);
 
-                    var baseType = tool.GetType().BaseType;
-                    var genericType = baseType != null && baseType.IsGenericType ? baseType.GetGenericArguments()[0] : null;
-                    object parameters = genericType != null 
-                        ? (System.Text.Json.JsonSerializer.Deserialize(call.Function.Arguments, genericType, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new { })
-                        : call.Function.Arguments;
-
-                    _policyProvider.BeforeTool(tool, parameters, context);
-                    var result = await tool.ExecuteAsync(call.Function.Arguments, context);
-                    result = _policyProvider.AfterTool(tool, parameters, result, context);
+                    _policyProvider.BeforeTool(tool, args, context);
+                    var result = await tool.ExecuteAsync(args, context);
+                    result = _policyProvider.AfterTool(tool, args, result, context);
 
                     request.Messages.Add(new ChatMessage
                     {
@@ -91,11 +86,10 @@ public class OpenAiController : ControllerBase
                 }
                 catch (Exception ex)
                 {
-                    int status = ex is ToolNotFoundException ? 404 : 500;
                     request.Messages.Add(new ChatMessage
                     {
                         Role = "tool",
-                        Content = ToolErrorHandler.ToProblemDetailsJson(ex, call.Function.Name, status),
+                        Content = ToolErrorHandler.ToProblemDetailsJson(ex, call.Function.Name),
                         ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
                     });
                 }

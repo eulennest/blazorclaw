@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorClaw.Server", "BlazorClaw.Server\BlazorClaw.Server.csproj", "{EBE2DA1E-4447-48B3-8031-E9B88A620987}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorClaw.Core", "BlazorClaw.Core\BlazorClaw.Core.csproj", "{CDC3A898-17FD-EC04-3F79-56064E63D45F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,8 +17,15 @@ Global
 		{EBE2DA1E-4447-48B3-8031-E9B88A620987}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EBE2DA1E-4447-48B3-8031-E9B88A620987}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EBE2DA1E-4447-48B3-8031-E9B88A620987}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CDC3A898-17FD-EC04-3F79-56064E63D45F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDC3A898-17FD-EC04-3F79-56064E63D45F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDC3A898-17FD-EC04-3F79-56064E63D45F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDC3A898-17FD-EC04-3F79-56064E63D45F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {650EA9F4-8DC7-4EC3-A58F-82FB4127150B}
 	EndGlobalSection
 EndGlobal

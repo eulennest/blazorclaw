@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
+using BlazorClaw.Core.Plugins;
+using BlazorClaw.Core.Security.Vault;
+using BlazorClaw.Server.Security.Vault;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,18 +27,10 @@ builder.Services.AddHttpClient("OpenRouter", client =>
     client.DefaultRequestHeaders.Add("Authorization", $"Bearer {llmConfig["ApiKey"]}");
 });
 
-// Tool registry & Security
-var toolRegistry = new BlazorClaw.Core.Tools.ToolRegistry();
-foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Where(a => a.FullName != null && a.FullName.Contains("BlazorClaw")))
-{
-    toolRegistry.RegisterFromAssembly(assembly);
-}
-builder.Services.AddSingleton<IToolRegistry>(toolRegistry);
-
-// Hier registrieren wir unsere Security Provider
-var sandboxProvider = new SandboxSecurityProvider("./");
-builder.Services.AddSingleton<IToolPolicyProvider>(sandboxProvider);
-builder.Services.AddSingleton<IMessagePolicyProvider>(sandboxProvider);
+builder.Services.AddSingleton<IToolRegistry>(sp => new ToolRegistry(PluginUtils.BuildPlugins<ITool>(sp)));
+builder.Services.AddScoped<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));
+builder.Services.AddScoped<IMessagePolicyProvider>(sp => new MessagePolicyAggregator(PluginUtils.BuildPlugins<IMessagePolicyProvider>(sp, typeof(MessagePolicyAggregator))));
+builder.Services.AddScoped<IVaultProvider, JsonVaultProvider>();
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -76,6 +71,8 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.KnownNetworks.Add(Microsoft.AspNetCore.HttpOverrides.IPNetwork.Parse("192.168.0.0/16"));
     options.ForwardLimit = 2;
 });
+
+builder.Services.Configure<JsonVaultOptions>( o=> { });
 
 
 var app = builder.Build();
