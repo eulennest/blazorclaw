@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Security;
 
 namespace BlazorClaw.Server.Controllers;
 
@@ -14,12 +15,14 @@ public class OpenAiController : ControllerBase
     private readonly HttpClient _httpClient;
     private readonly IToolRegistry _toolRegistry;
     private readonly IConfiguration _configuration;
+    private readonly IToolSecurityInjector _securityInjector;
 
-    public OpenAiController(IHttpClientFactory httpClientFactory, IToolRegistry toolRegistry, IConfiguration configuration)
+    public OpenAiController(IHttpClientFactory httpClientFactory, IToolRegistry toolRegistry, IConfiguration configuration, IToolSecurityInjector securityInjector)
     {
         _httpClient = httpClientFactory.CreateClient("OpenRouter");
         _toolRegistry = toolRegistry;
         _configuration = configuration;
+        _securityInjector = securityInjector;
     }
 
     [HttpPost("chat/completions")]
@@ -63,7 +66,13 @@ public class OpenAiController : ControllerBase
                         UserId = User.Identity?.Name ?? "anonymous"
                     };
 
+                    // SECURITY: Before Tool Hook
+                    _securityInjector.BeforeTool(tool, call.Function.Arguments, context);
+
                     var result = await tool.ExecuteAsync(call.Function.Arguments, context);
+
+                    // SECURITY: After Tool Hook
+                    _securityInjector.AfterTool(tool, call.Function.Arguments, result, context);
                     
                     // Füge Tool-Result zu History hinzu (vereinfacht)
                     request.Messages.Add(message); // Assistant Call
