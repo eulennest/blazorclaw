@@ -22,7 +22,15 @@ builder.Services.AddHttpClient("OpenRouter", client =>
 
 // Tool registry & Security
 var toolRegistry = new BlazorClaw.Core.Tools.ToolRegistry();
-toolRegistry.RegisterFromAssembly(typeof(BlazorClaw.Server.Tools.FS.LsTool).Assembly);
+// Registriere Tools aus ALLEN Assemblies, die 'BlazorClaw' im Namen tragen
+var loadedAssemblies = AppDomain.CurrentDomain.GetAssemblies()
+    .Where(a => a.FullName != null && a.FullName.Contains("BlazorClaw"));
+
+foreach (var assembly in loadedAssemblies)
+{
+    toolRegistry.RegisterFromAssembly(assembly);
+}
+
 builder.Services.AddSingleton<BlazorClaw.Core.Tools.IToolRegistry>(toolRegistry);
 builder.Services.AddSingleton<BlazorClaw.Core.Security.IToolPolicyProvider, BlazorClaw.Core.Security.ToolPolicyAggregator>();
 builder.Services.AddSingleton<BlazorClaw.Core.Security.IMessagePolicyProvider, BlazorClaw.Core.Security.MessagePolicyAggregator>();
