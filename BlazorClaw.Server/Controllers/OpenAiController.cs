@@ -15,14 +15,14 @@ public class OpenAiController : ControllerBase
     private readonly HttpClient _httpClient;
     private readonly IToolRegistry _toolRegistry;
     private readonly IConfiguration _configuration;
-    private readonly IToolSecurityInjector _securityInjector;
+    private readonly IToolPolicyProvider _policyProvider;
 
-    public OpenAiController(IHttpClientFactory httpClientFactory, IToolRegistry toolRegistry, IConfiguration configuration, IToolSecurityInjector securityInjector)
+    public OpenAiController(IHttpClientFactory httpClientFactory, IToolRegistry toolRegistry, IConfiguration configuration, IToolPolicyProvider policyProvider)
     {
         _httpClient = httpClientFactory.CreateClient("OpenRouter");
         _toolRegistry = toolRegistry;
         _configuration = configuration;
-        _securityInjector = securityInjector;
+        _policyProvider = policyProvider;
     }
 
     [HttpPost("chat/completions")]
@@ -35,7 +35,16 @@ public class OpenAiController : ControllerBase
             request.Messages.Insert(0, new ChatMessage { Role = "system", Content = systemPrompt });
         }
 
-        var tools = _toolRegistry.GetAllTools();
+        // Context für Security/Policies
+        var context = new ToolContext { 
+            SessionId = Guid.NewGuid(), // TODO: Aus Request/Header
+            ServiceProvider = HttpContext.RequestServices,
+            UserId = User.Identity?.Name ?? "anonymous",
+            HttpContext = HttpContext
+        };
+
+        // 2. Tools filtern und hinzufügen
+        var tools = _policyProvider.FilterTools(_toolRegistry.GetAllTools(), context);
         if (tools.Any())
         {
             request.Tools ??= new List<ToolDefinition>();
@@ -45,12 +54,12 @@ public class OpenAiController : ControllerBase
             }
         }
 
-        // 2. OpenAI Request
+        // 3. OpenAI Request
         var response = await _httpClient.PostAsJsonAsync("chat/completions", request);
         var content = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>();
         if (content == null || content.Choices.Count == 0) return BadRequest("Invalid response");
 
-        // 3. Tool Handling Loop
+        // 4. Tool Handling Loop
         var message = content.Choices[0].Message;
         if (message.ToolCalls != null && message.ToolCalls.Any())
         {
@@ -59,22 +68,15 @@ public class OpenAiController : ControllerBase
                 var tool = _toolRegistry.GetTool(call.Function.Name);
                 if (tool != null)
                 {
-                    // Erstelle context (SessionID etc aus Request/Auth)
-                    var context = new ToolContext { 
-                        SessionId = Guid.NewGuid(), // TODO: Aus Request/Header
-                        ServiceProvider = HttpContext.RequestServices,
-                        UserId = User.Identity?.Name ?? "anonymous"
-                    };
-
                     try
                     {
-                        // SECURITY: Before Tool Hook
-                        _securityInjector.BeforeTool(tool, call.Function.Arguments, context);
+                        // SECURITY Hooks
+                        _policyProvider.BeforeTool(tool, call.Function.Arguments, context);
 
                         var result = await tool.ExecuteAsync(call.Function.Arguments, context);
 
-                        // SECURITY: After Tool Hook
-                        _securityInjector.AfterTool(tool, call.Function.Arguments, result, context);
+                        // SECURITY Hooks
+                        _policyProvider.AfterTool(tool, call.Function.Arguments, result, context);
 
                         request.Messages.Add(message); // Assistant Call
                         request.Messages.Add(new ChatMessage

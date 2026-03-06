@@ -24,7 +24,7 @@ builder.Services.AddHttpClient("OpenRouter", client =>
 var toolRegistry = new BlazorClaw.Core.Tools.ToolRegistry();
 toolRegistry.RegisterFromAssembly(typeof(BlazorClaw.Server.Tools.FS.LsTool).Assembly);
 builder.Services.AddSingleton<BlazorClaw.Core.Tools.IToolRegistry>(toolRegistry);
-builder.Services.AddSingleton<BlazorClaw.Core.Security.IToolSecurityInjector, BlazorClaw.Core.Security.ToolSecurityService>();
+builder.Services.AddSingleton<BlazorClaw.Core.Security.IToolPolicyProvider, BlazorClaw.Core.Security.ToolPolicyAggregator>();
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
