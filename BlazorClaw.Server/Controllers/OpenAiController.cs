@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Authorization;
+using BlazorClaw.Core.DTOs;
 
 namespace BlazorClaw.Server.Controllers;
 
@@ -18,11 +18,13 @@ public class OpenAiController : ControllerBase
     }
 
     [HttpPost("chat/completions")]
-    public async Task<IActionResult> ChatCompletions([FromBody] object request)
+    public async Task<ActionResult<ChatCompletionResponse>> ChatCompletions([FromBody] ChatCompletionRequest request)
     {
         var response = await _httpClient.PostAsJsonAsync("chat/completions", request);
-        var content = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>();
 
-        return Content(content, "application/json");
+        if (content == null) return BadRequest("Invalid response from upstream");
+
+        return Ok(content);
     }
 }
