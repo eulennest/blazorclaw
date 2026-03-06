@@ -6,10 +6,12 @@
 @using BlazorClaw.Server.Data
 
 @inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
 @inject ILogger<Login> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject AuthenticationStateProvider AuthState
+@inject IConfiguration configuration
 
 
 <PageTitle>Login - BlazorClaw</PageTitle>
@@ -114,8 +116,18 @@
         var result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
         if (result.Succeeded)
         {
-            Logger.LogInformation("User logged in.");
-            RedirectManager.RedirectTo(ReturnUrl);
+            var user = await UserManager.FindByEmailAsync(Input.Email);
+            Logger.LogInformation($"User {user?.UserName} logged in.");
+
+            var adminPassword = configuration["Database:DefaultAdminPassword"] ?? "Admin123!";
+            if (adminPassword.Equals(Input.Password))
+            {
+                RedirectManager.RedirectTo("/Account/Manage/ChangePassword");
+            }
+            else
+            {
+                RedirectManager.RedirectTo(ReturnUrl);
+            }
         }
         else if (result.RequiresTwoFactor)
         {
