@@ -28,6 +28,10 @@ builder.Services.AddHttpClient("OpenRouter", client =>
     client.DefaultRequestHeaders.Add("Authorization", $"Bearer {llmConfig["ApiKey"]}");
 });
 
+// Add HttpClient for WebSearchProvider
+builder.Services.AddHttpClient<BlazorClaw.Core.Web.IWebSearchProvider, BlazorClaw.Server.Web.BraveSearchProvider>();
+builder.Services.Configure<BlazorClaw.Server.Web.WebSearchOptions>(builder.Configuration.GetSection(BlazorClaw.Server.Web.WebSearchOptions.Section));
+
 // Tool registry & Security
 builder.Services.AddSingleton<IToolRegistry>(sp => new ToolRegistry(PluginUtils.BuildPlugins<ITool>(sp)));
 builder.Services.AddScoped<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));
