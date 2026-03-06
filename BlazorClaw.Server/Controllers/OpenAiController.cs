@@ -36,7 +36,7 @@ public class OpenAiController : ControllerBase
         }
 
         // Context für Security/Policies
-        var context = new ToolContext { 
+        var context = new ToolContext {
             SessionId = Guid.NewGuid(), // TODO: Aus Request/Header
             ServiceProvider = HttpContext.RequestServices,
             UserId = User.Identity?.Name ?? "anonymous",
@@ -72,9 +72,15 @@ public class OpenAiController : ControllerBase
                     var tool = _toolRegistry.GetTool(call.Function.Name);
                     if (tool == null) throw new ToolNotFoundException(call.Function.Name);
 
-                    _policyProvider.BeforeTool(tool, call.Function.Arguments, context);
+                    var baseType = tool.GetType().BaseType;
+                    var genericType = baseType != null && baseType.IsGenericType ? baseType.GetGenericArguments()[0] : null;
+                    object parameters = genericType != null 
+                        ? (System.Text.Json.JsonSerializer.Deserialize(call.Function.Arguments, genericType, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new { })
+                        : call.Function.Arguments;
+
+                    _policyProvider.BeforeTool(tool, parameters, context);
                     var result = await tool.ExecuteAsync(call.Function.Arguments, context);
-                    result = _policyProvider.AfterTool(tool, call.Function.Arguments, result, context);
+                    result = _policyProvider.AfterTool(tool, parameters, result, context);
 
                     request.Messages.Add(new ChatMessage
                     {

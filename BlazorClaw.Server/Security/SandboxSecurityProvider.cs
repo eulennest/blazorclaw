@@ -1,9 +1,10 @@
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Security;
+using BlazorClaw.Server.Tools.FS;
 
 namespace BlazorClaw.Server.Security;
 
-public class SandboxSecurityProvider : IMessagePolicyProvider, IToolPolicyProvider
+public class SandboxSecurityProvider : IToolPolicyProvider
 {
     private readonly string _basePath;
 
@@ -12,27 +13,16 @@ public class SandboxSecurityProvider : IMessagePolicyProvider, IToolPolicyProvid
         _basePath = Path.GetFullPath(basePath);
     }
 
-    // --- IToolPolicyProvider (Tools filtern) ---
-    public IEnumerable<ITool> FilterTools(IEnumerable<ITool> allTools, ToolContext context)
-    {
-        return allTools; // Alle Tools erlaubt
-    }
+    public IEnumerable<ITool> FilterTools(IEnumerable<ITool> allTools, ToolContext context) => allTools;
 
-    public void BeforeTool(ITool tool, string arguments, ToolContext context)
+    public void BeforeTool(ITool tool, object parameters, ToolContext context)
     {
-        // Parameter-Validierung: Versuchen zu entkommen?
-        if (arguments.Contains(".."))
+        if (parameters is RmParams rmParams)
         {
+            if (rmParams.Path.Contains(".."))
              throw new UnauthorizedAccessException("Sandbox violation: Path traversal detected.");
         }
     }
 
-    public string AfterTool(ITool tool, string arguments, string result, ToolContext context)
-    {
-        return result;
-    }
-
-    // --- IMessagePolicyProvider (Nachrichten filtern) ---
-    public string FilterUserMessage(string message, ToolContext context) => message;
-    public string FilterAssistantMessage(string message, ToolContext context) => message;
+    public string AfterTool(ITool tool, object parameters, string result, ToolContext context) => result;
 }

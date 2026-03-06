@@ -1,10 +1,14 @@
 using BlazorClaw.Server.Components;
 using BlazorClaw.Server.Components.Account;
 using BlazorClaw.Server.Data;
+using BlazorClaw.Server.Security;
+using BlazorClaw.Core.Security;
+using BlazorClaw.Core.Tools;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,12 +30,12 @@ foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Where(a => a.Fu
 {
     toolRegistry.RegisterFromAssembly(assembly);
 }
-builder.Services.AddSingleton<BlazorClaw.Core.Tools.IToolRegistry>(toolRegistry);
+builder.Services.AddSingleton<IToolRegistry>(toolRegistry);
 
 // Hier registrieren wir unsere Security Provider
-var sandboxProvider = new BlazorClaw.Server.Security.SandboxSecurityProvider("./");
-builder.Services.AddSingleton<BlazorClaw.Core.Security.IToolPolicyProvider>(sandboxProvider);
-builder.Services.AddSingleton<BlazorClaw.Core.Security.IMessagePolicyProvider>(sandboxProvider);
+var sandboxProvider = new SandboxSecurityProvider("./");
+builder.Services.AddSingleton<IToolPolicyProvider>(sandboxProvider);
+builder.Services.AddSingleton<IMessagePolicyProvider>(sandboxProvider);
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -69,9 +73,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders =
         ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    // Only loopback proxies are allowed by default.
-    // Clear that restriction because forwarders are being enabled by explicit configuration.
-    options.KnownNetworks.Add(IPNetwork.Parse("192.168.0.0/16"));
+    options.KnownNetworks.Add(Microsoft.AspNetCore.HttpOverrides.IPNetwork.Parse("192.168.0.0/16"));
     options.ForwardLimit = 2;
 });
 

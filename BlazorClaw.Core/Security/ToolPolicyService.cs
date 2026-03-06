@@ -5,8 +5,8 @@ namespace BlazorClaw.Core.Security;
 public interface IToolPolicyProvider
 {
     IEnumerable<ITool> FilterTools(IEnumerable<ITool> allTools, ToolContext context);
-    void BeforeTool(ITool tool, string arguments, ToolContext context);
-    string AfterTool(ITool tool, string arguments, string result, ToolContext context);
+    void BeforeTool(ITool tool, object parameters, ToolContext context);
+    string AfterTool(ITool tool, object parameters, string result, ToolContext context);
 }
 
 public class ToolPolicyAggregator : IToolPolicyProvider
@@ -28,17 +28,17 @@ public class ToolPolicyAggregator : IToolPolicyProvider
         return result;
     }
 
-    public void BeforeTool(ITool tool, string arguments, ToolContext context)
+    public void BeforeTool(ITool tool, object parameters, ToolContext context)
     {
-        foreach (var provider in _providers) provider.BeforeTool(tool, arguments, context);
+        foreach (var provider in _providers) provider.BeforeTool(tool, parameters, context);
     }
 
-    public string AfterTool(ITool tool, string arguments, string result, ToolContext context)
+    public string AfterTool(ITool tool, object parameters, string result, ToolContext context)
     {
         var finalResult = result;
         foreach (var provider in _providers)
         {
-            finalResult = provider.AfterTool(tool, arguments, finalResult, context);
+            finalResult = provider.AfterTool(tool, parameters, finalResult, context);
         }
         return finalResult;
     }
