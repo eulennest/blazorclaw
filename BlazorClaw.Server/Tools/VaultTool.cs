@@ -8,14 +8,14 @@ namespace BlazorClaw.Server.Tools;
 
 public class VaultGetParams
 {
-    [Description("")]
+    [Description("Der Schlüssel des Geheimnisses")]
     [Required]
     public string Key { get; set; } = string.Empty;
 }
 
 public class VaultSetParams : VaultGetParams
 {
-    [Description("")]
+    [Description("Das Geheimnis selbst")]
     [Required]
     public string Secret { get; set; } = string.Empty;
 }
@@ -24,7 +24,7 @@ public class VaultSetParams : VaultGetParams
 public class VaultGetTool : BaseTool<VaultGetParams>
 {
     public override string Name => "vault_get";
-    public override string Description => "";
+    public override string Description => "Holt ein Geheimnis aus dem Vault";
 
     protected override Task<string> ExecuteInternalAsync(VaultGetParams p, ToolContext context)
     {
@@ -36,7 +36,7 @@ public class VaultGetTool : BaseTool<VaultGetParams>
 public class VaultSetTool : BaseTool<VaultSetParams>
 {
     public override string Name => "vault_set";
-    public override string Description => "";
+    public override string Description => "Setzt ein Geheimnis im Vault";
 
     protected override async Task<string> ExecuteInternalAsync(VaultSetParams p, ToolContext context)
     {
@@ -50,7 +50,7 @@ public class VaultSetTool : BaseTool<VaultSetParams>
 public class VaultListTool : BaseTool<EmptyParams>
 {
     public override string Name => "vault_list";
-    public override string Description => "";
+    public override string Description => "Listet alle Schlüssel im Vault auf";
 
     protected override async Task<string> ExecuteInternalAsync(EmptyParams p, ToolContext context)
     {
