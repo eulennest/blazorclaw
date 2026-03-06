@@ -2,7 +2,7 @@ namespace BlazorClaw.Core.Memory;
 
 public interface IMemorySearchProvider
 {
-    Task<string> SearchAsync(string query, int maxResults);
+    Task<string> SearchAsync(string[] queries, int maxResults);
 }
 
 public class MemorySearchAggregator : IMemorySearchProvider
@@ -14,12 +14,12 @@ public class MemorySearchAggregator : IMemorySearchProvider
         _providers = providers;
     }
 
-    public async Task<string> SearchAsync(string query, int maxResults)
+    public async Task<string> SearchAsync(string[] queries, int maxResults)
     {
         var results = new List<string>();
         foreach (var provider in _providers)
         {
-            results.Add(await provider.SearchAsync(query, maxResults));
+            results.Add(await provider.SearchAsync(queries, maxResults));
         }
         return string.Join("\n\n---\n\n", results);
     }
