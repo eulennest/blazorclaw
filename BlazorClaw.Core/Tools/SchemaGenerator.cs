@@ -48,7 +48,8 @@ public static class SchemaGenerator
             }
 
             // Required Check
-            if (prop.GetCustomAttribute<RequiredAttribute>() != null)
+            bool isValueType = prop.PropertyType.IsValueType && Nullable.GetUnderlyingType(prop.PropertyType) == null;
+            if (prop.GetCustomAttribute<RequiredAttribute>() != null || isValueType)
             {
                 required.Add(prop.Name);
             }
