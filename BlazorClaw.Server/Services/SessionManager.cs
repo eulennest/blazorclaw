@@ -119,6 +119,8 @@ namespace BlazorClaw.Server.Services
             using var scope = scopeFactory.CreateScope();
             using var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
             httpClient.BaseAddress = new Uri(sessionState.Provider.Uri.TrimEnd('/') + "/");
+            if (!string.IsNullOrWhiteSpace(sessionState.Provider.Uri))
+                httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {sessionState.Provider.Token}");
 
             // Context für Security/Policies
             var context = new ToolContext
