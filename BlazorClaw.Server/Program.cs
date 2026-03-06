@@ -54,6 +54,9 @@ builder.Services.AddScoped<IVaultProvider, JsonVaultProvider>();
 builder.Services.Configure<FileSystemMemoryOptions>(builder.Configuration.GetSection(FileSystemMemoryOptions.Section));
 builder.Services.AddSingleton<IMemorySearchProvider, FileSystemMemorySearchProvider>();
 
+// Providers
+builder.Services.AddSingleton<IProviderManager>(sp => new ProviderAggregator(PluginUtils.BuildPlugins<IProviderManager>(sp, typeof(ProviderAggregator))));
+
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));

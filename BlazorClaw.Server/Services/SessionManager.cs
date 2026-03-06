@@ -7,6 +7,8 @@ namespace BlazorClaw.Server.Services
     {
         public ChatSession Session { get; set; } = default!;
         public List<BlazorClaw.Core.DTOs.ChatMessage> MessageHistory { get; set; } = new();
+        public List<BlazorClaw.Core.DTOs.ChatMessage> SystemPrompts { get; set; } = new();
+        public List<BlazorClaw.Core.DTOs.ToolDefinition> Tools { get; set; } = new();
     }
 
     public interface ISessionManager
@@ -50,6 +52,24 @@ namespace BlazorClaw.Server.Services
         public Task SaveToDiskAsync(Guid sessionId)
         {
             // TODO: Implementierung von session_*.json Persistenz
+            return Task.CompletedTask;
+        }
+
+        public Task AppendSystemPromptAsync(Guid sessionId, BlazorClaw.Core.DTOs.ChatMessage message)
+        {
+            if (_sessions.TryGetValue(sessionId, out var state))
+            {
+                state.SystemPrompts.Add(message);
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task SetSystemPromptsAsync(Guid sessionId, List<BlazorClaw.Core.DTOs.ChatMessage> messages)
+        {
+            if (_sessions.TryGetValue(sessionId, out var state))
+            {
+                state.SystemPrompts = messages;
+            }
             return Task.CompletedTask;
         }
 

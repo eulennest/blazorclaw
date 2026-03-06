@@ -27,7 +27,7 @@ namespace BlazorClaw.Server.Services
             var telegramConfigs = _configuration.GetSection("Channels:Telegram").GetChildren();
             foreach (var botConfig in telegramConfigs)
             {
-                var id = botConfig["Id"] ?? "default";
+                var id = botConfig.Key; // Use Key (e.g. main/alerts)
                 var token = botConfig["Token"];
                 if (!string.IsNullOrEmpty(token))
                 {
