@@ -86,6 +86,9 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
+builder.Services.AddSingleton<BlazorClaw.Server.Services.ISessionManager, BlazorClaw.Server.Services.SessionManager>();
+builder.Services.AddScoped<BlazorClaw.Server.Services.IChannelToSessionDispatcher, BlazorClaw.Server.Services.ChannelToSessionDispatcher>();
+
 builder.Services.AddHostedService<BlazorClaw.Server.Services.TelegramBotHostedService>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
