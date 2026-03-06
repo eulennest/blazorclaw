@@ -7,6 +7,7 @@ namespace BlazorClaw.Server.Controllers;
 [Authorize]
 [ApiController]
 [Route("v1")]
+[IgnoreAntiforgeryToken]
 public class OpenAiController : ControllerBase
 {
     private readonly IConfiguration _configuration;

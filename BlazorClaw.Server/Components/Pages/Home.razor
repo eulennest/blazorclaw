@@ -1,9 +1,43 @@
 @page "/"
 @attribute [Authorize]
 @using Microsoft.AspNetCore.Authorization
+@inject NavigationManager Nav
 
-<PageTitle>Home - BlazorClaw</PageTitle>
+<PageTitle>Chat - BlazorClaw</PageTitle>
 
-<h1>Welcome to BlazorClaw!</h1>
+<div id="chat-container">
+    <div id="messages"></div>
+    <div class="input-area">
+        <input id="user-input" placeholder="Nachricht eingeben..." />
+        <button id="send-btn">Senden</button>
+    </div>
+</div>
 
-<p>You are logged in.</p>
+<script>
+    document.getElementById('send-btn').addEventListener('click', async () => {
+        const input = document.getElementById('user-input');
+        const content = input.value;
+        if (!content) return;
+        
+        // UI Update
+        const msgDiv = document.createElement('div');
+        msgDiv.textContent = 'User: ' + content;
+        document.getElementById('messages').appendChild(msgDiv);
+        input.value = '';
+
+        // API Call via JS
+        const response = await fetch('/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                model: 'mistralai/mistral-large', 
+                messages: [{ role: 'user', content: content }] 
+            })
+        });
+        
+        const data = await response.json();
+        const aiDiv = document.createElement('div');
+        aiDiv.textContent = 'Assistant: ' + data.choices[0].message.content;
+        document.getElementById('messages').appendChild(aiDiv);
+    });
+</script>
