@@ -8,10 +8,21 @@
 <div id="chat-container">
     <div id="messages"></div>
     <div class="input-area">
-        <input id="user-input" placeholder="Nachricht eingeben..." />
+        <textarea id="user-input" placeholder="Nachricht eingeben..."></textarea>
         <button id="send-btn">Senden</button>
     </div>
 </div>
+
+<style>
+    #chat-container { display: flex; flex-direction: column; height: 80vh; gap: 10px; padding: 20px; }
+    #messages { flex: 1; overflow-y: auto; border: 1px solid #ccc; padding: 15px; border-radius: 8px; }
+    .message { margin-bottom: 10px; padding: 10px; border-radius: 8px; max-width: 80%; }
+    .user { background: #e0f7fa; align-self: flex-end; margin-left: auto; }
+    .assistant { background: #f5f5f5; align-self: flex-start; }
+    .input-area { display: flex; gap: 10px; }
+    textarea { flex: 1; height: 60px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
+    button { padding: 0 20px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; }
+</style>
 
 <script>
     document.getElementById('send-btn').addEventListener('click', async () => {
@@ -19,13 +30,12 @@
         const content = input.value;
         if (!content) return;
         
-        // UI Update
         const msgDiv = document.createElement('div');
-        msgDiv.textContent = 'User: ' + content;
+        msgDiv.className = 'message user';
+        msgDiv.textContent = content;
         document.getElementById('messages').appendChild(msgDiv);
         input.value = '';
 
-        // API Call via JS
         const response = await fetch('/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -37,7 +47,8 @@
         
         const data = await response.json();
         const aiDiv = document.createElement('div');
-        aiDiv.textContent = 'Assistant: ' + data.choices[0].message.content;
+        aiDiv.className = 'message assistant';
+        aiDiv.textContent = data.choices[0].message.content;
         document.getElementById('messages').appendChild(aiDiv);
     });
 </script>
