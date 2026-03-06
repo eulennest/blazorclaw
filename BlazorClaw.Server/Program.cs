@@ -20,11 +20,12 @@ builder.Services.AddHttpClient("OpenRouter", client =>
     client.DefaultRequestHeaders.Add("Authorization", $"Bearer {llmConfig["ApiKey"]}");
 });
 
-// Tool registry
+// Tool registry & Security
 var toolRegistry = new BlazorClaw.Core.Tools.ToolRegistry();
 toolRegistry.RegisterFromAssembly(typeof(BlazorClaw.Server.Tools.FS.LsTool).Assembly);
 builder.Services.AddSingleton<BlazorClaw.Core.Tools.IToolRegistry>(toolRegistry);
 builder.Services.AddSingleton<BlazorClaw.Core.Security.IToolPolicyProvider, BlazorClaw.Core.Security.ToolPolicyAggregator>();
+builder.Services.AddSingleton<BlazorClaw.Core.Security.IMessagePolicyProvider, BlazorClaw.Core.Security.MessagePolicyAggregator>();
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

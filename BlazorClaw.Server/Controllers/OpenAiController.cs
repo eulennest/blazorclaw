@@ -76,7 +76,7 @@ public class OpenAiController : ControllerBase
                         var result = await tool.ExecuteAsync(call.Function.Arguments, context);
 
                         // SECURITY Hooks
-                        _policyProvider.AfterTool(tool, call.Function.Arguments, result, context);
+                        result = _policyProvider.AfterTool(tool, call.Function.Arguments, result, context);
 
                         request.Messages.Add(message); // Assistant Call
                         request.Messages.Add(new ChatMessage

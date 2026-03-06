@@ -6,7 +6,7 @@ public interface IToolPolicyProvider
 {
     IEnumerable<ITool> FilterTools(IEnumerable<ITool> allTools, ToolContext context);
     void BeforeTool(ITool tool, string arguments, ToolContext context);
-    void AfterTool(ITool tool, string arguments, string result, ToolContext context);
+    string AfterTool(ITool tool, string arguments, string result, ToolContext context);
 }
 
 public class ToolPolicyAggregator : IToolPolicyProvider
@@ -33,8 +33,13 @@ public class ToolPolicyAggregator : IToolPolicyProvider
         foreach (var provider in _providers) provider.BeforeTool(tool, arguments, context);
     }
 
-    public void AfterTool(ITool tool, string arguments, string result, ToolContext context)
+    public string AfterTool(ITool tool, string arguments, string result, ToolContext context)
     {
-        foreach (var provider in _providers) provider.AfterTool(tool, arguments, result, context);
+        var finalResult = result;
+        foreach (var provider in _providers)
+        {
+            finalResult = provider.AfterTool(tool, arguments, finalResult, context);
+        }
+        return finalResult;
     }
 }
