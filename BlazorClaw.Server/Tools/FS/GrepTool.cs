@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Text.Json;
 using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Server.Tools.FS;
@@ -12,24 +14,50 @@ public class GrepParams
     [Description("Suchtext in Dateien")]
     [Required]
     public string Query { get; set; } = string.Empty;
+
+    [Description("Glob-Muster (z.B. *.cs)")]
+    public string Pattern { get; set; } = "*";
+
+    [Description("Maximale Dateigröße in Bytes")]
+    public long MaxFileSize { get; set; } = 1024 * 1024; // 1MB
+
+    [Description("Zeilen vor dem Treffer")]
+    public int BeforeLines { get; set; } = 5;
+
+    [Description("Zeilen nach dem Treffer")]
+    public int AfterLines { get; set; } = 5;
 }
 
 public class GrepTool : BaseTool<GrepParams>
 {
     public override string Name => "fs_grep";
-    public override string Description => "Sucht nach Textinhalt in Dateien innerhalb eines Pfades";
+    public override string Description => "Sucht nach Textinhalt in Dateien";
 
     protected override async Task<string> ExecuteInternalAsync(GrepParams p, ToolContext context)
     {
-        var results = new List<string>();
-        foreach (var file in Directory.GetFiles(p.Path, "*", SearchOption.AllDirectories))
+        var results = new List<object>();
+        foreach (var file in Directory.GetFiles(p.Path, p.Pattern, SearchOption.AllDirectories))
         {
-            var content = await File.ReadAllTextAsync(file);
-            if (content.Contains(p.Query))
+            var info = new FileInfo(file);
+            if (info.Length > p.MaxFileSize) continue;
+
+            var lines = await File.ReadAllLinesAsync(file);
+            for (int i = 0; i < lines.Length; i++)
             {
-                results.Add(file);
+                if (lines[i].Contains(p.Query))
+                {
+                    int start = Math.Max(0, i - p.BeforeLines);
+                    int end = Math.Min(lines.Length - 1, i + p.AfterLines);
+                    
+                    results.Add(new {
+                        File = file,
+                        Line = i + 1,
+                        Match = lines[i],
+                        Context = lines.Skip(start).Take(end - start + 1).ToArray()
+                    });
+                }
             }
         }
-        return results.Count > 0 ? string.Join("\n", results) : "Keine Treffer.";
+        return JsonSerializer.Serialize(new { Matches = results });
     }
 }
