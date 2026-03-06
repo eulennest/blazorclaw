@@ -24,6 +24,7 @@
     button { padding: 0 20px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; }
 </style>
 
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
     document.getElementById('send-btn').addEventListener('click', async () => {
         const input = document.getElementById('user-input');
@@ -48,7 +49,7 @@
         const data = await response.json();
         const aiDiv = document.createElement('div');
         aiDiv.className = 'message assistant';
-        aiDiv.textContent = data.choices[0].message.content;
+        aiDiv.innerHTML = marked.parse(data.choices[0].message.content);
         document.getElementById('messages').appendChild(aiDiv);
     });
 </script>
