@@ -26,15 +26,26 @@ namespace BlazorClaw.Server.Services
         IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sess);
     }
 
-    public class SessionManager(IProviderManager providerManager, IServiceScopeFactory scopeFactory) : ISessionManager
+    public class SessionManager : ISessionManager
     {
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
+        private readonly IProviderManager _providerManager;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<SessionManager> _logger;
+
+        public SessionManager(IProviderManager providerManager, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger)
+        {
+            _providerManager = providerManager;
+            _scopeFactory = scopeFactory;
+            _logger = logger;
+        }
 
         public Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string model)
         {
             if (!_sessions.TryGetValue(sessionId, out var state))
             {
-                var prov = providerManager.GetProviderConfig(model) ?? throw new Exception($"No provider found for model {model}");
+                _logger.LogInformation("Creating session {SessionId}", sessionId);
+                var prov = _providerManager.GetProviderConfig(model) ?? throw new Exception($"No provider found for model {model}");
 
                 // Hier später Datenbank-Lookup implementieren
                 state = new ChatSessionState
@@ -58,7 +69,7 @@ namespace BlazorClaw.Server.Services
                 var store = await JsonSerializer.DeserializeAsync<JsonSessionStorage>(jsonStream).ConfigureAwait(false);
                 if (store != null)
                 {
-                    var prov = providerManager.GetProviderConfig(store.Session.CurrentModel) ?? throw new Exception($"No provider found for model {store.Session.CurrentModel}");
+                    var prov = _providerManager.GetProviderConfig(store.Session.CurrentModel) ?? throw new Exception($"No provider found for model {store.Session.CurrentModel}");
                     state = new ChatSessionState
                     {
                         Session = store.Session,
@@ -108,6 +119,7 @@ namespace BlazorClaw.Server.Services
         {
             if (_sessions.TryGetValue(sessionId, out var state))
             {
+                _logger.LogDebug("Appending message to session {SessionId}, role: {Role}", sessionId, message.Role);
                 state.MessageHistory.Add(message);
             }
             return Task.CompletedTask;
@@ -116,7 +128,8 @@ namespace BlazorClaw.Server.Services
 
         public async IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sessionState)
         {
-            using var scope = scopeFactory.CreateScope();
+            _logger.LogInformation("Dispatching LLM request for session {SessionId}", sessionState.Session.Id);
+            using var scope = _scopeFactory.CreateScope();
             using var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
             httpClient.BaseAddress = new Uri(sessionState.Provider.Uri.TrimEnd('/') + "/");
             if (!string.IsNullOrWhiteSpace(sessionState.Provider.Uri))
@@ -159,7 +172,7 @@ namespace BlazorClaw.Server.Services
             {
                 iterations++;
                 count = 0;
-                await foreach (var msg in InternalDispatchToLLMAsync(sessionState, context, httpClient, toolRegistry, policyProvider))
+                await foreach (var msg in InternalDispatchToLLMAsync(sessionState, context, httpClient, toolRegistry, policyProvider, _logger))
                 {
                     count++;
                     yield return msg;
@@ -168,7 +181,7 @@ namespace BlazorClaw.Server.Services
             while (count > 1 && iterations < 10);
         }
 
-        private static async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, ToolContext context, HttpClient httpClient, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider)
+        private static async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, ToolContext context, HttpClient httpClient, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
         {
             var request = new ChatCompletionRequest
             {
@@ -195,6 +208,7 @@ namespace BlazorClaw.Server.Services
                     {
                         foreach (var call in message.ToolCalls)
                         {
+                            logger.LogInformation("Tool called: {Name} args: {Args}", call.Function.Name, call.Function.Arguments);
                             ChatMessage msg;
                             try
                             {
