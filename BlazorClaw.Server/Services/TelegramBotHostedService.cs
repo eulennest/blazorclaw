@@ -61,7 +61,7 @@ namespace BlazorClaw.Server.Services
             // Suche User via Provider "Telegram"
             var user = await userManager.FindByLoginAsync("Telegram", telegramId);
 
-            var sm = scope.ServiceProvider.GetRequiredService<SessionManager>();
+            var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
 
             var uid = user != null ? Guid.Parse(user.Id) : Guid.NewGuid();
 
