@@ -15,8 +15,9 @@ builder.Services.AddRazorComponents()
 builder.Services.AddControllers();
 builder.Services.AddHttpClient("OpenRouter", client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["OpenRouterBaseUri"] ?? "https://openrouter.ai/api/v1/");
-    client.DefaultRequestHeaders.Add("Authorization", $"Bearer {builder.Configuration["OpenRouterApiKey"]}");
+    var llmConfig = builder.Configuration.GetSection("Llm");
+    client.BaseAddress = new Uri(llmConfig["BaseUrl"] ?? "https://openrouter.ai/api/v1/");
+    client.DefaultRequestHeaders.Add("Authorization", $"Bearer {llmConfig["ApiKey"]}");
 });
 
 // Add SQLite database
