@@ -47,11 +47,17 @@ public static class SchemaGenerator
             properties[prop.Name] = propInfo;
         }
 
-        return new
+        var result = new Dictionary<string, object>
         {
-            type = "object",
-            properties,
-            required
+            {"type", "object"},
+            {"properties", properties}
         };
+
+        if (required.Count > 0)
+        {
+            result["required"] = required;
+        }
+
+        return result;
     }
 }
