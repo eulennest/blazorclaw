@@ -28,7 +28,7 @@ public class OpenAiController : ControllerBase
     }
 
     [HttpPost("chat/completions")]
-    public async Task<ActionResult<ChatCompletionResponse>> ChatCompletions([FromBody] ChatCompletionRequest request)
+    public async Task<IActionResult> ChatCompletions([FromBody] ChatCompletionRequest request)
     {
         // 1. System Prompt nur beim ersten Aufruf
         var systemPrompt = _configuration["Llm:SystemPrompt"] ?? "Du bist ein hilfreicher KI-Assistent.";
@@ -56,6 +56,7 @@ public class OpenAiController : ControllerBase
                 request.Tools.Add(new ToolDefinition { Name = tool.Name, Description = tool.Description, Parameters = tool.GetSchema() });
             }
         }
+
 
         // 3. OpenAI Request
         var response = await _httpClient.PostAsJsonAsync("chat/completions", request);
