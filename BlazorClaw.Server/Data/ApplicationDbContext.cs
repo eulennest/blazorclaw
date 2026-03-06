@@ -1,3 +1,4 @@
+using BlazorClaw.Server.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
         : base(options)
     {
     }
+
+    public DbSet<ChatSession> ChatSessions { get; set; }
+    public DbSet<ChatSessionParticipant> ChatSessionParticipants { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
