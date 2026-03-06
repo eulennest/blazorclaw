@@ -107,7 +107,7 @@ public class ApiError
     public string Message { get; set; } = string.Empty;
 
     [JsonPropertyName("code")]
-    public string? Code { get; set; }
+    public object? Code { get; set; }
     
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
