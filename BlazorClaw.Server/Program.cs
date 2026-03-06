@@ -2,12 +2,15 @@ using BlazorClaw.Server.Components;
 using BlazorClaw.Server.Components.Account;
 using BlazorClaw.Server.Data;
 using BlazorClaw.Server.Security;
-using BlazorClaw.Server.Security.Vault;
+using BlazorClaw.Server.Memory;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Memory;
 using BlazorClaw.Core.Plugins;
 using BlazorClaw.Core.Security.Vault;
+using BlazorClaw.Server.Security.Vault;
+using BlazorClaw.Server.Web;
+using BlazorClaw.Core.Web;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -29,15 +32,20 @@ builder.Services.AddHttpClient("OpenRouter", client =>
 });
 
 // Add HttpClient for WebSearchProvider
-builder.Services.AddHttpClient<BlazorClaw.Core.Web.IWebSearchProvider, BlazorClaw.Server.Web.BraveSearchProvider>();
-builder.Services.Configure<BlazorClaw.Server.Web.WebSearchOptions>(builder.Configuration.GetSection(BlazorClaw.Server.Web.WebSearchOptions.Section));
+builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
+builder.Services.Configure<WebSearchOptions>(builder.Configuration.GetSection(WebSearchOptions.Section));
 
-// Tool registry & Security
+// Tool registry
 builder.Services.AddSingleton<IToolRegistry>(sp => new ToolRegistry(PluginUtils.BuildPlugins<ITool>(sp)));
+
+// Security
 builder.Services.AddScoped<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));
 builder.Services.AddScoped<IMessagePolicyProvider>(sp => new MessagePolicyAggregator(PluginUtils.BuildPlugins<IMessagePolicyProvider>(sp, typeof(MessagePolicyAggregator))));
 builder.Services.AddScoped<IVaultProvider, JsonVaultProvider>();
-builder.Services.AddSingleton<IMemorySearchProvider>(new BlazorClaw.Server.Memory.FileSystemMemorySearchProvider("./memory"));
+
+// Memory Search
+builder.Services.Configure<FileSystemMemoryOptions>(builder.Configuration.GetSection(FileSystemMemoryOptions.Section));
+builder.Services.AddSingleton<IMemorySearchProvider, FileSystemMemorySearchProvider>();
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

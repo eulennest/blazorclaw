@@ -1,20 +1,27 @@
 using BlazorClaw.Core.Memory;
-using BlazorClaw.Server.Tools.FS;
 
 namespace BlazorClaw.Server.Memory;
+
+public class FileSystemMemoryOptions
+{
+    public const string Section = "FileSystemMemory";
+    public string Path { get; set; } = "./memory";
+}
 
 public class FileSystemMemorySearchProvider : IMemorySearchProvider
 {
     private readonly string _path;
 
-    public FileSystemMemorySearchProvider(string path)
+    public FileSystemMemorySearchProvider(Microsoft.Extensions.Options.IOptions<FileSystemMemoryOptions> options)
     {
-        _path = path;
+        _path = options.Value.Path;
     }
 
     public async Task<string> SearchAsync(string[] queries, int maxResults)
     {
         var results = new List<string>();
+        if (!Directory.Exists(_path)) return "Memory Verzeichnis nicht gefunden.";
+        
         var files = Directory.GetFiles(_path, "*.md", SearchOption.AllDirectories);
 
         foreach (var file in files)
