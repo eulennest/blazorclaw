@@ -47,7 +47,7 @@ public class JsonVaultProvider(IOptions<JsonVaultOptions> options) : IVaultProvi
     }
 
 
-    public async Task<string> GetSecretAsync(string key)
+    public async Task<string?> GetSecretAsync(string key)
     {
         if (_secrets == null)
         {

@@ -2,25 +2,21 @@ namespace BlazorClaw.Core.Memory;
 
 public interface IMemorySearchProvider
 {
-    Task<string> SearchAsync(string[] queries, int maxResults);
+    IAsyncEnumerable<string> SearchAsync(string[] queries, int maxResults);
 }
 
-public class MemorySearchAggregator : IMemorySearchProvider
+public class MemorySearchAggregator(IEnumerable<IMemorySearchProvider> providers) : IMemorySearchProvider
 {
-    private readonly IEnumerable<IMemorySearchProvider> _providers;
+    private readonly List<IMemorySearchProvider> _providers = [.. providers];
 
-    public MemorySearchAggregator(IEnumerable<IMemorySearchProvider> providers)
+    public async IAsyncEnumerable<string> SearchAsync(string[] queries, int maxResults)
     {
-        _providers = providers;
-    }
-
-    public async Task<string> SearchAsync(string[] queries, int maxResults)
-    {
-        var results = new List<string>();
         foreach (var provider in _providers)
         {
-            results.Add(await provider.SearchAsync(queries, maxResults));
+            await foreach (var result in provider.SearchAsync(queries, maxResults))
+            {
+                yield return result;
+            }
         }
-        return string.Join("\n\n---\n\n", results);
     }
 }

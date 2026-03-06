@@ -26,10 +26,10 @@ public class VaultGetTool : BaseTool<VaultGetParams>
     public override string Name => "vault_get";
     public override string Description => "Holt ein Geheimnis aus dem Vault";
 
-    protected override Task<string> ExecuteInternalAsync(VaultGetParams p, ToolContext context)
+    protected override async Task<string> ExecuteInternalAsync(VaultGetParams p, ToolContext context)
     {
         var vp = context.ServiceProvider.GetRequiredService<IVaultProvider>();
-        return vp.GetSecretAsync(p.Key);
+        return await vp.GetSecretAsync(p.Key) ?? string.Empty;
     }
 }
 

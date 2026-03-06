@@ -6,35 +6,26 @@ using BlazorClaw.Core.Security.Vault;
 
 namespace BlazorClaw.Server.Memory
 {
-    public class VaultMemoryProvider : IMemorySearchProvider
+    public class VaultMemoryProvider(IVaultProvider vaultProvider) : IMemorySearchProvider
     {
-        private readonly IVaultProvider _vaultProvider;
-
-        public VaultMemoryProvider(IVaultProvider vaultProvider)
-        {
-            _vaultProvider = vaultProvider;
-        }
-
-        public async Task<string> SearchAsync(string[] queries, int maxResults)
+        public async IAsyncEnumerable<string> SearchAsync(string[] queries, int maxResults)
         {
             var results = new List<string>();
 
-            foreach (var query in queries)
+            await foreach (var key in vaultProvider.GetKeysAsync())
             {
-                await foreach (var key in _vaultProvider.GetKeysAsync())
+                foreach (var query in queries)
                 {
                     if (key.Contains(query, StringComparison.OrdinalIgnoreCase))
                     {
-                        results.Add($"(Vault-Eintrag gefunden) Schlüssel: '{key}'. " +
+                        yield return $"(Vault-Eintrag gefunden) Schlüssel: '{key}'. " +
                                      $"Du kannst diesen Eintrag mit dem 'vault_get' Tool abrufen, " +
-                                     $"indem du '{key}' als 'Key'-Parameter verwendest.");
-                        
-                        if (results.Count >= maxResults) break;
+                                     $"indem du '{key}' als 'Key'-Parameter verwendest.";
+                        break;
                     }
                 }
+                if (results.Count >= maxResults) break;
             }
-
-            return string.Join("\n", results);
         }
     }
 }

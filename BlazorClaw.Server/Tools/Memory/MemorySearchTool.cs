@@ -23,6 +23,8 @@ public class MemorySearchTool : BaseTool<MemorySearchParams>
     protected override async Task<string> ExecuteInternalAsync(MemorySearchParams p, ToolContext context)
     {
         var provider = context.ServiceProvider.GetRequiredService<IMemorySearchProvider>();
-        return await provider.SearchAsync(p.Queries, p.MaxResults);
+        var ret = await provider.SearchAsync(p.Queries, p.MaxResults).Take(p.MaxResults).ToListAsync();
+        return string.Join("\n\n---\n\n", ret);
+
     }
 }

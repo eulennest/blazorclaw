@@ -45,23 +45,22 @@ foreach (var plugin in plugins)
     plugin.ConfigureServices(builder.Services);
 }
 
+builder.Services.TryAddSingleton<IVaultProvider, JsonVaultProvider>();
+builder.Services.TryAddSingleton<ISessionManager, SessionManager>();
+
 // Tool registry
 builder.Services.AddSingleton<IToolRegistry>(sp => new ToolRegistry(PluginUtils.BuildPlugins<ITool>(sp)));
 
 // Security
 builder.Services.TryAddSingleton<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));
 builder.Services.TryAddSingleton<IMessagePolicyProvider>(sp => new MessagePolicyAggregator(PluginUtils.BuildPlugins<IMessagePolicyProvider>(sp, typeof(MessagePolicyAggregator))));
-builder.Services.TryAddSingleton<IVaultProvider, JsonVaultProvider>();
-builder.Services.TryAddSingleton<ISessionManager, SessionManager>();
 
 // Memory Search
 builder.Services.Configure<FileSystemMemoryOptions>(builder.Configuration.GetSection(FileSystemMemoryOptions.Section));
-builder.Services.TryAddSingleton<IMemorySearchProvider, FileSystemMemorySearchProvider>();
+builder.Services.TryAddSingleton<IMemorySearchProvider>(sp => new MemorySearchAggregator(PluginUtils.BuildPlugins<IMemorySearchProvider>(sp, typeof(MemorySearchAggregator))));
 
 // Providers
 builder.Services.TryAddSingleton<IProviderManager>(sp => new ProviderAggregator(PluginUtils.BuildPlugins<IProviderManager>(sp, typeof(ProviderAggregator))));
-
-builder.Services.TryAddSingleton<ISessionManager, SessionManager>();
 
 
 // Add SQLite database
