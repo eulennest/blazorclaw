@@ -9,7 +9,7 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
     private readonly string _memoryPath = "./memory";
 
     public override string Name => "memory_write";
-    public override string Description => "Schreibt Inhalt in eine Memory-Datei (relative zum /memory Ordner).";
+    public override string Description => "Schreibt Markdown-Inhalt in eine Memory-Datei (relative zum /memory Ordner).";
 
     public enum WriteMode { Create, Append, Override }
 
@@ -18,7 +18,7 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
         [Required, Description("Dateiname (ohne Pfad, nur Name + .md)")]
         public string FileName { get; set; } = string.Empty;
         
-        [Required, Description("Inhalt der geschrieben werden soll")]
+        [Required, Description("Markdown-Inhalt der geschrieben werden soll")]
         public string Content { get; set; } = string.Empty;
 
         [Description("Modus: Create (Standard), Append oder Override")]

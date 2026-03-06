@@ -9,7 +9,7 @@ public class MemoryEditTool : BaseTool<MemoryEditTool.Params>
     private readonly string _memoryPath = "./memory";
 
     public override string Name => "memory_edit";
-    public override string Description => "Editiert eine Memory-Datei (relative zum /memory Ordner).";
+    public override string Description => "Editiert eine Memory-Datei (Markdown-Format, relative zum /memory Ordner).";
 
     public class Params
     {

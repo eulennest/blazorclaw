@@ -9,7 +9,7 @@ public class MemoryReadTool : BaseTool<MemoryReadTool.Params>
     private readonly string _memoryPath = "./memory";
 
     public override string Name => "memory_read";
-    public override string Description => "Liest den Inhalt einer Memory-Datei (relative zum /memory Ordner).";
+    public override string Description => "Liest den Inhalt einer Memory-Datei als Markdown-Text (relative zum /memory Ordner).";
 
     public class Params
     {
