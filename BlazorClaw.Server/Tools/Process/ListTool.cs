@@ -21,7 +21,7 @@ public class ListTool : BaseTool<ListParams>
         var processes = System.Diagnostics.Process.GetProcesses();
         if (!string.IsNullOrEmpty(p.Search))
         {
-            processes = processes.Where(pr => pr.ProcessName.Contains(p.Search, StringComparison.OrdinalIgnoreCase)).ToArray();
+            processes = [.. processes.Where(pr => pr.ProcessName.Contains(p.Search, StringComparison.OrdinalIgnoreCase))];
         }
         
         return Task.FromResult(processes.Length > 0 
