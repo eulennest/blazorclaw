@@ -22,12 +22,9 @@
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <form action="Account/Logout" method="post">
-                        <AntiforgeryToken />
-                        <button type="submit" class="nav-link btn btn-link">
-                            <i class="bi bi-arrow-bar-right"></i> Logout
-                        </button>
-                    </form>
+                    <NavLink class="nav-link" href="Account/Logout">
+                        <i class="bi bi-arrow-bar-right"></i> Logout
+                    </NavLink>
                 </div>
             </Authorized>
             <NotAuthorized>

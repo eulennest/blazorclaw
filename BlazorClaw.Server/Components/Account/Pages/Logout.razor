@@ -4,6 +4,7 @@
 @using Microsoft.AspNetCore.Identity
 
 @inject IHttpContextAccessor httpContextAccessor
+@inject NavigationManager navigationManager
 
 <h3>Logout...</h3>
 
@@ -11,7 +12,10 @@
     protected override void OnInitialized()
     {
         httpContextAccessor.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
-        httpContextAccessor.HttpContext.Response.Redirect("/");
         base.OnInitialized();
+    }
+    protected override void OnAfterRender(bool firstRender)
+    {
+        navigationManager.NavigateTo("/");
     }
 }
