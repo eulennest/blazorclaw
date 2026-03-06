@@ -15,20 +15,24 @@ public static class SchemaGenerator
         {
             var propInfo = new Dictionary<string, object>();
             
+            // Check for Nullable
+            Type propType = prop.PropertyType;
+            Type underlyingType = Nullable.GetUnderlyingType(propType) ?? propType;
+            
             // Typ-Mapping
-            string typeName = prop.PropertyType.Name switch
+            string typeName = underlyingType.Name switch
             {
                 "String" => "string",
                 "Int32" or "Int64" => "integer",
                 "Double" or "Decimal" or "Single" => "number",
                 "Boolean" => "boolean",
-                _ => prop.PropertyType.IsEnum ? "string" : "string"
+                _ => underlyingType.IsEnum ? "string" : "string"
             };
             propInfo["type"] = typeName;
 
-            if (prop.PropertyType.IsEnum)
+            if (underlyingType.IsEnum)
             {
-                propInfo["enum"] = Enum.GetNames(prop.PropertyType);
+                propInfo["enum"] = Enum.GetNames(underlyingType);
             }
 
             // Beschreibung
