@@ -57,6 +57,7 @@ public class OpenAiController : ControllerBase
             }
         }
 
+        return Ok(request);
 
         // 3. OpenAI Request
         var response = await _httpClient.PostAsJsonAsync("chat/completions", request);
