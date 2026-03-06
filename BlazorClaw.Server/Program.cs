@@ -52,6 +52,7 @@ builder.Services.AddSingleton<IToolRegistry>(sp => new ToolRegistry(PluginUtils.
 builder.Services.TryAddSingleton<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));
 builder.Services.TryAddSingleton<IMessagePolicyProvider>(sp => new MessagePolicyAggregator(PluginUtils.BuildPlugins<IMessagePolicyProvider>(sp, typeof(MessagePolicyAggregator))));
 builder.Services.TryAddSingleton<IVaultProvider, JsonVaultProvider>();
+builder.Services.TryAddSingleton<ISessionManager, SessionManager>();
 
 // Memory Search
 builder.Services.Configure<FileSystemMemoryOptions>(builder.Configuration.GetSection(FileSystemMemoryOptions.Section));
