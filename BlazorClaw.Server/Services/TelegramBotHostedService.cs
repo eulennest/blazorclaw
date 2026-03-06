@@ -1,10 +1,8 @@
+using BlazorClaw.Server.Data;
 using Microsoft.AspNetCore.Identity;
 using Telegram.Bot;
-using Telegram.Bot.Types;
 using Telegram.Bot.Polling;
-using BlazorClaw.Server.Data;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Telegram.Bot.Types;
 
 namespace BlazorClaw.Server.Services
 {
@@ -15,11 +13,13 @@ namespace BlazorClaw.Server.Services
         private readonly List<TelegramBotInstance> _bots = new();
         private readonly IConfiguration _configuration;
         private readonly IServiceProvider _serviceProvider;
+        private readonly ILogger<TelegramBotHostedService> logger;
 
-        public TelegramBotHostedService(IConfiguration configuration, IServiceProvider serviceProvider)
+        public TelegramBotHostedService(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger)
         {
             _configuration = configuration;
             _serviceProvider = serviceProvider;
+            this.logger = logger;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -31,17 +31,18 @@ namespace BlazorClaw.Server.Services
                 var token = botConfig["Token"];
                 if (!string.IsNullOrEmpty(token))
                 {
+                    logger.LogInformation("Telegram Bot '{id}' registering ...", id);
+
                     var client = new TelegramBotClient(token);
                     _bots.Add(new TelegramBotInstance(id, token, client));
-                    
+
                     var receiverOptions = new ReceiverOptions
                     {
-                        AllowedUpdates = Array.Empty<Telegram.Bot.Types.Enums.UpdateType>() // receive all update types
                     };
 
                     client.StartReceiving(
-                        updateHandler: async (bot, update, token) => await HandleUpdateAsync(bot, update, token),
-                        pollingErrorHandler: async (bot, exception, token) => await HandlePollingErrorAsync(bot, exception, token),
+                        updateHandler: HandleUpdateAsync,
+                        errorHandler: HandlePollingErrorAsync,
                         receiverOptions: receiverOptions,
                         cancellationToken: cancellationToken
                     );
@@ -52,23 +53,29 @@ namespace BlazorClaw.Server.Services
 
         private Task HandlePollingErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
         {
+            logger.LogError(exception, "Telegram Bot '{BotId}' error received: {Name} : {Message}", botClient.BotId, exception.GetType().Name, exception.Message);
             return Task.CompletedTask;
         }
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
             if (update.Message?.Text == null) return;
+            logger.LogInformation("Telegram Bot '{BotId}' update received: {Message}", botClient.BotId, update.Message);
 
             using var scope = _serviceProvider.CreateScope();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-            
+
             var telegramId = update.Message.From!.Id.ToString();
+            logger.LogInformation("Looking up user for Telegram ID: {TelegramId}", telegramId);
+
+            // Suche User via Provider "Telegram"
             var user = await userManager.FindByLoginAsync("Telegram", telegramId);
-            
-            string reply = user != null 
-                ? $"Hallo {user.FirstName}, ich habe dich erkannt!" 
+
+            string reply = user != null
+                ? $"Hallo {user.FirstName}, ich habe dich erkannt!"
                 : "Ich kenne dich leider noch nicht. Bitte registriere dich.";
 
+            logger.LogInformation("Sending reply to {ChatId}: {Reply}", update.Message.Chat.Id, reply);
             await botClient.SendMessage(update.Message.Chat.Id, reply, cancellationToken: cancellationToken);
         }
 
