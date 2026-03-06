@@ -20,6 +20,11 @@ builder.Services.AddHttpClient("OpenRouter", client =>
     client.DefaultRequestHeaders.Add("Authorization", $"Bearer {llmConfig["ApiKey"]}");
 });
 
+// Tool registry
+var toolRegistry = new BlazorClaw.Core.Tools.ToolRegistry();
+toolRegistry.RegisterFromAssembly(typeof(BlazorClaw.Server.Tools.FS.LsTool).Assembly); // Registriert Tools aus Server
+builder.Services.AddSingleton<BlazorClaw.Core.Tools.IToolRegistry>(toolRegistry);
+
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
