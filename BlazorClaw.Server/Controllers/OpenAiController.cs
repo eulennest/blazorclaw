@@ -66,21 +66,43 @@ public class OpenAiController : ControllerBase
                         UserId = User.Identity?.Name ?? "anonymous"
                     };
 
-                    // SECURITY: Before Tool Hook
-                    _securityInjector.BeforeTool(tool, call.Function.Arguments, context);
+                    try
+                    {
+                        // SECURITY: Before Tool Hook
+                        _securityInjector.BeforeTool(tool, call.Function.Arguments, context);
 
-                    var result = await tool.ExecuteAsync(call.Function.Arguments, context);
+                        var result = await tool.ExecuteAsync(call.Function.Arguments, context);
 
-                    // SECURITY: After Tool Hook
-                    _securityInjector.AfterTool(tool, call.Function.Arguments, result, context);
-                    
-                    // Füge Tool-Result zu History hinzu (vereinfacht)
-                    request.Messages.Add(message); // Assistant Call
-                    request.Messages.Add(new ChatMessage { 
-                        Role = "tool", 
-                        Content = result,
-                        ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
-                    });
+                        // SECURITY: After Tool Hook
+                        _securityInjector.AfterTool(tool, call.Function.Arguments, result, context);
+
+                        request.Messages.Add(message); // Assistant Call
+                        request.Messages.Add(new ChatMessage
+                        {
+                            Role = "tool",
+                            Content = result,
+                            ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        var problemDetails = new Dictionary<string, object>
+                        {
+                            { "type", "https://tools.blazorclaw.dev/errors/execution-failed" },
+                            { "title", "Tool execution failed" },
+                            { "status", 500 },
+                            { "detail", ex.Message },
+                            { "tool", call.Function.Name }
+                        };
+
+                        request.Messages.Add(message);
+                        request.Messages.Add(new ChatMessage
+                        {
+                            Role = "tool",
+                            Content = System.Text.Json.JsonSerializer.Serialize(problemDetails),
+                            ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
+                        });
+                    }
 
                     // Rufe LLM erneut auf, damit es Tool-Result interpretiert
                     return await ChatCompletions(request);
