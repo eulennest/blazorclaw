@@ -35,6 +35,13 @@ builder.Services.AddHttpClient("OpenRouter", client =>
 builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
 builder.Services.Configure<WebSearchOptions>(builder.Configuration.GetSection(WebSearchOptions.Section));
 
+// Register Plugin Services
+var plugins = PluginUtils.BuildPlugins<IPluginProvider>(builder.Services.BuildServiceProvider());
+foreach (var plugin in plugins)
+{
+    plugin.ConfigureServices(builder.Services);
+}
+
 // Tool registry
 builder.Services.AddSingleton<IToolRegistry>(sp => new ToolRegistry(PluginUtils.BuildPlugins<ITool>(sp)));
 
