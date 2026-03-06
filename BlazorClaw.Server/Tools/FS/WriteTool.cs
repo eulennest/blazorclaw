@@ -20,7 +20,7 @@ public class WriteTool : BaseTool<WriteTool.Params>
         public string Content { get; set; } = string.Empty;
 
         [Description("Modus: Create (Standard), Append oder Override")]
-        public WriteMode Mode { get; set; } = WriteMode.Create;
+        public WriteMode? Mode { get; set; } = WriteMode.Create;
     }
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
@@ -29,7 +29,9 @@ public class WriteTool : BaseTool<WriteTool.Params>
         if (!string.IsNullOrEmpty(directory))
             Directory.CreateDirectory(directory);
 
-        if (parameters.Mode == WriteMode.Create)
+        var mode = parameters.Mode ?? WriteMode.Create;
+
+        if (mode == WriteMode.Create)
         {
             if (File.Exists(parameters.Path))
                 throw new InvalidOperationException($"Datei existiert bereits: {parameters.Path}");
@@ -37,7 +39,7 @@ public class WriteTool : BaseTool<WriteTool.Params>
             await File.WriteAllTextAsync(parameters.Path, parameters.Content);
             return $"Datei neu erstellt unter: {parameters.Path}";
         }
-        else if (parameters.Mode == WriteMode.Append)
+        else if (mode == WriteMode.Append)
         {
             await File.AppendAllTextAsync(parameters.Path, parameters.Content);
             return $"Inhalt erfolgreich an {parameters.Path} angehängt.";

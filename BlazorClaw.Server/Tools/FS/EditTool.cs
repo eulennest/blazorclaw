@@ -21,7 +21,7 @@ public class EditTool : BaseTool<EditTool.Params>
         public string NewText { get; set; } = string.Empty;
 
         [Description("Wenn true, werden alle Vorkommnisse ersetzt, sonst nur das erste (Standard: false)")]
-        public bool Multiple { get; set; } = false;
+        public bool? Multiple { get; set; } = false;
     }
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
@@ -34,7 +34,7 @@ public class EditTool : BaseTool<EditTool.Params>
             return "Fehler: Alter Text nicht gefunden.";
 
         string newContent;
-        if (parameters.Multiple)
+        if (parameters.Multiple == true)
         {
             newContent = content.Replace(parameters.OldText, parameters.NewText);
         }
