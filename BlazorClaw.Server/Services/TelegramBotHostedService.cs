@@ -71,7 +71,8 @@ namespace BlazorClaw.Server.Services
 
             await foreach (var msg in sm.DispatchToLLMAsync(sess))
             {
-                if (msg.Content is string content && !string.IsNullOrWhiteSpace(content))
+                var content = Convert.ToString(msg.Content);
+                if (!string.IsNullOrWhiteSpace(content))
                 {
                     logger.LogInformation("Sending reply to {ChatId}: {Reply}", update.Message.Chat.Id, content);
                     await botClient.SendMessage(update.Message.Chat.Id, content, cancellationToken: cancellationToken);
