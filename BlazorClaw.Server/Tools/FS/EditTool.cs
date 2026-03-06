@@ -19,6 +19,9 @@ public class EditTool : BaseTool<EditTool.Params>
         
         [Required, Description("Neuer Text")]
         public string NewText { get; set; } = string.Empty;
+
+        [Description("Wenn true, werden alle Vorkommnisse ersetzt, sonst nur das erste (Standard: false)")]
+        public bool Multiple { get; set; } = false;
     }
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
@@ -30,7 +33,17 @@ public class EditTool : BaseTool<EditTool.Params>
         if (!content.Contains(parameters.OldText))
             return "Fehler: Alter Text nicht gefunden.";
 
-        var newContent = content.Replace(parameters.OldText, parameters.NewText);
+        string newContent;
+        if (parameters.Multiple)
+        {
+            newContent = content.Replace(parameters.OldText, parameters.NewText);
+        }
+        else
+        {
+            var index = content.IndexOf(parameters.OldText);
+            newContent = content.Remove(index, parameters.OldText.Length).Insert(index, parameters.NewText);
+        }
+        
         await File.WriteAllTextAsync(parameters.Path, newContent);
         
         return "Datei erfolgreich editiert.";
