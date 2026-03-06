@@ -22,9 +22,14 @@ public static class SchemaGenerator
                 "Int32" or "Int64" => "integer",
                 "Double" or "Decimal" or "Single" => "number",
                 "Boolean" => "boolean",
-                _ => "string"
+                _ => prop.PropertyType.IsEnum ? "string" : "string"
             };
             propInfo["type"] = typeName;
+
+            if (prop.PropertyType.IsEnum)
+            {
+                propInfo["enum"] = Enum.GetNames(prop.PropertyType);
+            }
 
             // Beschreibung
             var descAttr = prop.GetCustomAttribute<DescriptionAttribute>();
