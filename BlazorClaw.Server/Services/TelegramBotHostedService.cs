@@ -44,12 +44,16 @@ namespace BlazorClaw.Server.Services
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
+            var logger = _serviceProvider.GetRequiredService<ILogger<TelegramBotHostedService>>();
+            logger.LogInformation("Telegram Update received: {Type}", update.Type);
+
             if (update.Message?.Text == null) return;
 
             using var scope = _serviceProvider.CreateScope();
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             
             var telegramId = update.Message.From!.Id.ToString();
+            logger.LogInformation("Looking up user for Telegram ID: {TelegramId}", telegramId);
             
             // Suche User via Provider "Telegram"
             var user = await userManager.FindByLoginAsync("Telegram", telegramId);
@@ -58,6 +62,7 @@ namespace BlazorClaw.Server.Services
                 ? $"Hallo {user.FirstName}, ich habe dich erkannt!" 
                 : "Ich kenne dich leider noch nicht. Bitte registriere dich.";
 
+            logger.LogInformation("Sending reply to {ChatId}: {Reply}", update.Message.Chat.Id, reply);
             await botClient.SendTextMessageAsync(update.Message.Chat.Id, reply, cancellationToken: cancellationToken);
         }
 
