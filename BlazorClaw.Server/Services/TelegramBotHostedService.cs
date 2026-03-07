@@ -51,49 +51,56 @@ namespace BlazorClaw.Server.Services
 
         private async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update, CancellationToken cancellationToken)
         {
-            if (update.Message?.Text == null) return;
-            logger.LogInformation("Telegram Bot '{BotId}' update received: {Message}", botClient.BotId, update.Message);
-
-            using var scope = serviceProvider.CreateScope();
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
-            var telegramId = update.Message.From!.Id.ToString();
-            logger.LogInformation("Looking up user for Telegram ID: {TelegramId}", telegramId);
-
-            // Suche User via Provider "Telegram"
-            var user = await userManager.FindByLoginAsync("Telegram", telegramId);
-
-            var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
-            await botClient.SendChatAction(update.Message.Chat.Id, Telegram.Bot.Types.Enums.ChatAction.Typing);
-
-            Guid? uid = user != null ? Guid.Parse(user.Id) : null;
-            if (uid == null)
+            try
             {
-                if (!sessIds.TryGetValue(telegramId, out var existingUid))
+                if (update.Message?.Text == null) return;
+                logger.LogInformation("Telegram Bot '{BotId}' update received: {Message}", botClient.BotId, update.Message);
+
+                using var scope = serviceProvider.CreateScope();
+                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+
+                var telegramId = update.Message.From!.Id.ToString();
+                logger.LogInformation("Looking up user for Telegram ID: {TelegramId}", telegramId);
+
+                // Suche User via Provider "Telegram"
+                var user = await userManager.FindByLoginAsync("Telegram", telegramId);
+
+                var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
+                await botClient.SendChatAction(update.Message.Chat.Id, Telegram.Bot.Types.Enums.ChatAction.Typing);
+
+                Guid? uid = user != null ? Guid.Parse(user.Id) : null;
+                if (uid == null)
                 {
-                    uid = Guid.NewGuid();
-                    sessIds[telegramId] = uid.Value;
-                    logger.LogInformation("No user found for Telegram ID {TelegramId}. Assigned temporary session ID: {SessionId}", telegramId, uid);
+                    if (!sessIds.TryGetValue(telegramId, out var existingUid))
+                    {
+                        uid = Guid.NewGuid();
+                        sessIds[telegramId] = uid.Value;
+                        logger.LogInformation("No user found for Telegram ID {TelegramId}. Assigned temporary session ID: {SessionId}", telegramId, uid);
+                    }
+                    else
+                    {
+                        uid = existingUid;
+                        logger.LogInformation("No user found for Telegram ID {TelegramId}. Using existing temporary session ID: {SessionId}", telegramId, uid);
+                    }
                 }
-                else
+                var sess = await sm.GetOrCreateSessionAsync(uid.Value, "openrouter/google/gemini-3.1-flash-lite-preview");
+
+                sess.MessageHistory.Add(new() { Role = "user", Content = update.Message.Text });
+
+                await foreach (var msg in sm.DispatchToLLMAsync(sess))
                 {
-                    uid = existingUid;
-                    logger.LogInformation("No user found for Telegram ID {TelegramId}. Using existing temporary session ID: {SessionId}", telegramId, uid);
+                    if (!"assistent".Equals(msg.Role)) continue;
+                    var content = Convert.ToString(msg.Content);
+                    if (!string.IsNullOrWhiteSpace(content))
+                    {
+                        logger.LogInformation("Sending reply to {ChatId}: {Reply}", update.Message.Chat.Id, content);
+                        await botClient.SendMessage(update.Message.Chat.Id, content, cancellationToken: cancellationToken);
+                    }
                 }
             }
-            var sess = await sm.GetOrCreateSessionAsync(uid.Value, "openrouter/google/gemini-3.1-flash-lite-preview");
-
-            sess.MessageHistory.Add(new() { Role = "user", Content = update.Message.Text });
-
-            await foreach (var msg in sm.DispatchToLLMAsync(sess))
+            catch (Exception ex)
             {
-                if (!"assistent".Equals(msg.Role)) continue;
-                var content = Convert.ToString(msg.Content);
-                if (!string.IsNullOrWhiteSpace(content))
-                {
-                    logger.LogInformation("Sending reply to {ChatId}: {Reply}", update.Message.Chat.Id, content);
-                    await botClient.SendMessage(update.Message.Chat.Id, content, cancellationToken: cancellationToken);
-                }
+                logger.LogError(ex, ex.Message);
             }
         }
 

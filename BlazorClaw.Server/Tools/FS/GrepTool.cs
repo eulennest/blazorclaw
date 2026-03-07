@@ -1,8 +1,7 @@
+using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.Text.Json;
-using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Server.Tools.FS;
 
@@ -10,24 +9,24 @@ public class GrepParams
 {
     [Description("Pfad zum Suchen")]
     public string Path { get; set; } = ".";
-    
+
     [Description("Suchtext in Dateien")]
     [Required]
     public string Query { get; set; } = string.Empty;
 
-    [Description("Glob-Muster (z.B. *.cs)")]
+    [Description("Glob-Muster (z.B. *.cs)  (Default: *)")]
     public string? Pattern { get; set; } = "*";
 
-    [Description("Maximale Dateigröße in Bytes")]
-    public long? MaxFileSize { get; set; } = 1024 * 1024; // 1MB
+    [Description("Maximale Dateigröße in Bytes  (Default: 10240)")]
+    public long? MaxFileSize { get; set; } = 1024 * 10; // 10kB
 
-    [Description("Zeilen vor der Trefferzeile")]
+    [Description("Zeilen vor der Trefferzeile (Default: 5)")]
     public int? BeforeLines { get; set; } = 5;
 
-    [Description("Zeilen nach der Trefferzeile")]
+    [Description("Zeilen nach der Trefferzeile (Default: 5)")]
     public int? AfterLines { get; set; } = 5;
 
-    [Description("Rekursiv durch Unterverzeichnisse suchen")]
+    [Description("Rekursiv durch Unterverzeichnisse suchen  (Default: true)")]
     public bool? Recursive { get; set; } = true;
 }
 
@@ -41,7 +40,7 @@ public class GrepTool : BaseTool<GrepParams>
         var results = new List<object>();
         var searchOption = (p.Recursive ?? true) ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
         var pattern = p.Pattern ?? "*";
-        var maxFileSize = p.MaxFileSize ?? 1024 * 1024;
+        var maxFileSize = p.MaxFileSize ?? 1024 * 10;
         var before = p.BeforeLines ?? 5;
         var after = p.AfterLines ?? 5;
 
@@ -57,8 +56,9 @@ public class GrepTool : BaseTool<GrepParams>
                 {
                     int start = Math.Max(0, i - before);
                     int end = Math.Min(lines.Length - 1, i + after);
-                    
-                    results.Add(new {
+
+                    results.Add(new
+                    {
                         File = file,
                         Line = i + 1,
                         Match = lines[i],
