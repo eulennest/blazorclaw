@@ -74,17 +74,16 @@ namespace BlazorClaw.Server.Services
             return state;
         }
 
-        public async Task SaveToDiskAsync(Guid sessionId)
+        private readonly JsonSerializerOptions jsonOp = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+        public async Task SaveToDiskAsync(ChatSessionState sessionState)
         {
-            if (!_sessions.TryGetValue(sessionId, out var sessionState)) throw new Exception("Session not found");
-
             var store = new JsonSessionStorage
             {
                 Session = sessionState.Session,
                 MessageHistory = sessionState.MessageHistory
             };
-            using var jsonStream = File.Create($"session_{sessionId}.json");
-            await JsonSerializer.SerializeAsync(jsonStream, store).ConfigureAwait(false);
+            using var jsonStream = File.Create($"session_{sessionState.Session.Id}.json");
+            await JsonSerializer.SerializeAsync(jsonStream, store, jsonOp).ConfigureAwait(false);
         }
 
         public Task AppendSystemPromptAsync(Guid sessionId, BlazorClaw.Core.DTOs.ChatMessage message)
@@ -167,6 +166,7 @@ namespace BlazorClaw.Server.Services
                     count++;
                     yield return msg;
                 }
+                await SaveToDiskAsync(sessionState);
             }
             while (count > 1 && iterations < 10);
         }
