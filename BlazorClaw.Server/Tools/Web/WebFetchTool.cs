@@ -45,6 +45,9 @@ public class WebFetchTool(HttpClient client) : BaseTool<WebFetchParams>
             return await resp.Content.ReadAsStringAsync();
 
         var converter = new ReverseMarkdown.Converter();
+        converter.Config.UnknownTags = ReverseMarkdown.Config.UnknownTagsOption.Bypass;
+        converter.Config.RemoveComments = true;
+        converter.Config.SmartHrefHandling = true;
         return converter.Convert(await resp.Content.ReadAsStringAsync());
     }
 }
