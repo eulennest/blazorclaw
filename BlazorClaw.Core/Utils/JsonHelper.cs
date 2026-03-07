@@ -11,7 +11,10 @@ namespace BlazorClaw.Core.Utils
             {
                 var jo = new JsonSerializerOptions(JsonSerializerDefaults.Web)
                 {
-                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    PropertyNameCaseInsensitive = true,
+                    IgnoreReadOnlyFields = true,
+                    IgnoreReadOnlyProperties = true,
                     WriteIndented = true
                 };
                 jo.Converters.Add(new JsonStringEnumConverter());
