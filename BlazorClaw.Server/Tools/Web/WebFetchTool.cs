@@ -11,14 +11,13 @@ public class WebFetchParams
     public string Url { get; set; } = string.Empty;
 }
 
-public class WebFetchTool : BaseTool<WebFetchParams>
+public class WebFetchTool(HttpClient client) : BaseTool<WebFetchParams>
 {
     public override string Name => "web_fetch";
-    public override string Description => "Abrufen einer Webseite als Markdown";
+    public override string Description => "Abrufen einer Webseite (Quelltext)";
 
     protected override Task<string> ExecuteInternalAsync(WebFetchParams p, ToolContext context)
     {
-        // TODO: HttpContent Extraction
-        return Task.FromResult($"Inhalt von {p.Url} abgerufen.");
+        return client.GetStringAsync(p.Url);
     }
 }
