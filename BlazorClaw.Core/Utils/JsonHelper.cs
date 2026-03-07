@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace BlazorClaw.Core.Utils
 {
@@ -14,7 +9,7 @@ namespace BlazorClaw.Core.Utils
         {
             get
             {
-                var jo = new JsonSerializerOptions
+                var jo = new JsonSerializerOptions(JsonSerializerDefaults.Web)
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
                     WriteIndented = true
