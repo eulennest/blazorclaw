@@ -10,16 +10,18 @@ namespace BlazorClaw.Core.Utils
 {
     public class JsonHelper
     {
-        public static JsonSerializerOptions DefaultOptions => new JsonSerializerOptions
+        public static JsonSerializerOptions DefaultOptions
         {
-            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
-            WriteIndented = true,
-            Converters =
+            get
             {
-                new JsonStringEnumConverter(),
+                var jo = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
+                    WriteIndented = true
+                };
+                jo.Converters.Add(new JsonStringEnumConverter());
+                return jo;
             }
-        };
-
-
+        }
     }
 }
