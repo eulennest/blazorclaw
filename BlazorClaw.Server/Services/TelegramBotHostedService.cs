@@ -89,7 +89,7 @@ namespace BlazorClaw.Server.Services
 
                 await foreach (var msg in sm.DispatchToLLMAsync(sess))
                 {
-                    if (!"assistent".Equals(msg.Role)) continue;
+                    if (!msg.IsAssistant) continue;
                     var content = Convert.ToString(msg.Content);
                     if (!string.IsNullOrWhiteSpace(content))
                     {

@@ -30,6 +30,18 @@ public class ChatMessage
 
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
+
+    [JsonIgnore]
+    public bool IsAssistant => Role.Equals("assistant", StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public bool IsUser => Role.Equals("user", StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public bool IsTool => Role.Equals("tool", StringComparison.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public bool IsSystem => Role.Equals("system", StringComparison.OrdinalIgnoreCase);
 }
 
 public class ToolCall
@@ -42,7 +54,7 @@ public class ToolCall
 
     [JsonPropertyName("function")]
     public FunctionCall Function { get; set; } = new();
-    
+
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 }
@@ -54,7 +66,7 @@ public class FunctionCall
 
     [JsonPropertyName("arguments")]
     public string Arguments { get; set; } = string.Empty;
-    
+
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 }
@@ -67,7 +79,7 @@ public class ToolDefinition
 
     [JsonPropertyName("name")]
     public required string Name { get; set; }
-    
+
     [JsonPropertyName("description")]
     public required string Description { get; set; }
 
@@ -124,7 +136,7 @@ public class ApiError
 
     [JsonPropertyName("code")]
     public object? Code { get; set; }
-    
+
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 }
