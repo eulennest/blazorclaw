@@ -1,31 +1,19 @@
 using BlazorClaw.Core.DTOs;
+using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Providers;
 using BlazorClaw.Core.Security;
+using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
-using BlazorClaw.Server.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
 {
-    public class ChatSessionState
-    {
-        public ChatSession Session { get; set; } = default!;
-        public required IProviderConfiguration Provider { get; set; }
-        public List<ChatMessage> MessageHistory { get; set; } = [];
-        public List<ChatMessage> SystemPrompts { get; set; } = [];
-        public List<FunctionMessage> Tools { get; set; } = [];
-    }
-
-    public interface ISessionManager
-    {
-        Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string model);
-        Task<ChatSessionState?> GetSessionAsync(Guid sessionId);
-        Task SaveToDiskAsync(ChatSessionState sessionState);
-        Task AppendMessageAsync(Guid sessionId, BlazorClaw.Core.DTOs.ChatMessage message);
-        IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sess);
-    }
 
     public class SessionManager(IProviderManager providerManager, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger) : ISessionManager
     {
@@ -41,7 +29,7 @@ namespace BlazorClaw.Server.Services
                 // Hier später Datenbank-Lookup implementieren
                 state = new ChatSessionState
                 {
-                    Session = new ChatSession { Id = sessionId, CurrentModel = model },
+                    Session = new() { Id = sessionId, CurrentModel = model },
                     Provider = prov
                 };
 

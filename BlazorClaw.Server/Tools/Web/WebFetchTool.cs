@@ -44,7 +44,6 @@ public class WebFetchTool(HttpClient client) : BaseTool<WebFetchParams>
 
         if (p.Mode == FetchMode.Source)
             return await resp.Content.ReadAsStringAsync();
-
         var converter = new ReverseMarkdown.Converter();
         converter.Config.UnknownTags = ReverseMarkdown.Config.UnknownTagsOption.Bypass;
         converter.Config.RemoveComments = true;

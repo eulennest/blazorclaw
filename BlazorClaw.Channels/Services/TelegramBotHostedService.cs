@@ -1,4 +1,5 @@
-using BlazorClaw.Server.Data;
+using BlazorClaw.Core.Data;
+using BlazorClaw.Core.Sessions;
 using Microsoft.AspNetCore.Identity;
 using System.Collections.Concurrent;
 using Telegram.Bot;
@@ -66,7 +67,7 @@ namespace BlazorClaw.Channels.Services
                 var user = await userManager.FindByLoginAsync("Telegram", telegramId);
 
                 var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
-                await botClient.SendChatAction(update.Message.Chat.Id, Telegram.Bot.Types.Enums.ChatAction.Typing);
+                await botClient.SendChatAction(update.Message.Chat.Id, Telegram.Bot.Types.Enums.ChatAction.Typing, cancellationToken: cancellationToken);
 
                 Guid? uid = user != null ? Guid.Parse(user.Id) : null;
                 if (uid == null)

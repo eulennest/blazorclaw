@@ -1,4 +1,4 @@
-﻿using BlazorClaw.Server.Data;
+﻿using BlazorClaw.Core.Data;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 

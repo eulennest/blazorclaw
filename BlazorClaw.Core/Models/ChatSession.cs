@@ -1,7 +1,7 @@
+using BlazorClaw.Core.Data;
 using System.ComponentModel.DataAnnotations;
-using BlazorClaw.Server.Data;
 
-namespace BlazorClaw.Server.Models;
+namespace BlazorClaw.Core.Models;
 
 public class ChatSession
 {

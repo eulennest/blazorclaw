@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 
-namespace BlazorClaw.Server.Data;
+namespace BlazorClaw.Core.Data;
 
 public class ApplicationRole : IdentityRole
 {
