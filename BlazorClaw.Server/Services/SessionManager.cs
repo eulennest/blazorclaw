@@ -21,7 +21,7 @@ namespace BlazorClaw.Server.Services
     {
         Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string model);
         Task<ChatSessionState?> GetSessionAsync(Guid sessionId);
-        Task SaveToDiskAsync(Guid sessionId);
+        Task SaveToDiskAsync(ChatSessionState sessionState);
         Task AppendMessageAsync(Guid sessionId, BlazorClaw.Core.DTOs.ChatMessage message);
         IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sess);
     }
