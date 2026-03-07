@@ -10,6 +10,7 @@ public class WebFetchParams
     [Required]
     public string Url { get; set; } = string.Empty;
 
+    [Description("Abruf-Modus: Auto (Standard), Source, oder Markdown")]
     public FetchMode? Mode { get; set; } = FetchMode.Auto;
 }
 

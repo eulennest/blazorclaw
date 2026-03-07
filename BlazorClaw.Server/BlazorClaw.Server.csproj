@@ -22,6 +22,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BlazorClaw.Core\BlazorClaw.Core.csproj" />
+    <ProjectReference Include="..\BlazorClaw.Channels\BlazorClaw.Channels\BlazorClaw.Channels.csproj" />
   </ItemGroup>
 
 </Project>

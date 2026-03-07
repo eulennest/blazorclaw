@@ -5,7 +5,7 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 
-namespace BlazorClaw.Server.Services
+namespace BlazorClaw.Channels.Services
 {
     public record TelegramBotInstance(string Id, string Token, TelegramBotClient Client);
 

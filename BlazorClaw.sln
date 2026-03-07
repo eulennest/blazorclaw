@@ -7,6 +7,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorClaw.Server", "Blazor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorClaw.Core", "BlazorClaw.Core\BlazorClaw.Core.csproj", "{CDC3A898-17FD-EC04-3F79-56064E63D45F}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BlazorClaw.Channels", "BlazorClaw.Channels", "{F4AA4686-E721-48D8-A62A-1AB80D9D8D18}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorClaw.Channels", "BlazorClaw.Channels\BlazorClaw.Channels\BlazorClaw.Channels.csproj", "{5D276701-A45C-4A1D-9D36-6A59A426EEEE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,11 +25,18 @@ Global
 		{CDC3A898-17FD-EC04-3F79-56064E63D45F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CDC3A898-17FD-EC04-3F79-56064E63D45F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CDC3A898-17FD-EC04-3F79-56064E63D45F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D276701-A45C-4A1D-9D36-6A59A426EEEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D276701-A45C-4A1D-9D36-6A59A426EEEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D276701-A45C-4A1D-9D36-6A59A426EEEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D276701-A45C-4A1D-9D36-6A59A426EEEE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {650EA9F4-8DC7-4EC3-A58F-82FB4127150B}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{5D276701-A45C-4A1D-9D36-6A59A426EEEE} = {F4AA4686-E721-48D8-A62A-1AB80D9D8D18}
 	EndGlobalSection
 EndGlobal
