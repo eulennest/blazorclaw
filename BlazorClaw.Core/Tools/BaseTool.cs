@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using BlazorClaw.Core.Utils;
 using Microsoft.AspNetCore.Http;
 
 namespace BlazorClaw.Core.Tools;
@@ -23,12 +24,11 @@ public interface ITool
 
 public abstract class BaseTool<TParams> : ITool where TParams : class
 {
-    protected JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
     public abstract string Name { get; }
     public abstract string Description { get; }
     
     public object GetSchema() => SchemaGenerator.Generate(typeof(TParams));
-    public object BuidlArguments(string arguments) => JsonSerializer.Deserialize<TParams>(arguments, JsonOptions)!;
+    public object BuidlArguments(string arguments) => JsonSerializer.Deserialize<TParams>(arguments, JsonHelper.DefaultOptions)!;
 
     public async Task<string> ExecuteAsync(object arguments, ToolContext context)
     {

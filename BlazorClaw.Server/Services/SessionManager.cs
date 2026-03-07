@@ -2,6 +2,7 @@ using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Providers;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Utils;
 using BlazorClaw.Server.Models;
 using System.Collections.Concurrent;
 using System.Text.Json;
@@ -74,7 +75,6 @@ namespace BlazorClaw.Server.Services
             return state;
         }
 
-        private readonly JsonSerializerOptions jsonOp = new(JsonSerializerDefaults.Web) { WriteIndented = true };
         public async Task SaveToDiskAsync(ChatSessionState sessionState)
         {
             var store = new JsonSessionStorage
@@ -83,7 +83,7 @@ namespace BlazorClaw.Server.Services
                 MessageHistory = sessionState.MessageHistory
             };
             using var jsonStream = File.Create($"session_{sessionState.Session.Id}.json");
-            await JsonSerializer.SerializeAsync(jsonStream, store, jsonOp).ConfigureAwait(false);
+            await JsonSerializer.SerializeAsync(jsonStream, store, JsonHelper.DefaultOptions).ConfigureAwait(false);
         }
 
         public Task AppendSystemPromptAsync(Guid sessionId, BlazorClaw.Core.DTOs.ChatMessage message)
