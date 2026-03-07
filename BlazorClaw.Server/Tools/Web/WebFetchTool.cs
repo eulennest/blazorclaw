@@ -9,15 +9,42 @@ public class WebFetchParams
     [Description("URL zum Abrufen")]
     [Required]
     public string Url { get; set; } = string.Empty;
+
+    public FetchMode? Mode { get; set; } = FetchMode.Auto;
+}
+
+public enum FetchMode
+{
+    Auto,
+    Source,
+    Markdown
 }
 
 public class WebFetchTool(HttpClient client) : BaseTool<WebFetchParams>
 {
     public override string Name => "web_fetch";
-    public override string Description => "Abrufen einer Webseite (Quelltext)";
+    public override string Description => "Abrufen einer Webseite";
 
-    protected override Task<string> ExecuteInternalAsync(WebFetchParams p, ToolContext context)
+    protected override async Task<string> ExecuteInternalAsync(WebFetchParams p, ToolContext context)
     {
-        return client.GetStringAsync(p.Url);
+        var mode = p.Mode ?? FetchMode.Auto;
+
+        using var resp = await client.GetAsync(p.Url);
+        resp.EnsureSuccessStatusCode();
+
+        if(mode == FetchMode.Auto)
+        {
+            var contentType = resp.Content.Headers.ContentType?.MediaType;
+            if (contentType != null && contentType.Contains("text/html"))
+                mode = FetchMode.Source;
+            else
+                mode = FetchMode.Markdown;
+        }
+
+        if (p.Mode == FetchMode.Source)
+            return await resp.Content.ReadAsStringAsync();
+
+        var converter = new ReverseMarkdown.Converter();
+        return converter.Convert(await resp.Content.ReadAsStringAsync());
     }
 }
