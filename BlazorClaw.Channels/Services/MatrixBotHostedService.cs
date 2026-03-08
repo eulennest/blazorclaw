@@ -105,10 +105,17 @@ namespace BlazorClaw.Channels.Services
             }
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
+        public string ProviderName => "Matrix";
+        public event Func<string, string, string, Task>? OnMessageReceived;
+
+        public async Task SendMessageAsync(string channelId, string message)
         {
-            foreach (var client in _clients) client.Stop();
-            return Task.CompletedTask;
+            // channelId in matrix is usually roomId
+            var client = _clients.FirstOrDefault();
+            if (client != null)
+            {
+                await client.SendMessageAsync(channelId, message);
+            }
         }
     }
 }

@@ -17,10 +17,22 @@ namespace BlazorClaw.Channels.Services
     public record TelegramBotInstance(string Id, string Token, TelegramBotClient Client, RootCommand Cmds);
 
 
-    public class TelegramBotHostedService(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger) : IHostedService
+    public class TelegramBotHostedService(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger) : IHostedService, IChannelBot
     {
+        public string ProviderName => "Telegram";
+        public event Func<string, string, string, Task>? OnMessageReceived;
+
         private readonly List<TelegramBotInstance> _bots = [];
         public ConcurrentDictionary<string, Guid> sessIds = [];
+        
+        public async Task SendMessageAsync(string channelId, string message)
+        {
+            var bot = _bots.FirstOrDefault(); // Simplified for now
+            if (bot != null && long.TryParse(channelId, out var chatId))
+            {
+                await bot.Client.SendMessage(chatId, message);
+            }
+        }
         public Task StartAsync(CancellationToken cancellationToken)
         {
             var telegramConfigs = configuration.GetSection("Channels:Telegram").GetChildren();
