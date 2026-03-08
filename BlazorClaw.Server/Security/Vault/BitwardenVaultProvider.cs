@@ -26,18 +26,28 @@ public class BitwardenVaultProvider : IVaultProvider
         _client.AccessTokenLogin(_options.AccessToken); 
     }
 
-    public Task<string?> GetSecretAsync(string key)
+    public async Task<string?> GetSecretAsync(string key)
     {
-        return Task.FromResult<string?>(null);
+        var secret = await _client.Secrets.GetAsync(key); 
+        return secret.Value;
     }
 
     public async IAsyncEnumerable<string> GetKeysAsync()
     {
-        yield break;
+        var data = await _client.Secrets.ListAsync(_options.OrganizationId);
+        foreach (var item in data.Data)
+        {
+            yield return item.Key;
+        }
     }
 
-    public Task SetSecretAsync(string key, string secret)
+    public async Task SetSecretAsync(string key, string secret)
     {
-        return Task.CompletedTask;
+        await _client.Secrets.CreateAsync(new SecretCreateRequest
+        {
+            Key = key,
+            Value = secret,
+            OrganizationId = Guid.Parse(_options.OrganizationId)
+        });
     }
 }
