@@ -22,7 +22,7 @@ public class GitTool(IOptions<GitOptions> options) : BaseTool<GitTool.Params>
     {
         [Required, Description("Git-Befehl und Argumente (z.B. 'status' oder 'log -n 5')")]
         public string Args { get; set; } = string.Empty;
-        
+
         [Description("Arbeitsverzeichnis für den Git-Befehl (optional)")]
         public string? WorkingDirectory { get; set; }
     }

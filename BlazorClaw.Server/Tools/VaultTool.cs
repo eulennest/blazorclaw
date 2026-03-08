@@ -59,7 +59,7 @@ public class VaultSetTool : BaseTool<VaultSetParams>
     protected override async Task<string> ExecuteInternalAsync(VaultSetParams p, ToolContext context)
     {
         var vp = context.ServiceProvider.GetRequiredService<IVaultProvider>();
-        return await vp.SetSecretAsync(p.Title, p.Secret,p.Note, p.Key);
+        return await vp.SetSecretAsync(p.Title, p.Secret, p.Note, p.Key);
     }
 }
 

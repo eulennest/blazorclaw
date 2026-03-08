@@ -1,6 +1,5 @@
 using BlazorClaw.Core.Models;
 using System.CommandLine;
-using System.Threading.Tasks;
 
 namespace BlazorClaw.Core.Commands;
 

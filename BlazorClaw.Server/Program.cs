@@ -20,7 +20,6 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using System.Windows.Input;
 
 var builder = WebApplication.CreateBuilder(args);
 
