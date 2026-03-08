@@ -1,5 +1,4 @@
 using Matrix.Sdk;
-// using Matrix.Sdk.Core.EventTypes.Spec; // Entfernen, wenn SDK dies nicht bereitstellt
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -12,11 +11,6 @@ using Matrix.Sdk.Core.Domain.RoomEvent;
 
 namespace BlazorClaw.Channels.Services
 {
-    // ... rest of the file
-    // In HandleUpdate change the event handling to be more generic if Spec types are missing
-    // or try Matrix.Sdk.Core.EventTypes.Spec; again? 
-    // Wait, let me check the SDK for actual text message events
-
     public class MatrixBotHostedService(IConfiguration configuration, ILogger<MatrixBotHostedService> logger, IServiceProvider serviceProvider) : IHostedService
     {
         private readonly List<IMatrixClient> _clients = [];

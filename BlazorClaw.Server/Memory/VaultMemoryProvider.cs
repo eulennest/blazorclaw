@@ -13,11 +13,11 @@ namespace BlazorClaw.Server.Memory
             {
                 foreach (var query in queries)
                 {
-                    if (key.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    if (key.Title.Contains(query, StringComparison.OrdinalIgnoreCase) || key.Key.Contains(query, StringComparison.OrdinalIgnoreCase))
                     {
-                        yield return $"(Vault-Eintrag gefunden) Schlüssel: '{key}'. " +
+                        yield return $"(Vault-Eintrag gefunden) Schlüssel: '{key.Key}'. " +
                                      $"Du kannst diesen Eintrag mit dem 'vault_get' Tool abrufen, " +
-                                     $"indem du '{key}' als 'Key'-Parameter verwendest.";
+                                     $"indem du '{key.Key}' als 'Key'-Parameter verwendest.";
                         break;
                     }
                 }
