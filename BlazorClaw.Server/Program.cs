@@ -58,6 +58,9 @@ builder.Services.TryAddSingleton<IMessagePolicyProvider>(sp => new MessagePolicy
 builder.Services.Configure<FileSystemMemoryOptions>(builder.Configuration.GetSection(FileSystemMemoryOptions.Section));
 builder.Services.TryAddSingleton<IMemorySearchProvider>(sp => new MemorySearchAggregator(PluginUtils.BuildPlugins<IMemorySearchProvider>(sp, typeof(MemorySearchAggregator))));
 
+// Commands
+builder.Services.TryAddSingleton<ISystemCommandAggregator>(sp => new SystemCommandAggregator(PluginUtils.BuildPlugins<ICommandProvider>(sp, typeof(SystemCommandAggregator))));
+
 // Providers
 builder.Services.TryAddSingleton<IProviderManager>(sp => new ProviderAggregator(PluginUtils.BuildPlugins<IProviderManager>(sp, typeof(ProviderAggregator))));
 
