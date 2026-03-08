@@ -32,16 +32,26 @@ public class OpenAiController(ISessionManager sessionManager) : ControllerBase
         }
 
         // 3. LLM Dispatcher ausführen
-        var responses = new List<ChatMessage>();
-        await foreach (var response in sessionManager.DispatchToLLMAsync(sessionState))
+        try
         {
-            responses.Add(response);
-        }
+            var responses = new List<ChatMessage>();
+            await foreach (var response in sessionManager.DispatchToLLMAsync(sessionState))
+            {
+                responses.Add(response);
+            }
 
-        // 4. Rückgabe der Assistant-Antworten
-        return Ok(new ChatCompletionResponse 
-        { 
-            Choices = responses.Select(r => new ChatChoice { Message = r }).ToList() 
-        });
+            // 4. Rückgabe der Assistant-Antworten
+            return Ok(new ChatCompletionResponse 
+            { 
+                Choices = responses.Select(r => new ChatChoice { Message = r }).ToList() 
+            });
+        }
+        catch (Exception ex)
+        {
+            return Ok(new ChatCompletionResponse 
+            { 
+                Error = new ApiError { Message = $"Fehler: {ex.Message}" } 
+            });
+        }
     }
 }
