@@ -17,7 +17,7 @@ namespace BlazorClaw.Server.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.24");
 
-            modelBuilder.Entity("BlazorClaw.Core.Data;.ApplicationRole", b =>
+            modelBuilder.Entity("BlazorClaw.Core.Data.ApplicationRole", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
@@ -51,13 +51,19 @@ namespace BlazorClaw.Server.Migrations
                     b.ToTable("AspNetRoles", (string)null);
                 });
 
-            modelBuilder.Entity("BlazorClaw.Core.Data;.ApplicationUser", b =>
+            modelBuilder.Entity("BlazorClaw.Core.Data.ApplicationUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("TEXT");
 
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ChannelRegisterToken")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ChannelRegisterTokenExpiredAt")
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
@@ -128,7 +134,7 @@ namespace BlazorClaw.Server.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
-            modelBuilder.Entity("BlazorClaw.Server.Models.ChatSession", b =>
+            modelBuilder.Entity("BlazorClaw.Core.Models.ChatSession", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -159,7 +165,7 @@ namespace BlazorClaw.Server.Migrations
                     b.ToTable("ChatSessions");
                 });
 
-            modelBuilder.Entity("BlazorClaw.Server.Models.ChatSessionParticipant", b =>
+            modelBuilder.Entity("BlazorClaw.Core.Models.ChatSessionParticipant", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -283,15 +289,15 @@ namespace BlazorClaw.Server.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("BlazorClaw.Server.Models.ChatSessionParticipant", b =>
+            modelBuilder.Entity("BlazorClaw.Core.Models.ChatSessionParticipant", b =>
                 {
-                    b.HasOne("BlazorClaw.Server.Models.ChatSession", "Session")
+                    b.HasOne("BlazorClaw.Core.Models.ChatSession", "Session")
                         .WithMany("Participants")
                         .HasForeignKey("SessionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BlazorClaw.Core.Data;.ApplicationUser", "User")
+                    b.HasOne("BlazorClaw.Core.Data.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -304,7 +310,7 @@ namespace BlazorClaw.Server.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
-                    b.HasOne("BlazorClaw.Core.Data;.ApplicationRole", null)
+                    b.HasOne("BlazorClaw.Core.Data.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -313,7 +319,7 @@ namespace BlazorClaw.Server.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("BlazorClaw.Core.Data;.ApplicationUser", null)
+                    b.HasOne("BlazorClaw.Core.Data.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -322,7 +328,7 @@ namespace BlazorClaw.Server.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("BlazorClaw.Core.Data;.ApplicationUser", null)
+                    b.HasOne("BlazorClaw.Core.Data.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -331,13 +337,13 @@ namespace BlazorClaw.Server.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<string>", b =>
                 {
-                    b.HasOne("BlazorClaw.Core.Data;.ApplicationRole", null)
+                    b.HasOne("BlazorClaw.Core.Data.ApplicationRole", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BlazorClaw.Core.Data;.ApplicationUser", null)
+                    b.HasOne("BlazorClaw.Core.Data.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -346,14 +352,14 @@ namespace BlazorClaw.Server.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("BlazorClaw.Core.Data;.ApplicationUser", null)
+                    b.HasOne("BlazorClaw.Core.Data.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("BlazorClaw.Server.Models.ChatSession", b =>
+            modelBuilder.Entity("BlazorClaw.Core.Models.ChatSession", b =>
                 {
                     b.Navigation("Participants");
                 });
