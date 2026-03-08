@@ -56,12 +56,21 @@
         });
         
         const data = await response.json();
-        const assistantMsg = data.choices[0].message.content;
-        chatHistory.push({ role: 'assistant', content: assistantMsg });
+        
+        if (data.error) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'message assistant';
+            errorDiv.style.color = 'red';
+            errorDiv.textContent = 'Fehler: ' + data.error.message;
+            document.getElementById('messages').appendChild(errorDiv);
+        } else {
+            const assistantMsg = data.choices[0].message.content;
+            chatHistory.push({ role: 'assistant', content: assistantMsg });
 
-        const aiDiv = document.createElement('div');
-        aiDiv.className = 'message assistant';
-        aiDiv.innerHTML = marked.parse(assistantMsg);
-        document.getElementById('messages').appendChild(aiDiv);
+            const aiDiv = document.createElement('div');
+            aiDiv.className = 'message assistant';
+            aiDiv.innerHTML = marked.parse(assistantMsg);
+            document.getElementById('messages').appendChild(aiDiv);
+        }
     });
 </script>
