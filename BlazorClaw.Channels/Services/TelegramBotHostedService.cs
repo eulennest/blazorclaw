@@ -88,7 +88,7 @@ namespace BlazorClaw.Channels.Services
                         logger.LogInformation("No user found for Telegram ID {TelegramId}. Using existing temporary session ID: {SessionId}", telegramId, uid);
                     }
                 }
-                var sess = await sm.GetOrCreateSessionAsync(uid.Value, "openrouter/google/gemini-3.1-flash-lite-preview");
+                var sess = await sm.GetOrCreateSessionAsync(uid.Value);
 
                 sess.MessageHistory.Add(new() { Role = "user", Content = update.Message.Text });
 

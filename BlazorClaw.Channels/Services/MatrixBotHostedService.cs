@@ -86,7 +86,7 @@ namespace BlazorClaw.Channels.Services
                         uid = existingUid;
                     }
                 }
-                var sess = await sm.GetOrCreateSessionAsync(uid.Value, "openrouter/google/gemini-3.1-flash-lite-preview");
+                var sess = await sm.GetOrCreateSessionAsync(uid.Value);
                 sess.MessageHistory.Add(new() { Role = "user", Content = message });
 
                 await foreach (var msg in sm.DispatchToLLMAsync(sess))

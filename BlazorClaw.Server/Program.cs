@@ -61,6 +61,7 @@ builder.Services.TryAddSingleton<IMemorySearchProvider>(sp => new MemorySearchAg
 // Providers
 builder.Services.TryAddSingleton<IProviderManager>(sp => new ProviderAggregator(PluginUtils.BuildPlugins<IProviderManager>(sp, typeof(ProviderAggregator))));
 
+builder.Services.Configure<LlmOptions>(builder.Configuration.GetSection(LlmOptions.Section));
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>

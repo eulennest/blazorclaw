@@ -5,18 +5,20 @@ using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
 {
 
-    public class SessionManager(IProviderManager providerManager, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger) : ISessionManager
+    public class SessionManager(IProviderManager providerManager, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options) : ISessionManager
     {
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
 
-        public Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string model)
+        public Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string? model = null)
         {
+            if (string.IsNullOrWhiteSpace(model)) model = options.CurrentValue.Model;
             if (!_sessions.TryGetValue(sessionId, out var state))
             {
                 logger.LogInformation("Creating session {SessionId}", sessionId);
@@ -149,7 +151,7 @@ namespace BlazorClaw.Server.Services
                 if (File.Exists("AGENTS.md"))
                 {
                     var agentPromptContent = await File.ReadAllTextAsync("AGENTS.md").ConfigureAwait(false);
-                    sessionState.SystemPrompts.Add(new ChatMessage { Role = "system", Content = agentPromptContent });
+                    sessionState.SystemPrompts.Add(new ChatMessage { Role = "system", Content = "[File: AGENTS.md]" + Environment.NewLine + "-----" + Environment.NewLine + agentPromptContent });
                 }
             }
 

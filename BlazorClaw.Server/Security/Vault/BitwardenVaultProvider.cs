@@ -1,15 +1,12 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Bitwarden.Sdk; // Assuming current SDK structure
+using Bitwarden.Sdk;
 using BlazorClaw.Core.Security.Vault;
 using Microsoft.Extensions.Options;
 
 namespace BlazorClaw.Server.Security.Vault;
 
-public class BitwardenOptions
+public class BitwardenOptions : BitwardenSettings
 {
-    public const string Section = "Tools:Bitwarden";
+    public const string Section = "Vault:Bitwarden";
     public string AccessToken { get; set; } = string.Empty;
     public string OrganizationId { get; set; } = string.Empty;
 }
@@ -22,7 +19,7 @@ public class BitwardenVaultProvider : IVaultProvider
     public BitwardenVaultProvider(IOptions<BitwardenOptions> options)
     {
         _options = options.Value;
-        _client = new BitwardenClient();
+        _client = new BitwardenClient(_options);
         _client.AccessTokenLogin(_options.AccessToken);
     }
 
@@ -59,8 +56,8 @@ public class BitwardenVaultProvider : IVaultProvider
 
         if (string.IsNullOrWhiteSpace(key))
         {
-             return await Task.Run(() =>
-                _client.Secrets.Create(title, secret, note ?? string.Empty, orgaId, []).Id.ToString());
+            return await Task.Run(() =>
+               _client.Secrets.Create(title, secret, note ?? string.Empty, orgaId, []).Id.ToString());
         }
         else
         {
