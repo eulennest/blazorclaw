@@ -39,8 +39,7 @@ public class RegisterCommand : ISystemCommand, ISystemCommandExecutor
     {
         var token = result.GetRequiredValue((Argument<string>)result.CommandResult.Command.Arguments[0]);
         var db = context.Provider.GetRequiredService<ApplicationDbContext>();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == context.UserId) ?? throw new UnauthorizedAccessException("User nicht gefunden");
-        if (!token.Equals(user.ChannelRegisterToken)) throw new UnauthorizedAccessException("Ungültiger Registrierungstoken");
+        var user = await db.Users.FirstOrDefaultAsync(u => u.ChannelRegisterToken == token) ?? throw new UnauthorizedAccessException("Ungültiger Registrierungstoken");
         if ((user.ChannelRegisterTokenExpiredAt ?? DateTime.MinValue) < DateTime.UtcNow) throw new UnauthorizedAccessException("Registrierungstoken ist abgelaufen");
         user.ChannelRegisterToken = null;
         user.ChannelRegisterTokenExpiredAt = null;
