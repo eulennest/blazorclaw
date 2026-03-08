@@ -28,11 +28,11 @@ public class StatusCommand : ISystemCommand, ISystemCommandExecutor
         var tokens = "Xk in / Y out";
         
         return Task.FromResult<object?>(
-            $"🦞 BlazorClaw {version} ({commit})\n" +
-            $"🧠 Model: {context.Session?.CurrentModel}\n" +
-            $"🧮 Tokens: {tokens}\n" +
-            $"🧵 Session: {context.Session?.Id}\n" +
-            $"🧵 Channel: {context.ChannelProvider}:{context.ChannelId}\n" +
+            $"🦞 BlazorClaw {version} ({commit})\r\n" +
+            $"🧠 Model: {context.Session?.CurrentModel}\r\n" +
+            $"🧮 Tokens: {tokens}\r\n" +
+            $"🧵 Session: {context.Session?.Id}\r\n" +
+            $"🧵 Channel: {context.ChannelProvider}:{context.ChannelId}\r\n" +
             $"⚙️ Runtime: direct · Think: off");
     }
 }
