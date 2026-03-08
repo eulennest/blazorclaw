@@ -11,41 +11,6 @@ public class AdminCommandProvider : ExecutorCommandProvider
     {
         yield return new StatusCommand();
         yield return new RegisterCommand();
-        yield return new ChannelCommand();
-    }
-}
-
-public class ChannelCommand : ISystemCommand, ISystemCommandExecutor
-{
-    public Command GetCommand()
-    {
-        var cmd = new Command("channels", "Kanal-Verwaltung");
-        var register = new Command("register", "Erzeugt einen neuen Registrierungstoken");
-        var list = new Command("list", "Listet alle registrierten Kanäle");
-        cmd.AddCommand(register);
-        cmd.AddCommand(list);
-        return cmd;
-    }
-
-    public async Task<object?> ExecuteAsync(ParseResult result, CommandContext context)
-    {
-        var db = context.Provider.GetRequiredService<BlazorClaw.Server.Data.ApplicationDbContext>();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == context.UserId) ?? throw new UnauthorizedAccessException("User nicht gefunden");
-        
-        if (result.CommandResult.Command.Name == "register")
-        {
-            user.ChannelRegisterToken = Guid.NewGuid().ToString("N");
-            user.ChannelRegisterTokenExpiredAt = DateTime.UtcNow.AddMinutes(10);
-            await db.SaveChangesAsync();
-            return $"Registrierungstoken: {user.ChannelRegisterToken} (gültig für 10 Min)";
-        }
-        else if (result.CommandResult.Command.Name == "list")
-        {
-            var logins = await db.UserLogins.Where(l => l.UserId == user.Id).ToListAsync();
-            if (!logins.Any()) return "Keine Kanäle registriert.";
-            return string.Join("\n", logins.Select(l => $"{l.LoginProvider}: {l.ProviderKey}"));
-        }
-        return "Befehl nicht gefunden.";
     }
 }
 
