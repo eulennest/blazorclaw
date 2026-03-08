@@ -17,24 +17,14 @@ namespace BlazorClaw.Channels.Services
     // or try Matrix.Sdk.Core.EventTypes.Spec; again? 
     // Wait, let me check the SDK for actual text message events
 
-    public class MatrixBotHostedService : IHostedService
+    public class MatrixBotHostedService(IConfiguration configuration, ILogger<MatrixBotHostedService> logger, IServiceProvider serviceProvider) : IHostedService
     {
-        private readonly List<IMatrixClient> _clients = new();
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<MatrixBotHostedService> _logger;
-        private readonly IServiceProvider _serviceProvider;
+        private readonly List<IMatrixClient> _clients = [];
         private readonly ConcurrentDictionary<string, Guid> _sessIds = [];
-
-        public MatrixBotHostedService(IConfiguration configuration, ILogger<MatrixBotHostedService> logger, IServiceProvider serviceProvider)
-        {
-            _configuration = configuration;
-            _logger = logger;
-            _serviceProvider = serviceProvider;
-        }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            var matrixConfigs = _configuration.GetSection("Channels:Matrix").GetChildren();
+            var matrixConfigs = configuration.GetSection("Channels:Matrix").GetChildren();
             var factory = new MatrixClientFactory();
 
             foreach (var config in matrixConfigs)
@@ -43,7 +33,7 @@ namespace BlazorClaw.Channels.Services
                 var userId = config["UserId"] ?? "";
                 var password = config["Password"] ?? "";
 
-                _logger.LogInformation("Matrix Bot '{id}' initializing ...", config.Key);
+                logger.LogInformation("Matrix Bot '{id}' initializing ...", config.Key);
 
                 try
                 {
@@ -54,25 +44,25 @@ namespace BlazorClaw.Channels.Services
 
                     client.Start();
                     _clients.Add(client);
-                    _logger.LogInformation("Matrix Bot '{id}' started successfully.", config.Key);
+                    logger.LogInformation("Matrix Bot '{id}' started successfully.", config.Key);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to start Matrix Bot '{id}'", config.Key);
+                    logger.LogError(ex, "Failed to start Matrix Bot '{id}'", config.Key);
                 }
             }
         }
 
-        private async void HandleUpdate(object sender, MatrixRoomEventsEventArgs eventArgs)
+        private async void HandleUpdate(object? sender, MatrixRoomEventsEventArgs eventArgs)
         {
-            var client = (IMatrixClient)sender;
+            if (sender is not IMatrixClient client) return;
             foreach (var roomEvent in eventArgs.MatrixRoomEvents)
             {
                 if (client.UserId != roomEvent.SenderUserId)
                 {
                     if (roomEvent is TextMessageEvent textMessageEvent)
                     {
-                        _logger.LogInformation("Matrix received message in {RoomId}", roomEvent.RoomId);
+                        logger.LogInformation("Matrix received message in {RoomId}", roomEvent.RoomId);
                         await ProcessMatrixMessage(client, roomEvent.RoomId, roomEvent.SenderUserId, textMessageEvent.Message);
                     }
                 }
@@ -83,7 +73,7 @@ namespace BlazorClaw.Channels.Services
         {
             try
             {
-                using var scope = _serviceProvider.CreateScope();
+                using var scope = serviceProvider.CreateScope();
                 var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
                 var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
 
@@ -117,7 +107,7 @@ namespace BlazorClaw.Channels.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing matrix message");
+                logger.LogError(ex, "Error processing matrix message");
             }
         }
 

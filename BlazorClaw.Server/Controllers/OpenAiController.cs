@@ -1,6 +1,5 @@
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
-using BlazorClaw.Core.Providers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -14,12 +13,13 @@ namespace BlazorClaw.Server.Controllers;
 public class OpenAiController(ISessionManager sessionManager) : ControllerBase
 {
     [HttpPost("chat/completions")]
-    public async Task<IActionResult> ChatCompletions([FromBody] ChatCompletionRequest request)
+    public async Task<ChatCompletionResponse> ChatCompletions([FromBody] ChatCompletionRequest request)
     {
+        var resp = new ChatCompletionResponse();
         try
         {
             var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString)) return Unauthorized();
+            if (string.IsNullOrEmpty(userIdString)) throw new UnauthorizedAccessException("User not logged in");
 
             var userId = Guid.Parse(userIdString);
 
@@ -38,24 +38,17 @@ public class OpenAiController(ISessionManager sessionManager) : ControllerBase
 
             // 3. LLM Dispatcher ausführen
 
-            var responses = new List<ChatMessage>();
-            await foreach (var response in sessionManager.DispatchToLLMAsync(sessionState))
+            await foreach (var item in sessionManager.DispatchToLLMAsync(sessionState))
             {
-                responses.Add(response);
+                resp.Choices ??= [];
+                resp.Choices.Add(new ChatChoice { Message = item });
             }
-
-            // 4. Rückgabe der Assistant-Antworten
-            return Ok(new ChatCompletionResponse
-            {
-                Choices = responses.Select(r => new ChatChoice { Message = r }).ToList()
-            });
         }
         catch (Exception ex)
         {
-            return Ok(new ChatCompletionResponse
-            {
-                Error = new ApiError { Message = $"Fehler: {ex.Message}" }
-            });
+            resp.Error = new ApiError { Message = $"Fehler: {ex.Message}" };
         }
+        // 4. Rückgabe der Assistant-Antworten
+        return resp;
     }
 }

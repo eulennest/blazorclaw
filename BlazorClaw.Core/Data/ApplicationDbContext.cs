@@ -4,13 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BlazorClaw.Core.Data;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser, ApplicationRole, string>(options)
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options)
-    {
-    }
-
     public DbSet<ChatSession> ChatSessions { get; set; }
     public DbSet<ChatSessionParticipant> ChatSessionParticipants { get; set; }
 

@@ -1,7 +1,7 @@
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using BlazorClaw.Core.Tools;
 using Microsoft.Extensions.Options;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace BlazorClaw.Server.Tools.Process;
 
@@ -11,14 +11,9 @@ public class GitOptions
     public string GitPath { get; set; } = "git"; // Standardpfad
 }
 
-public class GitTool : BaseTool<GitTool.Params>
+public class GitTool(IOptions<GitOptions> options) : BaseTool<GitTool.Params>
 {
-    private readonly GitOptions _options;
-
-    public GitTool(IOptions<GitOptions> options)
-    {
-        _options = options.Value;
-    }
+    private readonly GitOptions _options = options.Value;
 
     public override string Name => "git_exec";
     public override string Description => "Führt einen Git-Befehl aus.";
@@ -45,9 +40,7 @@ public class GitTool : BaseTool<GitTool.Params>
             WorkingDirectory = parameters.WorkingDirectory ?? Environment.CurrentDirectory
         };
 
-        using var process = System.Diagnostics.Process.Start(startInfo);
-        if (process == null) return "Fehler: Git-Prozess konnte nicht gestartet werden.";
-
+        using var process = System.Diagnostics.Process.Start(startInfo) ?? throw new NullReferenceException("Prozess konnte nicht gestartet werden.");
         string output = await process.StandardOutput.ReadToEndAsync();
         string error = await process.StandardError.ReadToEndAsync();
         await process.WaitForExitAsync();
