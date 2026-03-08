@@ -1,6 +1,6 @@
+using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Server.Tools.Process;
 
@@ -18,11 +18,14 @@ public class KillTool : BaseTool<KillParams>
 
     protected override Task<string> ExecuteInternalAsync(KillParams p, ToolContext context)
     {
-        try {
+        try
+        {
             var process = System.Diagnostics.Process.GetProcessById(p.Pid);
             process.Kill();
             return Task.FromResult($"Prozess {p.Pid} beendet.");
-        } catch (Exception ex) {
+        }
+        catch (Exception ex)
+        {
             return Task.FromResult($"Fehler: {ex.Message}");
         }
     }

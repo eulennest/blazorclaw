@@ -1,5 +1,4 @@
 using BlazorClaw.Core.Web;
-using BlazorClaw.Server.Web;
 using Microsoft.Extensions.Options;
 
 namespace BlazorClaw.Server.Web;

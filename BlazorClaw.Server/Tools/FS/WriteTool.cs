@@ -1,6 +1,6 @@
+using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Server.Tools.FS;
 
@@ -15,7 +15,7 @@ public class WriteTool : BaseTool<WriteTool.Params>
     {
         [Required, Description("Pfad zur Datei")]
         public string Path { get; set; } = string.Empty;
-        
+
         [Required, Description("Neuer Inhalt")]
         public string Content { get; set; } = string.Empty;
 
@@ -35,7 +35,7 @@ public class WriteTool : BaseTool<WriteTool.Params>
         {
             if (File.Exists(parameters.Path))
                 throw new InvalidOperationException($"Datei existiert bereits: {parameters.Path}");
-            
+
             await File.WriteAllTextAsync(parameters.Path, parameters.Content);
             return $"Datei neu erstellt unter: {parameters.Path}";
         }

@@ -1,14 +1,14 @@
-﻿using System.Security.Claims;
-using System.Text.Json;
+﻿using BlazorClaw.Core.Data;
 using BlazorClaw.Server.Components.Account.Pages;
 using BlazorClaw.Server.Components.Account.Pages.Manage;
-using BlazorClaw.Server.Data;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Primitives;
+using System.Security.Claims;
+using System.Text.Json;
 
 namespace Microsoft.AspNetCore.Routing
 {

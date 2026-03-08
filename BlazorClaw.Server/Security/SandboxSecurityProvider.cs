@@ -1,5 +1,5 @@
-using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Security;
+using BlazorClaw.Core.Tools;
 using BlazorClaw.Server.Tools.FS;
 
 namespace BlazorClaw.Server.Security;
@@ -20,7 +20,7 @@ public class SandboxSecurityProvider : IToolPolicyProvider
         if (parameters is RmParams rmParams)
         {
             if (rmParams.Path.Contains(".."))
-             throw new UnauthorizedAccessException("Sandbox violation: Path traversal detected.");
+                throw new UnauthorizedAccessException("Sandbox violation: Path traversal detected.");
         }
     }
 

@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
-namespace BlazorClaw.Server.Data;
+namespace BlazorClaw.Core.Data;
 
-public static class DbInitializer
+public class DbInitializer
 {
     public static async Task InitializeAsync(IServiceProvider serviceProvider, IConfiguration configuration)
     {
@@ -11,7 +14,7 @@ public static class DbInitializer
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<DbInitializer>>();
 
         try
         {
@@ -81,7 +84,7 @@ public static class DbInitializer
         {
             var adminEmail = configuration["Database:DefaultAdminEmail"] ?? "admin@localhost";
             var adminPassword = configuration["Database:DefaultAdminPassword"] ?? "Admin123!";
-            
+
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
 
             if (adminUser == null)

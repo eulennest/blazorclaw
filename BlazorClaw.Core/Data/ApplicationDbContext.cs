@@ -1,8 +1,8 @@
-using BlazorClaw.Server.Models;
+using BlazorClaw.Core.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace BlazorClaw.Server.Data;
+namespace BlazorClaw.Core.Data;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, string>
 {

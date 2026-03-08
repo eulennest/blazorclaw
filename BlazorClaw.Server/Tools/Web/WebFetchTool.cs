@@ -1,6 +1,6 @@
+using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Server.Tools.Web;
 
@@ -33,7 +33,7 @@ public class WebFetchTool(HttpClient client) : BaseTool<WebFetchParams>
         using var resp = await client.GetAsync(p.Url);
         resp.EnsureSuccessStatusCode();
 
-        if(mode == FetchMode.Auto)
+        if (mode == FetchMode.Auto)
         {
             var contentType = resp.Content.Headers.ContentType?.MediaType;
             if (contentType != null && contentType.Contains("text/html"))

@@ -1,6 +1,6 @@
+using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Server.Tools.Memory;
 
@@ -15,10 +15,10 @@ public class MemoryEditTool : BaseTool<MemoryEditTool.Params>
     {
         [Required, Description("Dateiname (ohne Pfad, nur Name + .md)")]
         public string FileName { get; set; } = string.Empty;
-        
+
         [Required, Description("Text, der ersetzt werden soll")]
         public string OldText { get; set; } = string.Empty;
-        
+
         [Required, Description("Neuer Text")]
         public string NewText { get; set; } = string.Empty;
 
@@ -49,7 +49,7 @@ public class MemoryEditTool : BaseTool<MemoryEditTool.Params>
             var index = content.IndexOf(parameters.OldText);
             newContent = content.Remove(index, parameters.OldText.Length).Insert(index, parameters.NewText);
         }
-        
+
         await File.WriteAllTextAsync(fullPath, newContent);
         return $"Memory-Datei '{safeFileName}' erfolgreich editiert.";
     }

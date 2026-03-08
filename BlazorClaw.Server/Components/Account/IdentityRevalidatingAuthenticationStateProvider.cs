@@ -1,4 +1,4 @@
-﻿using BlazorClaw.Server.Data;
+﻿using BlazorClaw.Core.Data;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;

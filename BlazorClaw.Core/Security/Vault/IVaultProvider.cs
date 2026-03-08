@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace BlazorClaw.Core.Security.Vault;
 
 public interface IVaultProvider

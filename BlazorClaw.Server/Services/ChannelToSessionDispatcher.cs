@@ -1,5 +1,3 @@
-using BlazorClaw.Server.Models;
-
 namespace BlazorClaw.Server.Services
 {
     public interface IChannelToSessionDispatcher

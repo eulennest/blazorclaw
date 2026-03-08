@@ -5,11 +5,7 @@ using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
-using System.Net.Http.Json;
 using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
@@ -144,7 +140,7 @@ namespace BlazorClaw.Server.Services
             }
             if ((sessionState.SystemPrompts?.Count ?? 0) == 0)
             {
-                    sessionState.SystemPrompts ??= [];
+                sessionState.SystemPrompts ??= [];
                 if (File.Exists("SYSTEMPROMPT.md"))
                 {
                     var systemPromptContent = await File.ReadAllTextAsync("SYSTEMPROMPT.md").ConfigureAwait(false);

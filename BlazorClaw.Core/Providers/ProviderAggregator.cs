@@ -8,7 +8,7 @@ namespace BlazorClaw.Core.Providers
         public IAsyncEnumerable<string> GetModelsAsync(string provider)
         {
             provider = SplitProviderFromModel(provider);
-            var prov = _providers.FirstOrDefault( o=> o.GetProviders().Contains(provider));
+            var prov = _providers.FirstOrDefault(o => o.GetProviders().Contains(provider));
             return prov?.GetModelsAsync(provider) ?? AsyncEnumerable.Empty<string>();
         }
 

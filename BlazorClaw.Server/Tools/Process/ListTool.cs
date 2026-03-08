@@ -1,11 +1,9 @@
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using BlazorClaw.Core.Tools;
+using System.ComponentModel;
 
 namespace BlazorClaw.Server.Tools.Process;
 
-public class ListParams 
+public class ListParams
 {
     [Description("Optionaler Filterbegriff für den Prozessnamen")]
     public string? Search { get; set; }
@@ -23,8 +21,8 @@ public class ListTool : BaseTool<ListParams>
         {
             processes = [.. processes.Where(pr => pr.ProcessName.Contains(p.Search, StringComparison.OrdinalIgnoreCase))];
         }
-        
-        return Task.FromResult(processes.Length > 0 
+
+        return Task.FromResult(processes.Length > 0
             ? string.Join("\n", processes.Select(pr => $"{pr.Id}: {pr.ProcessName}"))
             : "Keine übereinstimmenden Prozesse gefunden.");
     }

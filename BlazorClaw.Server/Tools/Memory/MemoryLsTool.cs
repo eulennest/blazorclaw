@@ -1,5 +1,3 @@
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Server.Tools.Memory;
@@ -24,7 +22,7 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
         if (files.Length == 0)
             return Task.FromResult("Keine Memory-Dateien gefunden.");
 
-        var fileInfoList = files.Select(f => 
+        var fileInfoList = files.Select(f =>
             $"- {f.Name} (Größe: {f.Length} Bytes, Letzte Änderung: {f.LastWriteTime:yyyy-MM-dd HH:mm:ss}, Attribute: {f.Attributes})");
 
         return Task.FromResult("Memory-Dateien:\n" + string.Join("\n", fileInfoList));

@@ -14,7 +14,8 @@ public class FileSystemMemorySearchProvider(Microsoft.Extensions.Options.IOption
 
     public async IAsyncEnumerable<string> SearchAsync(string[] queries, int maxResults)
     {
-        if (Directory.Exists(_path)) {
+        if (Directory.Exists(_path))
+        {
 
             var files = Directory.GetFiles(_path, "*.md", SearchOption.AllDirectories);
 

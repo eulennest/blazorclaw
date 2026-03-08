@@ -1,6 +1,6 @@
+using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Server.Tools.Memory;
 
@@ -17,7 +17,7 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
     {
         [Required, Description("Dateiname (ohne Pfad, nur Name + .md)")]
         public string FileName { get; set; } = string.Empty;
-        
+
         [Required, Description("Markdown-Inhalt der geschrieben werden soll")]
         public string Content { get; set; } = string.Empty;
 
@@ -40,7 +40,7 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
         {
             if (File.Exists(fullPath))
                 throw new InvalidOperationException($"Memory-Datei existiert bereits: {safeFileName}");
-            
+
             await File.WriteAllTextAsync(fullPath, parameters.Content);
             return $"Memory-Datei '{safeFileName}' neu erstellt.";
         }

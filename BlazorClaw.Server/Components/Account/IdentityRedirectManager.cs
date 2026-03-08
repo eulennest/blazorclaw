@@ -1,8 +1,9 @@
-using BlazorClaw.Server.Data;
+using BlazorClaw.Core.Data;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Identity;
 
 namespace BlazorClaw.Server.Components.Account;
+
 internal sealed class IdentityRedirectManager(NavigationManager navigationManager)
 {
     public const string StatusCookieName = "Identity.StatusMessage";

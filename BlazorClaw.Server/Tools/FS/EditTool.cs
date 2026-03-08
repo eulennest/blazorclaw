@@ -1,6 +1,6 @@
+using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Server.Tools.FS;
 
@@ -13,10 +13,10 @@ public class EditTool : BaseTool<EditTool.Params>
     {
         [Required, Description("Pfad zur Datei")]
         public string Path { get; set; } = string.Empty;
-        
+
         [Required, Description("Text, der ersetzt werden soll")]
         public string OldText { get; set; } = string.Empty;
-        
+
         [Required, Description("Neuer Text")]
         public string NewText { get; set; } = string.Empty;
 
@@ -43,9 +43,9 @@ public class EditTool : BaseTool<EditTool.Params>
             var index = content.IndexOf(parameters.OldText);
             newContent = content.Remove(index, parameters.OldText.Length).Insert(index, parameters.NewText);
         }
-        
+
         await File.WriteAllTextAsync(parameters.Path, newContent);
-        
+
         return "Datei erfolgreich editiert.";
     }
 }

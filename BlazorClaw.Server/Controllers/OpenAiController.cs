@@ -3,8 +3,6 @@ using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Metadata;
-using System.Text.Json;
 
 namespace BlazorClaw.Server.Controllers;
 

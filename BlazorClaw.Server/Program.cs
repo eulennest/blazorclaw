@@ -1,26 +1,23 @@
-using BlazorClaw.Server.Components;
-using BlazorClaw.Server.Components.Account;
-using BlazorClaw.Server.Data;
-using BlazorClaw.Server.Security;
-using BlazorClaw.Server.Memory;
-using BlazorClaw.Core.Security;
-using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Memory;
 using BlazorClaw.Core.Plugins;
+using BlazorClaw.Core.Providers;
+using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Security.Vault;
-using BlazorClaw.Server.Security.Vault;
-using BlazorClaw.Server.Web;
+using BlazorClaw.Core.Sessions;
+using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Web;
+using BlazorClaw.Server.Components;
+using BlazorClaw.Server.Components.Account;
+using BlazorClaw.Server.Memory;
+using BlazorClaw.Server.Security.Vault;
+using BlazorClaw.Server.Services;
+using BlazorClaw.Server.Web;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Net;
-using BlazorClaw.Core.Providers;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using BlazorClaw.Server.Services;
-using BlazorClaw.Core.Data;
-using BlazorClaw.Core.Sessions;
 
 var builder = WebApplication.CreateBuilder(args);
 

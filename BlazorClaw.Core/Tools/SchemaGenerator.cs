@@ -14,11 +14,11 @@ public static class SchemaGenerator
         foreach (var prop in type.GetProperties())
         {
             var propInfo = new Dictionary<string, object>();
-            
+
             // Check for Nullable
             Type propType = prop.PropertyType;
             Type underlyingType = Nullable.GetUnderlyingType(propType) ?? propType;
-            
+
             // Typ-Mapping
             string typeName = underlyingType.Name switch
             {
