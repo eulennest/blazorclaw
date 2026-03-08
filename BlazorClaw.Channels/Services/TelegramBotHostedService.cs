@@ -109,32 +109,34 @@ namespace BlazorClaw.Channels.Services
 
                 if (inst != null && update.Message.Text.StartsWith('/'))
                 {
-                    var commandText = update.Message.Text[1..].Split(' ')[0].ToLower(); // Get command without '/'
-                    logger.LogInformation("Received command: {Command}", commandText);
-                    var cmds = scope.ServiceProvider.GetRequiredService<ICommandProvider>();
-                    var command = cmds.GetCommands()
-                        .FirstOrDefault(o => o.GetCommand().Name.Equals(commandText, StringComparison.OrdinalIgnoreCase));
-
-                    if (command != null)
+                    try
                     {
                         var cmdContext = new CommandContext
                         {
                             UserId = user?.Id,
                             ChannelProvider = "Telegram",
                             ChannelId = telegramId,
-                            Session = sess?.Session,
+                            Session = sess.Session,
                             Provider = scope.ServiceProvider
                         };
-                        logger.LogInformation("Executing command: {Command}", commandText);
-
-                        var result = await cmds.ExecuteAsync(command, inst.Cmds.Parse(update.Message.Text[1..]), cmdContext);
-                        var textRes = Convert.ToString(result);
-                        if (!string.IsNullOrWhiteSpace(textRes))
+                        var ret = await sm.DispatchCommandAsync(update.Message.Text, cmdContext, inst.Cmds, scope.ServiceProvider.GetRequiredService<ICommandProvider>());
+                        if (ret != null)
                         {
-                            logger.LogInformation("Sending command result to {ChatId}: {Result}", update.Message.Chat.Id, result);
-                            await botClient.SendMessage(update.Message.Chat.Id, textRes, cancellationToken: cancellationToken);
+                            var textRes = Convert.ToString(ret);
+                            if (!string.IsNullOrWhiteSpace(textRes))
+                            {
+                                logger.LogInformation("Sending command result to {ChatId}: {Result}", update.Message.Chat.Id, ret);
+                                await botClient.SendMessage(update.Message.Chat.Id, textRes, cancellationToken: cancellationToken);
+                            }
+                            return; // Command handled, exit early
                         }
-                        return; // Command handled, exit early
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Error processing command '{Command}' for Telegram ID {TelegramId}: {Message}", update.Message.Text, telegramId, ex.Message);
+                        var textRes = $"Error processing command: {ex.Message}";
+                        await botClient.SendMessage(update.Message.Chat.Id, textRes, cancellationToken: cancellationToken);
+                        return; // Exit early on command error
                     }
                 }
 
@@ -153,7 +155,7 @@ namespace BlazorClaw.Channels.Services
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, ex.Message);
+                logger.LogError(ex, "Error: {Messsage}", ex.Message);
             }
         }
 

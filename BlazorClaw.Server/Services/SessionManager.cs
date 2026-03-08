@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Providers;
@@ -7,7 +8,10 @@ using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
+using System.CommandLine;
 using System.Text.Json;
+using Telegram.Bot.Types;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace BlazorClaw.Server.Services
 {
@@ -100,6 +104,23 @@ namespace BlazorClaw.Server.Services
             return Task.CompletedTask;
         }
 
+        public async Task<object?> DispatchCommandAsync(string cmdline, CommandContext cmdContext, RootCommand rootCmd, ICommandProvider commandProvider)
+        {
+            if (cmdline.StartsWith('/'))
+            {
+                var commandText = cmdline[1..].Split(' ')[0].ToLower(); // Get command without '/'
+                logger.LogInformation("Received command: {Command}", commandText);
+                var command = commandProvider.GetCommands()
+                    .FirstOrDefault(o => o.GetCommand().Name.Equals(commandText, StringComparison.OrdinalIgnoreCase));
+
+                if (command != null)
+                {
+                    logger.LogInformation("Executing command: {Command}", commandText);
+                    return await commandProvider.ExecuteAsync(command, rootCmd.Parse(cmdline[1..]), cmdContext);
+                }
+            }
+            return null;
+        }
 
         public async IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sessionState)
         {
