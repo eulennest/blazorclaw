@@ -2,24 +2,36 @@ namespace BlazorClaw.Core.Security.Vault;
 
 public interface IVaultProvider
 {
-    IAsyncEnumerable<string> GetKeysAsync();
-    Task<string?> GetSecretAsync(string key);
-    Task SetSecretAsync(string key, string secret);
+    IAsyncEnumerable<IVaultKey> GetKeysAsync();
+    Task<IVaultEntry?> GetSecretAsync(string key);
+    Task<string> SetSecretAsync(string title, string secret, string? note = null, string? key = null);
 }
+
+public interface IVaultKey
+{
+    string Key { get; set; }
+    string Title { get; set; }
+}
+public interface IVaultEntry : IVaultKey
+{
+    string Secret { get; set; }
+    string Notes { get; set; }
+}
+
 
 public class VaultAggregator(IEnumerable<IVaultProvider> provider) : IVaultProvider
 {
     private readonly List<IVaultProvider> Providers = [.. provider];
 
     private Dictionary<string, IVaultProvider> keysAll = [];
-    public async IAsyncEnumerable<string> GetKeysAsync()
+    public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
     {
         Dictionary<string, IVaultProvider> keys = [];
         foreach (var prov in Providers)
         {
             await foreach (var item in prov.GetKeysAsync())
             {
-                keys.TryAdd(item, prov);
+                keys.TryAdd(item.Key, prov);
                 yield return item;
             }
         }
@@ -27,17 +39,17 @@ public class VaultAggregator(IEnumerable<IVaultProvider> provider) : IVaultProvi
 
     }
 
-    public Task<string?> GetSecretAsync(string key)
+    public Task<IVaultEntry?> GetSecretAsync(string key)
     {
         if (keysAll.TryGetValue(key, out var prov))
             return prov.GetSecretAsync(key);
-        return Task.FromResult<string?>(null);
+        return Task.FromResult<IVaultEntry?>(null);
     }
 
-    public Task SetSecretAsync(string key, string secret)
+    public Task<string> SetSecretAsync(string title, string secret, string? note = null, string? key = null)
     {
-        if (keysAll.TryGetValue(key, out var prov))
-            return prov.SetSecretAsync(key, secret);
-        return Providers.First().SetSecretAsync(key, secret);
+        if (!string.IsNullOrWhiteSpace(key) && keysAll.TryGetValue(key, out var prov))
+            return prov.SetSecretAsync(title, secret, note, key);
+        return Providers.First().SetSecretAsync(title, secret, note, key);
     }
 }

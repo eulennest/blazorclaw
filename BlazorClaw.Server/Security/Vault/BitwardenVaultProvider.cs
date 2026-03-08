@@ -23,31 +23,49 @@ public class BitwardenVaultProvider : IVaultProvider
     {
         _options = options.Value;
         _client = new BitwardenClient();
-        _client.AccessTokenLogin(_options.AccessToken); 
+        _client.AccessTokenLogin(_options.AccessToken);
     }
 
-    public async Task<string?> GetSecretAsync(string key)
+    public async Task<IVaultEntry?> GetSecretAsync(string key)
     {
-        var secret = await _client.Secrets.GetAsync(key); 
-        return secret.Value;
+        var uid = Guid.Parse(key);
+        var secret = await Task.Run(() => _client.Secrets.Get(uid));
+        return new VaultEntry()
+        {
+            Key = secret.Id.ToString(),
+            Secret = secret.Value,
+            Title = secret.Key,
+            Notes = secret.Note
+        };
     }
 
-    public async IAsyncEnumerable<string> GetKeysAsync()
+    public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
     {
-        var data = await _client.Secrets.ListAsync(_options.OrganizationId);
+        var orgaId = Guid.Parse(_options.OrganizationId);
+        var data = await Task.Run(() => _client.Secrets.List(orgaId));
         foreach (var item in data.Data)
         {
-            yield return item.Key;
+            yield return new VaultKey()
+            {
+                Key = item.Id.ToString(),
+                Title = item.Key
+            };
         }
     }
 
-    public async Task SetSecretAsync(string key, string secret)
+    public async Task<string> SetSecretAsync(string title, string secret, string? note = null, string? key = null)
     {
-        await _client.Secrets.CreateAsync(new SecretCreateRequest
+        var orgaId = Guid.Parse(_options.OrganizationId);
+
+        if (string.IsNullOrWhiteSpace(key))
         {
-            Key = key,
-            Value = secret,
-            OrganizationId = Guid.Parse(_options.OrganizationId)
-        });
+             return await Task.Run(() =>
+                _client.Secrets.Create(title, secret, note ?? string.Empty, orgaId, []).Id.ToString());
+        }
+        else
+        {
+            var uid = Guid.Parse(key);
+            return await Task.Run(() => _client.Secrets.Update(uid, title, secret, note ?? string.Empty, orgaId, []).Id.ToString());
+        }
     }
 }

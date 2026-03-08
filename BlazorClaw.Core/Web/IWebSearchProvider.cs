@@ -6,21 +6,20 @@ public interface IWebSearchProvider
     Task<string> FetchAsync(string url);
 }
 
-public class WebAggregator : IWebSearchProvider
+public class WebAggregator(IEnumerable<IWebSearchProvider> providers) : IWebSearchProvider
 {
-    private readonly IEnumerable<IWebSearchProvider> _providers;
-
-    public WebAggregator(IEnumerable<IWebSearchProvider> providers)
-    {
-        _providers = providers;
-    }
-
     public async Task<string> SearchAsync(string query, int count)
     {
         var results = new List<string>();
-        foreach (var provider in _providers)
+        foreach (var provider in providers)
         {
-            results.Add(await provider.SearchAsync(query, count));
+            try
+            {
+                results.Add(await provider.SearchAsync(query, count));
+            }
+            catch
+            {
+            }
         }
         return string.Join("\n\n---\n\n", results);
     }
@@ -28,9 +27,9 @@ public class WebAggregator : IWebSearchProvider
     public async Task<string> FetchAsync(string url)
     {
         // Einfache Implementierung: Erster Provider gewinnt
-        foreach (var provider in _providers)
+        foreach (var provider in providers)
         {
-            try { return await provider.FetchAsync(url); } catch { continue; }
+            try { return await provider.FetchAsync(url); } catch { }
         }
         return "Fetch failed.";
     }

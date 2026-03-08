@@ -2,6 +2,7 @@ using BlazorClaw.Core.Security.Vault;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Text;
 
 namespace BlazorClaw.Server.Tools;
 
@@ -13,13 +14,22 @@ public class VaultGetParams
     public string Key { get; set; } = string.Empty;
 }
 
-public class VaultSetParams : VaultGetParams
+public class VaultSetParams
 {
-    [Description("Das Geheimnis selbst")]
     [Required]
-    public string Secret { get; set; } = string.Empty;
-}
+    [Description("Der Title des Geheimnis")]
+    public string Title { get; set; } = string.Empty;
 
+    [Required]
+    [Description("Das Geheimnis selbst")]
+    public string Secret { get; set; } = string.Empty;
+
+    [Description("Zusätzliche Notiz")]
+    public string? Note { get; set; }
+
+    [Description("Der Schlüssel des Geheimnisses  nur bei Update")]
+    public string? Key { get; set; }
+}
 
 public class VaultGetTool : BaseTool<VaultGetParams>
 {
@@ -29,20 +39,27 @@ public class VaultGetTool : BaseTool<VaultGetParams>
     protected override async Task<string> ExecuteInternalAsync(VaultGetParams p, ToolContext context)
     {
         var vp = context.ServiceProvider.GetRequiredService<IVaultProvider>();
-        return await vp.GetSecretAsync(p.Key) ?? string.Empty;
+
+        var secret = await vp.GetSecretAsync(p.Key) ?? throw new KeyNotFoundException($"Kein Geheimnis mit Schlüssel '{p.Key}' gefunden.");
+        var sb = new StringBuilder();
+        sb.AppendLine($"Key: {secret.Key}");
+        sb.AppendLine($"Title: {secret.Title}");
+        sb.AppendLine($"Secret: {secret.Secret}");
+        if (!string.IsNullOrWhiteSpace(secret.Notes))
+            sb.AppendLine($"Notes: {secret.Notes}");
+        return sb.ToString();
     }
 }
 
 public class VaultSetTool : BaseTool<VaultSetParams>
 {
     public override string Name => "vault_set";
-    public override string Description => "Setzt ein Geheimnis im Vault";
+    public override string Description => "Setzt ein Geheimnis im Vault (Return: Key des Geheimnisses)";
 
     protected override async Task<string> ExecuteInternalAsync(VaultSetParams p, ToolContext context)
     {
         var vp = context.ServiceProvider.GetRequiredService<IVaultProvider>();
-        await vp.SetSecretAsync(p.Key, p.Secret);
-        return "Secret saved.";
+        return await vp.SetSecretAsync(p.Title, p.Secret,p.Note, p.Key);
     }
 }
 
@@ -56,6 +73,6 @@ public class VaultListTool : BaseTool<EmptyParams>
     {
         var vp = context.ServiceProvider.GetRequiredService<IVaultProvider>();
         var list = await vp.GetKeysAsync().ToListAsync();
-        return string.Join(Environment.NewLine, list);
+        return string.Join(Environment.NewLine, list.Select(o => $"{o.Key}: {o.Title}"));
     }
 }

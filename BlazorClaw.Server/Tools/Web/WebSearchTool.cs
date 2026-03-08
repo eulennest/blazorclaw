@@ -5,15 +5,8 @@ using BlazorClaw.Core.Web;
 
 namespace BlazorClaw.Server.Tools.Web;
 
-public class WebSearchTool : BaseTool<WebSearchTool.Params>
+public class WebSearchTool(IWebSearchProvider webSearchProvider) : BaseTool<WebSearchTool.Params>
 {
-    private readonly IWebSearchProvider _webSearchProvider;
-
-    public WebSearchTool(IWebSearchProvider webSearchProvider)
-    {
-        _webSearchProvider = webSearchProvider;
-    }
-
     public override string Name => "web_search";
     public override string Description => "Sucht im Web nach Informationen.";
 
@@ -28,6 +21,6 @@ public class WebSearchTool : BaseTool<WebSearchTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
     {
-        return await _webSearchProvider.SearchAsync(parameters.Query, parameters.Count ?? 10);
+        return await webSearchProvider.SearchAsync(parameters.Query, parameters.Count ?? 10);
     }
 }
