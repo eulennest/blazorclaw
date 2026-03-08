@@ -22,12 +22,12 @@ public class WebSearchTool : BaseTool<WebSearchTool.Params>
         [Required, Description("Suchbegriff")]
         public string Query { get; set; } = string.Empty;
 
-        [Description("Anzahl der Ergebnisse (Standard: 5)")]
-        public int Count { get; set; } = 5;
+        [Description("Anzahl der Ergebnisse (Standard: 10)")]
+        public int? Count { get; set; } = 10;
     }
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
     {
-        return await _webSearchProvider.SearchAsync(parameters.Query, parameters.Count);
+        return await _webSearchProvider.SearchAsync(parameters.Query, parameters.Count ?? 10);
     }
 }
