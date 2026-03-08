@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Memory;
 using BlazorClaw.Core.Plugins;
@@ -7,6 +8,7 @@ using BlazorClaw.Core.Security.Vault;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Web;
+using BlazorClaw.Server;
 using BlazorClaw.Server.Components;
 using BlazorClaw.Server.Components.Account;
 using BlazorClaw.Server.Memory;
@@ -18,6 +20,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Windows.Input;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,7 +62,7 @@ builder.Services.Configure<FileSystemMemoryOptions>(builder.Configuration.GetSec
 builder.Services.TryAddSingleton<IMemorySearchProvider>(sp => new MemorySearchAggregator(PluginUtils.BuildPlugins<IMemorySearchProvider>(sp, typeof(MemorySearchAggregator))));
 
 // Commands
-builder.Services.TryAddSingleton<ISystemCommandAggregator>(sp => new SystemCommandAggregator(PluginUtils.BuildPlugins<ICommandProvider>(sp, typeof(SystemCommandAggregator))));
+builder.Services.TryAddSingleton<ICommandProvider>(sp => new SystemCommandAggregator(PluginUtils.BuildPlugins<ICommandProvider>(sp, typeof(SystemCommandAggregator))));
 
 // Providers
 builder.Services.TryAddSingleton<IProviderManager>(sp => new ProviderAggregator(PluginUtils.BuildPlugins<IProviderManager>(sp, typeof(ProviderAggregator))));

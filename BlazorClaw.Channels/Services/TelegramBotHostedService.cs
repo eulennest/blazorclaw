@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Sessions;
 using Microsoft.AspNetCore.Identity;
@@ -6,13 +7,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.CommandLine;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 
 namespace BlazorClaw.Channels.Services
 {
-    public record TelegramBotInstance(string Id, string Token, TelegramBotClient Client);
+    public record TelegramBotInstance(string Id, string Token, TelegramBotClient Client, RootCommand Cmds);
 
 
     public class TelegramBotHostedService(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger) : IHostedService
@@ -30,12 +32,25 @@ namespace BlazorClaw.Channels.Services
                 {
                     logger.LogInformation("Telegram Bot '{id}' registering ...", id);
 
+                    var cmds = serviceProvider.GetRequiredService<ICommandProvider>();
+                    RootCommand rootCommand = new("Commands for Telegram");
+                    foreach (var cmd in cmds.GetCommands())
+                    {
+                        var command = cmd.GetCommand();
+                        rootCommand.Add(command);
+                    }
+
                     var client = new TelegramBotClient(token);
-                    _bots.Add(new TelegramBotInstance(id, token, client));
+                    _bots.Add(new TelegramBotInstance(id, token, client, rootCommand));
 
                     var receiverOptions = new ReceiverOptions
                     {
                     };
+
+                    var commands = cmds.GetCommands()
+                        .Select(o => o.GetCommand())
+                        .Select(c => new BotCommand { Command = c.Name.ToLower(), Description = c.Description ?? string.Empty }).ToArray();
+                    client.SetMyCommands(commands, cancellationToken: cancellationToken);
 
                     client.StartReceiving(
                         updateHandler: HandleUpdateAsync,
@@ -58,6 +73,8 @@ namespace BlazorClaw.Channels.Services
         {
             try
             {
+                var inst = _bots.FirstOrDefault(b => b.Client.BotId == botClient.BotId);
+
                 if (update.Message?.Text == null) return;
                 logger.LogInformation("Telegram Bot '{BotId}' update received: {Message}", botClient.BotId, update.Message);
 
@@ -89,6 +106,37 @@ namespace BlazorClaw.Channels.Services
                     }
                 }
                 var sess = await sm.GetOrCreateSessionAsync(uid.Value);
+
+                if (inst != null && update.Message.Text.StartsWith('/'))
+                {
+                    var commandText = update.Message.Text[1..].Split(' ')[0].ToLower(); // Get command without '/'
+                    logger.LogInformation("Received command: {Command}", commandText);
+                    var cmds = scope.ServiceProvider.GetRequiredService<ICommandProvider>();
+                    var command = cmds.GetCommands()
+                        .FirstOrDefault(o => o.GetCommand().Name.Equals(commandText, StringComparison.OrdinalIgnoreCase));
+
+                    if (command != null)
+                    {
+                        var cmdContext = new CommandContext
+                        {
+                            UserId = user?.Id,
+                            ChannelProvider = "Telegram",
+                            ChannelId = telegramId,
+                            Session = sess?.Session,
+                            Provider = scope.ServiceProvider
+                        };
+                        logger.LogInformation("Executing command: {Command}", commandText);
+
+                        var result = await cmds.ExecuteAsync(command, inst.Cmds.Parse(update.Message.Text[1..]), cmdContext);
+                        var textRes = Convert.ToString(result);
+                        if (!string.IsNullOrWhiteSpace(textRes))
+                        {
+                            logger.LogInformation("Sending command result to {ChatId}: {Result}", update.Message.Chat.Id, result);
+                            await botClient.SendMessage(update.Message.Chat.Id, textRes, cancellationToken: cancellationToken);
+                        }
+                        return; // Command handled, exit early
+                    }
+                }
 
                 sess.MessageHistory.Add(new() { Role = "user", Content = update.Message.Text });
 

@@ -9,19 +9,12 @@ public interface IToolPolicyProvider
     string AfterTool(ITool tool, object parameters, string result, ToolContext context);
 }
 
-public class ToolPolicyAggregator : IToolPolicyProvider
+public class ToolPolicyAggregator(IEnumerable<IToolPolicyProvider> providers) : IToolPolicyProvider
 {
-    private readonly IEnumerable<IToolPolicyProvider> _providers;
-
-    public ToolPolicyAggregator(IEnumerable<IToolPolicyProvider> providers)
-    {
-        _providers = providers;
-    }
-
     public IEnumerable<ITool> FilterTools(IEnumerable<ITool> allTools, ToolContext context)
     {
         var result = allTools;
-        foreach (var provider in _providers)
+        foreach (var provider in providers)
         {
             result = provider.FilterTools(result, context);
         }
@@ -30,13 +23,13 @@ public class ToolPolicyAggregator : IToolPolicyProvider
 
     public void BeforeTool(ITool tool, object parameters, ToolContext context)
     {
-        foreach (var provider in _providers) provider.BeforeTool(tool, parameters, context);
+        foreach (var provider in providers) provider.BeforeTool(tool, parameters, context);
     }
 
     public string AfterTool(ITool tool, object parameters, string result, ToolContext context)
     {
         var finalResult = result;
-        foreach (var provider in _providers)
+        foreach (var provider in providers)
         {
             finalResult = provider.AfterTool(tool, parameters, finalResult, context);
         }

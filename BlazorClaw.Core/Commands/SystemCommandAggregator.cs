@@ -1,46 +1,34 @@
-using System.Threading.Tasks;
 using System.CommandLine;
-using BlazorClaw.Core.Commands;
 
 namespace BlazorClaw.Core.Commands;
 
-public class CommandContext
+public class SystemCommandAggregator(IEnumerable<ICommandProvider> providers) : ICommandProvider
 {
-    public string UserId { get; set; } = string.Empty;
-    public string ChannelId { get; set; } = string.Empty;
-}
+    private Dictionary<ISystemCommand, ICommandProvider>? _commandMap;
 
-public interface ISystemCommandAggregator
-{
-    Task ExecuteAsync(string input, CommandContext context);
-}
-
-public class SystemCommandAggregator : ISystemCommandAggregator
-{
-    private readonly RootCommand _rootCommand;
-    private readonly Dictionary<string, ISystemCommand> _commandMap = new();
-
-    public SystemCommandAggregator(IEnumerable<ICommandProvider> providers)
+    public IEnumerable<ISystemCommand> GetCommands()
     {
-        _rootCommand = new RootCommand("BlazorClaw System Commands");
-        foreach (var provider in providers)
+        if (_commandMap == null)
         {
-            foreach (var command in provider.GetCommands())
+            _commandMap = [];
+
+            foreach (var provider in providers)
             {
-                _rootCommand.Add(command.GetCommand());
-                _commandMap[command.GetCommand().Name] = command;
+                foreach (var command in provider.GetCommands())
+                {
+                    _commandMap[command] = provider;
+                }
             }
         }
+        return _commandMap.Keys;
     }
 
-    public async Task ExecuteAsync(string input, CommandContext context)
+    public Task<object?> ExecuteAsync(ISystemCommand command, ParseResult result, CommandContext context)
     {
-        var result = _rootCommand.Parse(input);
-        
-        var commandName = result.CommandResult.Command.Name;
-        if (_commandMap.TryGetValue(commandName, out var command))
+        if (_commandMap?.TryGetValue(command, out var provider) ?? false)
         {
-            await command.ExecuteAsync(result, context);
+            return provider.ExecuteAsync(command, result, context);
         }
+        throw new InvalidOperationException($"No provider found for command {result.CommandResult.Command.Name}");
     }
 }
