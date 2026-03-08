@@ -1,7 +1,7 @@
 using System.CommandLine;
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Data;
-using BlazorClaw.Server.Data; // Required for ApplicationDbContext
+using BlazorClaw.Core.Data; // Required for ApplicationDbContext
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection; // Required for context.Provider
 
