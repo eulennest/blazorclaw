@@ -27,7 +27,7 @@ public class SystemCommandAggregator : ISystemCommandAggregator
         {
             foreach (var command in provider.GetCommands())
             {
-                _rootCommand.AddCommand(command.GetCommand());
+                _rootCommand.Add(command.GetCommand());
                 _commandMap[command.GetCommand().Name] = command;
             }
         }
