@@ -4,6 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Auto-versioning: Major.Minor.DaysSince2000.SecondsSinceMidnight/2 -->
+    <Version>$([System.DateTime]::UtcNow.Year).$([System.DateTime]::UtcNow.Month).$([System.DateTime]::UtcNow.Day)</Version>
   </PropertyGroup>
 
   <ItemGroup>
