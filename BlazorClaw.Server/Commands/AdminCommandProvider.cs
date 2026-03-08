@@ -20,7 +20,18 @@ public class StatusCommand : ISystemCommand, ISystemCommandExecutor
     public Command GetCommand() => new("status", "Status von BlazorClaw anzeigen");
     public Task<object?> ExecuteAsync(ParseResult result, CommandContext context)
     {
-        return Task.FromResult<object?>($"Status: BlazorClaw is running. User: {context.UserId}, Channel: {context.ChannelId}");
+        // Einfache Mock-Daten für die Anzeige des System-Status
+        var version = "2026.2.26"; 
+        var commit = "bc50708";
+        var model = "mistralai/mistral-large";
+        var tokens = "19k in / 154 out";
+        
+        return Task.FromResult<object?>(
+            $"🦞 BlazorClaw {version} ({commit})\n" +
+            $"🧠 Model: {model}\n" +
+            $"🧮 Tokens: {tokens}\n" +
+            $"🧵 Session: agent:main:{context.ChannelProvider}:{context.ChannelId}\n" +
+            $"⚙️ Runtime: direct · Think: off");
     }
 }
 
