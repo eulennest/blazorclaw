@@ -8,6 +8,7 @@ using BlazorClaw.Core.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Identity;
 using System.Collections.Concurrent;
+using Matrix.Sdk.Core.Domain.RoomEvent;
 
 namespace BlazorClaw.Channels.Services
 {
@@ -43,12 +44,12 @@ namespace BlazorClaw.Channels.Services
                 var password = config["Password"] ?? "";
 
                 _logger.LogInformation("Matrix Bot '{id}' initializing ...", config.Key);
-                
+
                 try
                 {
                     IMatrixClient client = factory.Create();
                     await client.LoginAsync(homeserver, userId, password, "BlazorClawBot");
-                    
+
                     client.OnMatrixRoomEventsReceived += HandleUpdate;
 
                     client.Start();
@@ -64,22 +65,20 @@ namespace BlazorClaw.Channels.Services
 
         private async void HandleUpdate(object sender, MatrixRoomEventsEventArgs eventArgs)
         {
+            var client = (IMatrixClient)sender;
             foreach (var roomEvent in eventArgs.MatrixRoomEvents)
             {
-                if (roomEvent is TextMessageEvent textMessageEvent)
+                if (client.UserId != roomEvent.SenderUserId)
                 {
-                    (string roomId, string senderUserId, string message) = textMessageEvent;
-                    var client = (IMatrixClient)sender;
-                    
-                    if (client.UserId != senderUserId)
+                    if (roomEvent is TextMessageEvent textMessageEvent)
                     {
-                        _logger.LogInformation("Matrix received message in {RoomId}", roomId);
-                        await ProcessMatrixMessage(client, roomId, senderUserId, message);
+                        _logger.LogInformation("Matrix received message in {RoomId}", roomEvent.RoomId);
+                        await ProcessMatrixMessage(client, roomEvent.RoomId, roomEvent.SenderUserId, textMessageEvent.Message);
                     }
                 }
             }
         }
-        
+
         private async Task ProcessMatrixMessage(IMatrixClient client, string roomId, string senderUserId, string message)
         {
             try

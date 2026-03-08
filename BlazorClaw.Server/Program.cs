@@ -98,6 +98,7 @@ builder.Services.AddSingleton<ISessionManager, BlazorClaw.Server.Services.Sessio
 builder.Services.AddScoped<BlazorClaw.Server.Services.IChannelToSessionDispatcher, BlazorClaw.Server.Services.ChannelToSessionDispatcher>();
 
 builder.Services.AddHostedService<BlazorClaw.Channels.Services.TelegramBotHostedService>();
+builder.Services.AddHostedService<BlazorClaw.Channels.Services.MatrixBotHostedService>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
