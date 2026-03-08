@@ -25,7 +25,10 @@ public class OpenAiController(ISessionManager sessionManager) : ControllerBase
 
             // 1. Session via SessionManager laden/erstellen
             var sessionState = await sessionManager.GetOrCreateSessionAsync(userId, request.Model);
-
+            if (!string.IsNullOrWhiteSpace(request.Model))
+            {
+                sessionState.Session.CurrentModel = request.Model;
+            }
             // 2. Nur die letzte Nachricht verarbeiten
             var lastUserMessage = request.Messages.LastOrDefault(m => m.Role == "user");
             if (lastUserMessage != null)
