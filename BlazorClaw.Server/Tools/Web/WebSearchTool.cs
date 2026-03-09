@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Web;
 using System.ComponentModel;
@@ -19,7 +20,7 @@ public class WebSearchTool(IWebSearchProvider webSearchProvider) : BaseTool<WebS
         public int? Count { get; set; } = 10;
     }
 
-    protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
+    protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
         return await webSearchProvider.SearchAsync(parameters.Query, parameters.Count ?? 10);
     }

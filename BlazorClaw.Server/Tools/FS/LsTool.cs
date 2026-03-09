@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 
@@ -23,7 +24,7 @@ public class LsTool : BaseTool<LsParams>
     public override string Name => "fs_ls";
     public override string Description => "Listet Dateien in einem Verzeichnis auf (optional mit Glob-Pattern, Details und Rekursion)";
 
-    protected override Task<string> ExecuteInternalAsync(LsParams p, ToolContext context)
+    protected override Task<string> ExecuteInternalAsync(LsParams p, MessageContext context)
     {
         if (!Directory.Exists(p.Path)) return Task.FromResult("Pfad nicht gefunden");
         var searchOption = (p.Recursive ?? false) ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;

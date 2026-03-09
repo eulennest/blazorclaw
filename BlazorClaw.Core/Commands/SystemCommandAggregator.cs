@@ -23,7 +23,7 @@ public class SystemCommandAggregator(IEnumerable<ICommandProvider> providers) : 
         return _commandMap.Keys;
     }
 
-    public Task<object?> ExecuteAsync(ISystemCommand command, ParseResult result, CommandContext context)
+    public Task<object?> ExecuteAsync(ISystemCommand command, ParseResult result, MessageContext context)
     {
         if (_commandMap?.TryGetValue(command, out var provider) ?? false)
         {

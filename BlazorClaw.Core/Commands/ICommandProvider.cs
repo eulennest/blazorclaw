@@ -1,4 +1,5 @@
 using BlazorClaw.Core.Models;
+using BlazorClaw.Core.Sessions;
 using System.CommandLine;
 
 namespace BlazorClaw.Core.Commands;
@@ -6,7 +7,7 @@ namespace BlazorClaw.Core.Commands;
 public interface ICommandProvider
 {
     IEnumerable<ISystemCommand> GetCommands();
-    Task<object?> ExecuteAsync(ISystemCommand cmd, ParseResult result, CommandContext context);
+    Task<object?> ExecuteAsync(ISystemCommand cmd, ParseResult result, MessageContext context);
 }
 
 public interface ISystemCommand
@@ -16,21 +17,20 @@ public interface ISystemCommand
 
 public interface ISystemCommandExecutor
 {
-    Task<object?> ExecuteAsync(ParseResult result, CommandContext context);
+    Task<object?> ExecuteAsync(ParseResult result, MessageContext context);
 }
 
-public class CommandContext
+public class MessageContext
 {
     public ChatSession? Session { get; set; }
     public required IServiceProvider Provider { get; set; }
     public string? UserId { get; set; }
-    public string ChannelProvider { get; set; } = string.Empty;
-    public string ChannelId { get; set; } = string.Empty;
+    public IChannelSession? Channel { get; set; }
 }
 
 public abstract class ExecutorCommandProvider : ICommandProvider
 {
-    public Task<object?> ExecuteAsync(ISystemCommand cmd, ParseResult result, CommandContext context)
+    public Task<object?> ExecuteAsync(ISystemCommand cmd, ParseResult result, MessageContext context)
     {
         if (cmd is ISystemCommandExecutor executor)
         {

@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -17,7 +18,7 @@ public class MemoryReadTool : BaseTool<MemoryReadTool.Params>
         public string FileName { get; set; } = string.Empty;
     }
 
-    protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
+    protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
         var safeFileName = Path.GetFileName(parameters.FileName);
         if (!safeFileName.EndsWith(".md")) safeFileName += ".md";

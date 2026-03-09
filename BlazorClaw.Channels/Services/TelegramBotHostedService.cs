@@ -1,12 +1,9 @@
 using BlazorClaw.Core.Commands;
-using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Sessions;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 using System.CommandLine;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -14,25 +11,10 @@ using Telegram.Bot.Types;
 
 namespace BlazorClaw.Channels.Services
 {
-    public record TelegramBotInstance(string Id, string Token, TelegramBotClient Client, RootCommand Cmds);
-
-
-    public class TelegramBotHostedService(IConfiguration configuration, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger) : IHostedService, IChannelBot
+    public class TelegramBotHostedService(IConfiguration configuration, IMessageDispatcher md, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger) : IHostedService
     {
-        public string ProviderName => "Telegram";
-        public event Func<string, string, string, Task>? OnMessageReceived;
+        private readonly List<TelegramChannelBot> _bots = [];
 
-        private readonly List<TelegramBotInstance> _bots = [];
-        public ConcurrentDictionary<string, Guid> sessIds = [];
-        
-        public async Task SendMessageAsync(string channelId, string message)
-        {
-            var bot = _bots.FirstOrDefault(); // Simplified for now
-            if (bot != null && long.TryParse(channelId, out var chatId))
-            {
-                await bot.Client.SendMessage(chatId, message);
-            }
-        }
         public Task StartAsync(CancellationToken cancellationToken)
         {
             var telegramConfigs = configuration.GetSection("Channels:Telegram").GetChildren();
@@ -53,8 +35,9 @@ namespace BlazorClaw.Channels.Services
                     }
 
                     var client = new TelegramBotClient(token);
-                    _bots.Add(new TelegramBotInstance(id, token, client, rootCommand));
-
+                    var bot = new TelegramChannelBot(client);
+                    _bots.Add(bot);
+                    md.Register(bot);
                     var receiverOptions = new ReceiverOptions
                     {
                     };
@@ -86,84 +69,10 @@ namespace BlazorClaw.Channels.Services
             try
             {
                 var inst = _bots.FirstOrDefault(b => b.Client.BotId == botClient.BotId);
-
-                if (update.Message?.Text == null) return;
-                logger.LogInformation("Telegram Bot '{BotId}' update received: {Message}", botClient.BotId, update.Message);
-
-                using var scope = serviceProvider.CreateScope();
-                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
+                if (inst == null || update.Message?.Text == null) return;
                 var telegramId = update.Message.From!.Id.ToString();
-                logger.LogInformation("Looking up user for Telegram ID: {TelegramId}", telegramId);
-
-                // Suche User via Provider "Telegram"
-                var user = await userManager.FindByLoginAsync("Telegram", telegramId);
-
-                var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
                 await botClient.SendChatAction(update.Message.Chat.Id, Telegram.Bot.Types.Enums.ChatAction.Typing, cancellationToken: cancellationToken);
-
-                Guid? uid = user != null ? Guid.Parse(user.Id) : null;
-                if (uid == null)
-                {
-                    if (!sessIds.TryGetValue(telegramId, out var existingUid))
-                    {
-                        uid = Guid.NewGuid();
-                        sessIds[telegramId] = uid.Value;
-                        logger.LogInformation("No user found for Telegram ID {TelegramId}. Assigned temporary session ID: {SessionId}", telegramId, uid);
-                    }
-                    else
-                    {
-                        uid = existingUid;
-                        logger.LogInformation("No user found for Telegram ID {TelegramId}. Using existing temporary session ID: {SessionId}", telegramId, uid);
-                    }
-                }
-                var sess = await sm.GetOrCreateSessionAsync(uid.Value);
-
-                if (inst != null && update.Message.Text.StartsWith('/'))
-                {
-                    try
-                    {
-                        var cmdContext = new CommandContext
-                        {
-                            UserId = user?.Id,
-                            ChannelProvider = "Telegram",
-                            ChannelId = telegramId,
-                            Session = sess.Session,
-                            Provider = scope.ServiceProvider
-                        };
-                        var ret = await sm.DispatchCommandAsync(update.Message.Text, cmdContext, inst.Cmds, scope.ServiceProvider.GetRequiredService<ICommandProvider>());
-                        if (ret != null)
-                        {
-                            var textRes = Convert.ToString(ret);
-                            if (!string.IsNullOrWhiteSpace(textRes))
-                            {
-                                logger.LogInformation("Sending command result to {ChatId}: {Result}", update.Message.Chat.Id, ret);
-                                await botClient.SendMessage(update.Message.Chat.Id, textRes, cancellationToken: cancellationToken);
-                            }
-                            return; // Command handled, exit early
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger.LogError(ex, "Error processing command '{Command}' for Telegram ID {TelegramId}: {Message}", update.Message.Text, telegramId, ex.Message);
-                        var textRes = $"Error processing command: {ex.Message}";
-                        await botClient.SendMessage(update.Message.Chat.Id, textRes, cancellationToken: cancellationToken);
-                        return; // Exit early on command error
-                    }
-                }
-
-                sess.MessageHistory.Add(new() { Role = "user", Content = update.Message.Text });
-
-                await foreach (var msg in sm.DispatchToLLMAsync(sess))
-                {
-                    if (!msg.IsAssistant) continue;
-                    var content = Convert.ToString(msg.Content);
-                    if (!string.IsNullOrWhiteSpace(content))
-                    {
-                        logger.LogInformation("Sending reply to {ChatId}: {Reply}", update.Message.Chat.Id, content);
-                        await botClient.SendMessage(update.Message.Chat.Id, content, cancellationToken: cancellationToken);
-                    }
-                }
+                await inst.OnMessageReceivedAsync(new ChannelSession(inst, telegramId), update.Message.Text);
             }
             catch (Exception ex)
             {
@@ -171,6 +80,24 @@ namespace BlazorClaw.Channels.Services
             }
         }
 
-        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            foreach (var bot in _bots)
+            {
+                md.Unregister(bot);
+            }
+            return Task.CompletedTask;
+        }
     }
+
+
+    public class TelegramChannelBot(TelegramBotClient Client) : AbstractChannelBot("Telegram")
+    {
+        internal TelegramBotClient Client { get; } = Client;
+        public override Task SendMessageAsync(IChannelSession channelId, object message, CancellationToken cancellationToken = default)
+        {
+            return Client.SendMessage(channelId.ChannelId, Convert.ToString(message) ?? string.Empty, cancellationToken: cancellationToken);
+        }
+    }
+
 }

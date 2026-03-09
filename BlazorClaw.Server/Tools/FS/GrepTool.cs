@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -35,7 +36,7 @@ public class GrepTool : BaseTool<GrepParams>
     public override string Name => "fs_grep";
     public override string Description => "Sucht nach Textinhalt in Dateien";
 
-    protected override async Task<string> ExecuteInternalAsync(GrepParams p, ToolContext context)
+    protected override async Task<string> ExecuteInternalAsync(GrepParams p, MessageContext context)
     {
         var results = new List<object>();
         var searchOption = (p.Recursive ?? true) ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;

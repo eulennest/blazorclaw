@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -12,7 +13,7 @@ public class ExecParams
     public string Binary { get; set; } = string.Empty;
 
     [Description("Argumente für die Datei")]
-    public string[] Args { get; set; } = new string[0];
+    public string[] Args { get; set; } = [];
 }
 
 public class ExecTool : BaseTool<ExecParams>
@@ -20,7 +21,7 @@ public class ExecTool : BaseTool<ExecParams>
     public override string Name => "process_exec";
     public override string Description => "Führt ein Programm mit Parametern aus";
 
-    protected override Task<string> ExecuteInternalAsync(ExecParams p, ToolContext context)
+    protected override Task<string> ExecuteInternalAsync(ExecParams p, MessageContext context)
     {
         var startInfo = new ProcessStartInfo
         {

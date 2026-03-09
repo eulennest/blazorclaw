@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -25,7 +26,7 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
         public WriteMode? Mode { get; set; } = WriteMode.Create;
     }
 
-    protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
+    protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
         var safeFileName = Path.GetFileName(parameters.FileName);
         if (!safeFileName.EndsWith(".md")) safeFileName += ".md";

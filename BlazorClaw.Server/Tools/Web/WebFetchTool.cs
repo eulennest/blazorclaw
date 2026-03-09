@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -26,7 +27,7 @@ public class WebFetchTool(HttpClient client) : BaseTool<WebFetchParams>
     public override string Name => "web_fetch";
     public override string Description => "Abrufen einer Webseite";
 
-    protected override async Task<string> ExecuteInternalAsync(WebFetchParams p, ToolContext context)
+    protected override async Task<string> ExecuteInternalAsync(WebFetchParams p, MessageContext context)
     {
         var mode = p.Mode ?? FetchMode.Auto;
 

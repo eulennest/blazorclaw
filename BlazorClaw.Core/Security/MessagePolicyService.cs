@@ -1,36 +1,30 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Core.Security;
 
 public interface IMessagePolicyProvider
 {
-    string FilterUserMessage(string message, ToolContext context);
-    string FilterAssistantMessage(string message, ToolContext context);
+    string FilterUserMessage(string message, MessageContext context);
+    string FilterAssistantMessage(string message, MessageContext context);
 }
 
-public class MessagePolicyAggregator : IMessagePolicyProvider
+public class MessagePolicyAggregator(IEnumerable<IMessagePolicyProvider> providers) : IMessagePolicyProvider
 {
-    private readonly IEnumerable<IMessagePolicyProvider> _providers;
-
-    public MessagePolicyAggregator(IEnumerable<IMessagePolicyProvider> providers)
-    {
-        _providers = providers;
-    }
-
-    public string FilterUserMessage(string message, ToolContext context)
+    public string FilterUserMessage(string message, MessageContext context)
     {
         var result = message;
-        foreach (var provider in _providers)
+        foreach (var provider in providers)
         {
             result = provider.FilterUserMessage(result, context);
         }
         return result;
     }
 
-    public string FilterAssistantMessage(string message, ToolContext context)
+    public string FilterAssistantMessage(string message, MessageContext context)
     {
         var result = message;
-        foreach (var provider in _providers)
+        foreach (var provider in providers)
         {
             result = provider.FilterAssistantMessage(result, context);
         }

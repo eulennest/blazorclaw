@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using Microsoft.Extensions.Options;
 using System.ComponentModel;
@@ -27,7 +28,7 @@ public class GitTool(IOptions<GitOptions> options) : BaseTool<GitTool.Params>
         public string? WorkingDirectory { get; set; }
     }
 
-    protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
+    protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
         var startInfo = new System.Diagnostics.ProcessStartInfo
         {

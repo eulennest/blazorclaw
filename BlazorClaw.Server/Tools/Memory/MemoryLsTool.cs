@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 
 namespace BlazorClaw.Server.Tools.Memory;
@@ -11,7 +12,7 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
 
     public class Params { }
 
-    protected override Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
+    protected override Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
         if (!Directory.Exists(_memoryPath))
             return Task.FromResult("Memory-Ordner existiert nicht.");

@@ -19,20 +19,20 @@ public class AdminCommandProvider : ExecutorCommandProvider
 public class StatusCommand : ISystemCommand, ISystemCommandExecutor
 {
     public Command GetCommand() => new("status", "Status von BlazorClaw anzeigen");
-    public Task<object?> ExecuteAsync(ParseResult result, CommandContext context)
+    public Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
     {
         var host = context.Provider.GetRequiredService<IWebHostEnvironment>();
         // Einfache Mock-Daten für die Anzeige des System-Status
-        var version = Assembly.GetExecutingAssembly().GetName().Version; 
+        var version = Assembly.GetExecutingAssembly().GetName().Version;
         var commit = host.EnvironmentName;
         var tokens = "Xk in / Y out";
-        
+
         return Task.FromResult<object?>(
             $"🦞 BlazorClaw {version} ({commit})\r\n" +
             $"🧠 Model: {context.Session?.CurrentModel}\r\n" +
             $"🧮 Tokens: {tokens}\r\n" +
             $"🧵 Session: {context.Session?.Id}\r\n" +
-            $"🧵 Channel: {context.ChannelProvider}:{context.ChannelId}\r\n" +
+            $"🧵 Channel: {context.Channel?.ChannelProvider}:{context.Channel?.ChannelId}\r\n" +
             $"⚙️ Runtime: direct · Think: off");
     }
 }
@@ -48,8 +48,9 @@ public class RegisterCommand : ISystemCommand, ISystemCommandExecutor
         return cmd;
     }
 
-    public async Task<object?> ExecuteAsync(ParseResult result, CommandContext context)
+    public async Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
     {
+        if (context.Channel == null) throw new InvalidOperationException("Dieser Befehl muss in einem Channel ausgeführt werden.");
         var token = result.GetRequiredValue((Argument<string>)result.CommandResult.Command.Arguments[0]);
         var db = context.Provider.GetRequiredService<ApplicationDbContext>();
         var user = await db.Users.FirstOrDefaultAsync(u => u.ChannelRegisterToken == token) ?? throw new UnauthorizedAccessException("Ungültiger Registrierungstoken");
@@ -60,9 +61,9 @@ public class RegisterCommand : ISystemCommand, ISystemCommandExecutor
         db.UserLogins.Add(new Microsoft.AspNetCore.Identity.IdentityUserLogin<string>
         {
             UserId = user.Id,
-            LoginProvider = context.ChannelProvider,
-            ProviderKey = context.ChannelId,
-            ProviderDisplayName = context.ChannelProvider
+            LoginProvider = context.Channel.ChannelProvider,
+            ProviderKey = context.Channel.ChannelId,
+            ProviderDisplayName = context.Channel.ChannelProvider
         });
         await db.SaveChangesAsync();
         return "User Channel erfolgreich registriert";
@@ -82,7 +83,7 @@ public class ChannelCommand : ISystemCommand, ISystemCommandExecutor
         return cmd;
     }
 
-    public async Task<object?> ExecuteAsync(ParseResult result, CommandContext context)
+    public async Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
     {
         var db = context.Provider.GetRequiredService<ApplicationDbContext>();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Id == context.UserId) ?? throw new UnauthorizedAccessException("User nicht gefunden");

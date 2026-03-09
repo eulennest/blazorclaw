@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -16,7 +17,7 @@ public class KillTool : BaseTool<KillParams>
     public override string Name => "process_kill";
     public override string Description => "Beendet einen laufenden Prozess";
 
-    protected override Task<string> ExecuteInternalAsync(KillParams p, ToolContext context)
+    protected override Task<string> ExecuteInternalAsync(KillParams p, MessageContext context)
     {
         try
         {

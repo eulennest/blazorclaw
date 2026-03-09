@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -24,7 +25,7 @@ public class EditTool : BaseTool<EditTool.Params>
         public bool? Multiple { get; set; } = false;
     }
 
-    protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
+    protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
         if (!File.Exists(parameters.Path))
             throw new FileNotFoundException($"Datei nicht gefunden: {parameters.Path}");

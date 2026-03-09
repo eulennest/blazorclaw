@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 
@@ -14,7 +15,7 @@ public class ListTool : BaseTool<ListParams>
     public override string Name => "process_list";
     public override string Description => "Listet laufende Prozesse auf (optional gefiltert)";
 
-    protected override Task<string> ExecuteInternalAsync(ListParams p, ToolContext context)
+    protected override Task<string> ExecuteInternalAsync(ListParams p, MessageContext context)
     {
         var processes = System.Diagnostics.Process.GetProcesses();
         if (!string.IsNullOrEmpty(p.Search))

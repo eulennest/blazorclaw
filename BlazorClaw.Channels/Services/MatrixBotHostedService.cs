@@ -8,13 +8,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using Telegram.Bot;
 
 namespace BlazorClaw.Channels.Services
 {
-    public class MatrixBotHostedService(IConfiguration configuration, ILogger<MatrixBotHostedService> logger, IServiceProvider serviceProvider) : IHostedService
+    public class MatrixBotHostedService(IConfiguration configuration, ILogger<MatrixBotHostedService> logger, IMessageDispatcher messageDispatcher) : IHostedService
     {
-        private readonly List<IMatrixClient> _clients = [];
-        private readonly ConcurrentDictionary<string, Guid> _sessIds = [];
+        private readonly List<MatrixChannelBot> _bots = [];
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
@@ -35,9 +35,11 @@ namespace BlazorClaw.Channels.Services
                     await client.LoginAsync(homeserver, userId, password, "BlazorClawBot");
 
                     client.OnMatrixRoomEventsReceived += HandleUpdate;
-
                     client.Start();
-                    _clients.Add(client);
+
+                    var bot = new MatrixChannelBot(client);
+                    messageDispatcher.Register(bot);
+                    _bots.Add(bot);
                     logger.LogInformation("Matrix Bot '{id}' started successfully.", config.Key);
                 }
                 catch (Exception ex)
@@ -67,55 +69,45 @@ namespace BlazorClaw.Channels.Services
         {
             try
             {
-                using var scope = serviceProvider.CreateScope();
-                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-                var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
-
-                var user = await userManager.FindByLoginAsync("Matrix", senderUserId);
-
-                Guid? uid = user != null ? Guid.Parse(user.Id) : null;
-                if (uid == null)
-                {
-                    if (!_sessIds.TryGetValue(senderUserId, out var existingUid))
-                    {
-                        uid = Guid.NewGuid();
-                        _sessIds[senderUserId] = uid.Value;
-                    }
-                    else
-                    {
-                        uid = existingUid;
-                    }
-                }
-                var sess = await sm.GetOrCreateSessionAsync(uid.Value);
-                sess.MessageHistory.Add(new() { Role = "user", Content = message });
-
-                await foreach (var msg in sm.DispatchToLLMAsync(sess))
-                {
-                    if (msg.Role != "assistant") continue;
-                    var content = Convert.ToString(msg.Content);
-                    if (!string.IsNullOrWhiteSpace(content))
-                    {
-                        await client.SendMessageAsync(roomId, content);
-                    }
-                }
+                var inst = _bots.FirstOrDefault(b => b.Client == client);
+                if (inst == null || message == null) return;
+                await inst.Client.SendTypingSignal(roomId, true);
+                await inst.OnMessageReceivedAsync(new ChannelSession(inst, roomId, senderUserId), message);
             }
             catch (Exception ex)
             {
-                logger.LogError(ex, "Error processing matrix message");
+                logger.LogError(ex, "Error: {Messsage}", ex.Message);
+            }
+            finally
+            {
+                await client.SendTypingSignal(roomId, false);
             }
         }
 
-        public string ProviderName => "Matrix";
-        public event Func<string, string, string, Task>? OnMessageReceived;
-
-        public async Task SendMessageAsync(string channelId, string message)
+        public Task StopAsync(CancellationToken cancellationToken)
         {
-            // channelId in matrix is usually roomId
-            var client = _clients.FirstOrDefault();
-            if (client != null)
+            foreach (var item in _bots)
             {
-                await client.SendMessageAsync(channelId, message);
+                try
+                {
+                    messageDispatcher.Unregister(item);
+                    item.Client.Stop();
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Error stopping Matrix client: {Message}", ex.Message);
+                }
             }
+            return Task.CompletedTask;
+        }
+    }
+
+    public class MatrixChannelBot(IMatrixClient Client) : AbstractChannelBot("Matrix")
+    {
+        internal IMatrixClient Client { get; } = Client;
+        public override Task SendMessageAsync(IChannelSession channelId, object message, CancellationToken cancellationToken = default)
+        {
+            return Client.SendMessageAsync(channelId.ChannelId, Convert.ToString(message) ?? string.Empty);
         }
     }
 }

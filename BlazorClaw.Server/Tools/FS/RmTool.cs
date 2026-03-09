@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -18,7 +19,7 @@ public class RmTool : BaseTool<RmParams>
     public override string Name => "fs_rm";
     public override string Description => "Löscht Dateien oder Verzeichnisse";
 
-    protected override Task<string> ExecuteInternalAsync(RmParams p, ToolContext context)
+    protected override Task<string> ExecuteInternalAsync(RmParams p, MessageContext context)
     {
         if (File.Exists(p.Path)) File.Delete(p.Path);
         else if (Directory.Exists(p.Path)) Directory.Delete(p.Path, p.Recursive);

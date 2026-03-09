@@ -1,3 +1,4 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -23,7 +24,7 @@ public class WriteTool : BaseTool<WriteTool.Params>
         public WriteMode? Mode { get; set; } = WriteMode.Create;
     }
 
-    protected override async Task<string> ExecuteInternalAsync(Params parameters, ToolContext context)
+    protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
         var directory = Path.GetDirectoryName(parameters.Path);
         if (!string.IsNullOrEmpty(directory))

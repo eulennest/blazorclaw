@@ -104,7 +104,7 @@ namespace BlazorClaw.Server.Services
             return Task.CompletedTask;
         }
 
-        public async Task<object?> DispatchCommandAsync(string cmdline, CommandContext cmdContext, RootCommand rootCmd, ICommandProvider commandProvider)
+        public async Task<object?> DispatchCommandAsync(string cmdline, MessageContext cmdContext, RootCommand rootCmd, ICommandProvider commandProvider)
         {
             if (cmdline.StartsWith('/'))
             {
@@ -132,12 +132,11 @@ namespace BlazorClaw.Server.Services
                 httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {sessionState.Provider.Token}");
 
             // Context für Security/Policies
-            var context = new ToolContext
+            var context = new MessageContext
             {
-                SessionId = sessionState.Session.Id,
-                ServiceProvider = scope.ServiceProvider,
+                Session = sessionState.Session,
+                Provider = scope.ServiceProvider,
                 UserId = sessionState.Session.Participants.FirstOrDefault()?.UserId,
-                HttpContext = scope.ServiceProvider.GetService<IHttpContextAccessor>()?.HttpContext
             };
 
             var toolRegistry = scope.ServiceProvider.GetRequiredService<IToolRegistry>();
@@ -192,7 +191,7 @@ namespace BlazorClaw.Server.Services
             while (count > 1 && iterations < 10);
         }
 
-        private static async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, ToolContext context, HttpClient httpClient, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
+        private static async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, MessageContext context, HttpClient httpClient, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
         {
             var request = new ChatCompletionRequest
             {
