@@ -11,9 +11,11 @@ using Telegram.Bot.Types;
 
 namespace BlazorClaw.Channels.Services
 {
-    public class TelegramBotHostedService(IConfiguration configuration, IMessageDispatcher md, IServiceProvider serviceProvider, ILogger<TelegramBotHostedService> logger) : IHostedService
+    public class TelegramBotHostedService(IConfiguration configuration, IMessageDispatcher md, IServiceScopeFactory scopeFactory, ILogger<TelegramBotHostedService> logger) : IHostedService
     {
         private readonly List<TelegramChannelBot> _bots = [];
+
+        private IServiceScope Scope = scopeFactory.CreateScope();
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
@@ -26,7 +28,7 @@ namespace BlazorClaw.Channels.Services
                 {
                     logger.LogInformation("Telegram Bot '{id}' registering ...", id);
 
-                    var cmds = serviceProvider.GetRequiredService<ICommandProvider>();
+                    var cmds = Scope.ServiceProvider.GetRequiredService<ICommandProvider>();
                     RootCommand rootCommand = new("Commands for Telegram");
                     foreach (var cmd in cmds.GetCommands())
                     {

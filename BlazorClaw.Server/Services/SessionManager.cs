@@ -14,7 +14,7 @@ using System.Text.Json;
 namespace BlazorClaw.Server.Services
 {
 
-    public class SessionManager(IProviderManager providerManager, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options) : ISessionManager
+    public class SessionManager(IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options) : ISessionManager
     {
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
 
@@ -24,14 +24,13 @@ namespace BlazorClaw.Server.Services
             if (!_sessions.TryGetValue(sessionId, out var state))
             {
                 logger.LogInformation("Creating session {SessionId}", sessionId);
-                var prov = providerManager.GetProviderConfig(model) ?? throw new Exception($"No provider found for model {model}");
-
+                var scope = scopeFactory.CreateScope();
                 // Hier später Datenbank-Lookup implementieren
                 state = new ChatSessionState
                 {
-                    Scope = scopeFactory.CreateScope(),
+                    Scope = scope,
                     Session = new() { Id = sessionId, CurrentModel = model },
-                    Provider = prov
+                    Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model) ?? throw new Exception($"No provider found for model {model}")
                 };
 
                 _sessions.TryAdd(sessionId, state);
@@ -49,12 +48,13 @@ namespace BlazorClaw.Server.Services
                 var store = await JsonSerializer.DeserializeAsync<JsonSessionStorage>(jsonStream).ConfigureAwait(false);
                 if (store != null)
                 {
-                    var prov = providerManager.GetProviderConfig(store.Session.CurrentModel) ?? throw new Exception($"No provider found for model {store.Session.CurrentModel}");
+                    var scope = scopeFactory.CreateScope();
+                    var model = store.Session.CurrentModel;
                     state = new ChatSessionState
                     {
-                        Scope = scopeFactory.CreateScope(),
+                        Scope = scope,
                         Session = store.Session,
-                        Provider = prov,
+                        Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model) ?? throw new Exception($"No provider found for model {model}"),
                         MessageHistory = store.MessageHistory
                     };
                     _sessions.TryAdd(sessionId, state);

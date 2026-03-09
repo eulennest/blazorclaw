@@ -66,7 +66,7 @@ builder.Services.TryAddScoped<IMemorySearchProvider>(sp => new MemorySearchAggre
 builder.Services.TryAddScoped<ICommandProvider>(sp => new SystemCommandAggregator(PluginUtils.BuildPlugins<ICommandProvider>(sp, typeof(SystemCommandAggregator))));
 
 // Providers
-builder.Services.TryAddScoped<IProviderManager>(sp => new ProviderAggregator(PluginUtils.BuildPlugins<IProviderManager>(sp, typeof(ProviderAggregator))));
+builder.Services.TryAddSingleton<IProviderManager>(sp => new ProviderAggregator(PluginUtils.BuildPlugins<IProviderManager>(sp, typeof(ProviderAggregator))));
 
 builder.Services.Configure<LlmOptions>(builder.Configuration.GetSection(LlmOptions.Section));
 

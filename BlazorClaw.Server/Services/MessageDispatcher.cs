@@ -7,9 +7,10 @@ using System.CommandLine;
 
 namespace BlazorClaw.Server.Services
 {
-    public class MessageDispatcher(IServiceProvider serviceProvider, ILogger<MessageDispatcher> logger) : IMessageDispatcher
+    public class MessageDispatcher(IServiceScopeFactory scopeFactory, ILogger<MessageDispatcher> logger) : IMessageDispatcher
     {
         private readonly ConcurrentDictionary<string, Guid> _sessIds = [];
+        private IServiceScope Scope = scopeFactory.CreateScope();
 
         public async Task<ChatSessionState?> GetSessionAsync(MessageContext context)
         {
@@ -31,7 +32,7 @@ namespace BlazorClaw.Server.Services
                     logger.LogInformation("No user ID in context. Assigned new temporary session ID {SessionId} for channel {ChannelProvider}:{ChannelId}", uid, context.Channel.ChannelProvider, context.Channel.ChannelId);
                 }
             }
-            var sm = serviceProvider.GetRequiredService<ISessionManager>();
+            var sm = Scope.ServiceProvider.GetRequiredService<ISessionManager>();
             var session = await sm.GetOrCreateSessionAsync(uid.Value);
             return session;
         }
@@ -53,7 +54,7 @@ namespace BlazorClaw.Server.Services
         {
             try
             {
-                var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                var userManager = Scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
                 // Suche User via Provider "Telegram"
                 var user = await userManager.FindByLoginAsync(channelSession.ChannelProvider, channelSession.SenderId);
 
@@ -61,7 +62,7 @@ namespace BlazorClaw.Server.Services
                 {
                     UserId = user?.Id,
                     Channel = channelSession,
-                    Provider = serviceProvider,
+                    Provider = Scope.ServiceProvider,
                 };
                 var session = await GetSessionAsync(cmdContext);
                 cmdContext.Provider = session!.Services;
