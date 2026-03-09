@@ -1,31 +1,17 @@
 # BlazorClaw
 
-**OpenClaw-Ersatz in .NET 8 / Blazor**
+**Das .NET Agenten-Ökosystem für modulare KI-Kommunikation.**
 
-Agent-Host mit Session-Management, Tool-System, LLM-Integration und Multi-Channel-Support.
-
----
-
-## Prio 1 – MVP
-
-| Feature | Beschreibung |
-|---------|--------------|
-| **Chat UI (Blazor Web)** | Web-Interface zum Chatten |
-| Session RAM + JSON | Speichern/Laden |
-| LLM Integration | OpenAI-kompatibel |
-| Tools: `read`, `write`, `message` | Basis-Tools |
+BlazorClaw ist ein natives .NET-Ökosystem zur Orchestrierung von KI-Agenten über verschiedene Kanäle (Telegram, Matrix, Web). Es verbindet die Flexibilität eines Agenten-Frameworks mit der Stabilität, Typ-Sicherheit und Performance von .NET 8+.
 
 ---
 
-## Prio 2 – Nach MVP
+## Warum BlazorClaw?
 
-| Feature | Beschreibung |
-|---------|--------------|
-| Telegram Channel | Erster Channel |
-| `exec` Tool | Shell Commands |
-| Session Compression | Token-Sparen |
-| Basic Security | Tool-Policies |
-| OpenAI API Compatibility | Externe Apps |
+- **Sicherheit by Design**: Zentrale `PolicyProvider` sichern jedes Tool und jede Nachricht.
+- **Modulare Architektur**: Dank `MessageDispatcher` und `Plugin-System` lassen sich neue Tools und Kanäle als .NET Assemblies dynamisch laden.
+- **Token-Optimierung**: Integriertes *Self-Compacting* für lange Sessions.
+- **Deployment-Ready**: Gebaut auf ASP.NET Core – einfach containerisieren und als .NET Service betreiben.
 
 ---
 
@@ -33,48 +19,33 @@ Agent-Host mit Session-Management, Tool-System, LLM-Integration und Multi-Channe
 
 ```
 BlazorClaw/
-├── BlazorClaw.Server/     # MVP: Alles in einem Projekt
-├── BlazorClaw.Core/       # Core-Logik (später)
-├── BlazorClaw.Channels/   # Telegram, Matrix (später)
-└── BlazorClaw.UI/         # Admin-UI (später)
+├── BlazorClaw.Core/       # Interfaces, DTOs & Kern-Logik (Provider, Sessions)
+├── BlazorClaw.Channels/   # Kanal-Adapter (Telegram, Matrix, Web)
+├── BlazorClaw.Server/     # API-Hosting, Tools, Commands, Dispatcher
+└── BlazorClaw.UI/         # Web-Interface (in Entwicklung)
 ```
 
 ---
 
-## Tech Stack
+## Schneller Einstieg
 
-- .NET 8 / Blazor Server
-- ASP.NET Identity (Auth)
-- EF Core (Datenbank)
-- SignalR (Echtzeit)
-- OpenAI-kompatible LLM-Integration
-
----
-
-## Quick Start
-
-```bash
-# Clone
-git clone https://github.com/eulennest/blazorclaw.git
-cd BlazorClaw
-
-# Restore & Build
-dotnet restore
-dotnet build
-
-# Run
-dotnet run --project BlazorClaw.Server
-```
+1. **Voraussetzungen**: .NET 8 SDK.
+2. **Setup**:
+   ```bash
+   git clone https://github.com/eulennest/blazorclaw.git
+   cd BlazorClaw
+   ```
+3. **Starten**:
+   ```bash
+   dotnet run --project BlazorClaw.Server/BlazorClaw.Server.csproj
+   ```
+   *Hinweis: Datenbank-Migrationen werden beim Start automatisch angewendet.*
 
 ---
 
-## Datenspeicherung
+## Kanalanbindung
 
-| Daten | Speicher |
-|-------|----------|
-| User, Auth | ASP.NET Identity (EF Core) |
-| Channel-Config | EF Core |
-| Session | JSON Files |
+BlazorClaw unterstützt eine einheitliche Schnittstelle (`IChannelBot`). Um einen neuen Kanal (z.B. Slack) anzubinden, implementieren Sie einfach `IChannelBot` und registrieren Sie den Service in `Program.cs`. 
 
 ---
 
@@ -84,4 +55,4 @@ MIT
 
 ---
 
-*Erstellt: 2026-03-05*
+*Powered by Eulennest. 🦞*
