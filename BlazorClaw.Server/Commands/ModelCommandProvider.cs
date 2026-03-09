@@ -10,19 +10,7 @@ public class ModelCommandProvider : ExecutorCommandProvider
 {
     public override IEnumerable<ISystemCommand> GetCommands()
     {
-        yield return new ModelGetCommand();
         yield return new ModelSwitchCommand();
-    }
-}
-
-public class ModelGetCommand : ISystemCommand, ISystemCommandExecutor
-{
-    public Command GetCommand() => new("model", "Zeigt LLM-Einstellungen");
-
-    public Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
-    {
-        var options = context.Provider.GetRequiredService<IOptionsMonitor<LlmOptions>>().CurrentValue;
-        return Task.FromResult<object?>($"Model: {options.Model}\nTemperature: {options.Temperature}\nMaxTokens: {options.MaxTokens}");
     }
 }
 
