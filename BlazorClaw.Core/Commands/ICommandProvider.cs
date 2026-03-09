@@ -28,6 +28,16 @@ public class MessageContext
     public IChannelSession? Channel { get; set; }
 }
 
+public class MessageContextAccessor
+{
+    public void SetContext(MessageContext state)
+    {
+        Context = state;
+    }
+    public MessageContext? Context { get; private set; }
+}
+
+
 public abstract class ExecutorCommandProvider : ICommandProvider
 {
     public Task<object?> ExecuteAsync(ISystemCommand cmd, ParseResult result, MessageContext context)

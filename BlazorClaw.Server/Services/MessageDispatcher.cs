@@ -69,6 +69,8 @@ namespace BlazorClaw.Server.Services
 
                 var sm = cmdContext.Provider.GetRequiredService<ISessionManager>();
                 cmdContext.Session = session?.Session;
+                var mca = cmdContext.Provider.GetRequiredService<MessageContextAccessor>();
+                mca.SetContext(cmdContext);
 
                 if (message is string msgString)
                 {
@@ -100,7 +102,7 @@ namespace BlazorClaw.Server.Services
 
                     session!.MessageHistory.Add(new() { Role = "user", Content = msgString });
 
-                    await foreach (var msg in sm.DispatchToLLMAsync(session))
+                    await foreach (var msg in sm.DispatchToLLMAsync(session, cmdContext))
                     {
                         if (!msg.IsAssistant) continue;
                         var content = Convert.ToString(msg.Content);

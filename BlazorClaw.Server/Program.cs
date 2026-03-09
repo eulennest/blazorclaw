@@ -51,6 +51,8 @@ builder.Services.TryAddSingleton<ISessionManager, SessionManager>();
 
 
 builder.Services.TryAddScoped<IVaultProvider, JsonVaultProvider>();
+builder.Services.TryAddScoped<SessionStateAccessor>();
+builder.Services.TryAddScoped<MessageContextAccessor>();
 // Tool registry
 builder.Services.TryAddScoped<IToolRegistry>(sp => new ToolRegistry(PluginUtils.BuildPlugins<ITool>(sp)));
 

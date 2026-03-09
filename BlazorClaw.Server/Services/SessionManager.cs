@@ -32,6 +32,7 @@ namespace BlazorClaw.Server.Services
                     Session = new() { Id = sessionId, CurrentModel = model },
                     Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model) ?? throw new Exception($"No provider found for model {model}")
                 };
+                scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
 
                 _sessions.TryAdd(sessionId, state);
             }
@@ -122,21 +123,13 @@ namespace BlazorClaw.Server.Services
             return null;
         }
 
-        public async IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sessionState)
+        public async IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sessionState, MessageContext context)
         {
             logger.LogInformation("Dispatching LLM request for session {SessionId}", sessionState.Session.Id);
             using var httpClient = sessionState.Services.GetRequiredService<HttpClient>();
             httpClient.BaseAddress = new Uri(sessionState.Provider.Uri.TrimEnd('/') + "/");
             if (!string.IsNullOrWhiteSpace(sessionState.Provider.Uri))
                 httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {sessionState.Provider.Token}");
-
-            // Context für Security/Policies
-            var context = new MessageContext
-            {
-                Session = sessionState.Session,
-                Provider = sessionState.Services,
-                UserId = sessionState.Session.Participants.FirstOrDefault()?.UserId,
-            };
 
             var toolRegistry = sessionState.Services.GetRequiredService<IToolRegistry>();
             var policyProvider = sessionState.Services.GetRequiredService<IToolPolicyProvider>();
@@ -167,7 +160,7 @@ namespace BlazorClaw.Server.Services
                     var systemPromptContent = await File.ReadAllTextAsync("SYSTEMPROMPT.md").ConfigureAwait(false);
                     sessionState.SystemPrompts.Add(new ChatMessage { Role = "system", Content = systemPromptContent });
                 }
-                sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(sessionState.Services, context));
+                sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(sessionState));
 
                 if (File.Exists("AGENTS.md"))
                 {

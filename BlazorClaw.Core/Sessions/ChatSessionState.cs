@@ -18,3 +18,13 @@ public class ChatSessionState
     public double Costs { get; set; }
     public double Tokens { get; set; }
 }
+
+public class SessionStateAccessor
+{
+    public void SetSessionState(ChatSessionState state)
+    {
+        SessionState = state;
+    }
+    public ChatSessionState? SessionState { get; private set; }
+}
+

@@ -10,7 +10,7 @@ public interface ISessionManager
     Task<ChatSessionState?> GetSessionAsync(Guid sessionId);
     Task SaveToDiskAsync(ChatSessionState sessionState);
     Task AppendMessageAsync(Guid sessionId, ChatMessage message);
-    IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sess);
+    IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sess, MessageContext context);
     Task<object?> DispatchCommandAsync(string cmdline, MessageContext cmdContext, RootCommand rootCmd, ICommandProvider commandProvider);
 }
 
