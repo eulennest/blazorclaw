@@ -20,13 +20,13 @@ public class ChatCompletionRequest
 public class ChatMessage
 {
     [JsonPropertyName("role")]
-    public string Role { get; set; } = string.Empty;
+    public virtual string Role { get; set; } = string.Empty;
 
     [JsonPropertyName("content")]
-    public object? Content { get; set; }
+    public virtual object? Content { get; set; }
 
     [JsonPropertyName("tool_calls")]
-    public List<ToolCall>? ToolCalls { get; set; }
+    public virtual List<ToolCall>? ToolCalls { get; set; }
 
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }

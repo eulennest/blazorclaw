@@ -168,6 +168,8 @@ namespace BlazorClaw.Server.Services
                     var systemPromptContent = await File.ReadAllTextAsync("SYSTEMPROMPT.md").ConfigureAwait(false);
                     sessionState.SystemPrompts.Add(new ChatMessage { Role = "system", Content = systemPromptContent });
                 }
+                sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(scope.ServiceProvider));
+
                 if (File.Exists("AGENTS.md"))
                 {
                     var agentPromptContent = await File.ReadAllTextAsync("AGENTS.md").ConfigureAwait(false);
