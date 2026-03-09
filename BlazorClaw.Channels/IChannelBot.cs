@@ -1,6 +1,3 @@
-using BlazorClaw.Core.Commands;
-using BlazorClaw.Core.Sessions;
-
 namespace BlazorClaw.Channels;
 
 public interface IChannelBot

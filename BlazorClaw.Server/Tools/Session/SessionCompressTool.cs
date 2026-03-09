@@ -14,7 +14,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
     protected override async Task<string> ExecuteInternalAsync(SessionCompressParams p, MessageContext context)
     {
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
-        var sess = await sessionManager.GetSessionAsync(context.Session.Id);
+        var sess = await sessionManager.GetSessionAsync(context.Session!.Id);
         if (sess == null) return "Session nicht gefunden.";
 
         // Komprimiere den Verlauf: Historie leeren und Zusammenfassung als System-Message

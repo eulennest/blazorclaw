@@ -7,7 +7,7 @@ namespace BlazorClaw.Core.Sessions;
 
 public class ChatSessionState
 {
-    public required IServiceScope Scope { get; set; } 
+    public required IServiceScope Scope { get; set; }
     public IServiceProvider Services => Scope.ServiceProvider;
     public ChatSession Session { get; set; } = default!;
     public required IProviderConfiguration Provider { get; set; }

@@ -24,7 +24,7 @@ public class StatusCommand : ISystemCommand, ISystemCommandExecutor
     {
         var host = context.Provider.GetRequiredService<IWebHostEnvironment>();
         var sm = context.Provider.GetRequiredService<ISessionManager>();
-        var sessstate = await sm.GetOrCreateSessionAsync(context.Session.Id);
+        var sessstate = await sm.GetOrCreateSessionAsync(context.Session!.Id);
         // Einfache Mock-Daten für die Anzeige des System-Status
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         var commit = host.EnvironmentName;

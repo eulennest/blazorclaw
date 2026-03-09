@@ -1,7 +1,7 @@
 ﻿@using BlazorClaw.Server.Components.Account.Shared
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(BlazorClaw.UI.Components.Layout.MainLayout)">
             <NotAuthorized>
                 <RedirectToLogin />
             </NotAuthorized>

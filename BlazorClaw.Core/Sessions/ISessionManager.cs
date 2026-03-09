@@ -1,7 +1,6 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.DTOs;
 using System.CommandLine;
-using System.Threading.Channels;
 
 namespace BlazorClaw.Core.Sessions;
 

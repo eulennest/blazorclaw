@@ -1,10 +1,7 @@
-using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
-using BlazorClaw.Server.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.CommandLine;
 using System.Security.Claims;
 
 namespace BlazorClaw.Server.Controllers;

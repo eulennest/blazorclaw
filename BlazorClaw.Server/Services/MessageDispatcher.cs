@@ -64,7 +64,7 @@ namespace BlazorClaw.Server.Services
                     Provider = serviceProvider,
                 };
                 var session = await GetSessionAsync(cmdContext);
-                cmdContext.Provider = session.Services;
+                cmdContext.Provider = session!.Services;
 
                 var sm = cmdContext.Provider.GetRequiredService<ISessionManager>();
                 cmdContext.Session = session?.Session;
@@ -97,7 +97,7 @@ namespace BlazorClaw.Server.Services
                         }
                     }
 
-                    session.MessageHistory.Add(new() { Role = "user", Content = msgString });
+                    session!.MessageHistory.Add(new() { Role = "user", Content = msgString });
 
                     await foreach (var msg in sm.DispatchToLLMAsync(session))
                     {
