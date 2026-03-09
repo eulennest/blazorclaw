@@ -1,0 +1,71 @@
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <nav class="flex-column">
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                    <i class="bi bi-house-door-fill"></i> Dashboard
+                </NavLink>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin">
+                    <i class="bi bi-gear-fill"></i> Übersicht
+                </NavLink>
+            </div>
+            
+            <div class="px-3 py-2 text-muted small border-bottom">
+                <strong>Konfiguration</strong>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/general">
+                    <i class="bi bi-sliders"></i> Allgemein
+                </NavLink>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/channels">
+                    <i class="bi bi-chat-dots"></i> Kanäle
+                </NavLink>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/providers">
+                    <i class="bi bi-plug-fill"></i> Provider
+                </NavLink>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/security">
+                    <i class="bi bi-shield-lock"></i> Sicherheit
+                </NavLink>
+            </div>
+            
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="admin/apikeys">
+                    <i class="bi bi-key-fill"></i> API-Keys
+                </NavLink>
+            </div>
+        </nav>
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <a href="/" class="me-3 text-decoration-none">
+                <i class="bi bi-arrow-left"></i> Zurück
+            </a>
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<style>
+    .nav-scrollable {
+        display: none;
+    }
+</style>
