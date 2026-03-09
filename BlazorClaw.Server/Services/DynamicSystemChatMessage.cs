@@ -25,6 +25,7 @@ namespace BlazorClaw.Server.Services
                 var tokenProz = (state.LastUsage?.PromptTokens ?? 1) / 100000.0 * 100.0;
                 var sb = new StringBuilder();
                 sb.AppendLine($"Current Time: {DateTime.UtcNow:R}");
+                sb.AppendLine($"Current Model: {context.Session?.CurrentModel}");
                 sb.AppendLine($"Session ID: {context.Session?.Id}");
                 sb.AppendLine($"User ID: {context.UserId}");
                 sb.AppendLine($"Channel Provider: {context.Channel?.ChannelProvider}");
