@@ -45,3 +45,4 @@ tmp/
 *.db
 *.db-shm
 *.db-wal
+session_*.json

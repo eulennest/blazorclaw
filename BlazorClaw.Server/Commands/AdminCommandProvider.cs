@@ -1,5 +1,6 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Data;
+using BlazorClaw.Core.Sessions;
 using Microsoft.EntityFrameworkCore;
 using System.CommandLine;
 using System.Reflection;
@@ -19,21 +20,24 @@ public class AdminCommandProvider : ExecutorCommandProvider
 public class StatusCommand : ISystemCommand, ISystemCommandExecutor
 {
     public Command GetCommand() => new("status", "Status von BlazorClaw anzeigen");
-    public Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
+    public async Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
     {
         var host = context.Provider.GetRequiredService<IWebHostEnvironment>();
+        var sm = context.Provider.GetRequiredService<ISessionManager>();
+        var sessstate = await sm.GetOrCreateSessionAsync(context.Session.Id);
         // Einfache Mock-Daten für die Anzeige des System-Status
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         var commit = host.EnvironmentName;
-        var tokens = "Xk in / Y out";
+        var tokens = $"{sessstate?.LastUsage?.PromptTokens} in / {sessstate?.LastUsage?.CompletionTokens} out";
 
-        return Task.FromResult<object?>(
+        return
             $"🦞 BlazorClaw {version} ({commit})\r\n" +
             $"🧠 Model: {context.Session?.CurrentModel}\r\n" +
             $"🧮 Tokens: {tokens}\r\n" +
+            $"🧮 Cost: {sessstate?.Costs}\r\n" +
             $"🧵 Session: {context.Session?.Id}\r\n" +
             $"🧵 Channel: {context.Channel?.ChannelProvider}:{context.Channel?.ChannelId}\r\n" +
-            $"⚙️ Runtime: direct · Think: off");
+            $"⚙️ Runtime: direct · Think: off";
     }
 }
 

@@ -11,4 +11,7 @@ public class ChatSessionState
     public List<ChatMessage> MessageHistory { get; set; } = [];
     public List<ChatMessage> SystemPrompts { get; set; } = [];
     public List<FunctionMessage> Tools { get; set; } = [];
+    public TokenUsage? LastUsage { get; set; }
+    public double Costs { get; set; }
+    public double Tokens { get; set; }
 }

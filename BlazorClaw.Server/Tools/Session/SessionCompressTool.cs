@@ -1,39 +1,49 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
-using BlazorClaw.Core.Commands;
-using System.CommandLine;
-using Microsoft.Extensions.DependencyInjection;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 
 namespace BlazorClaw.Server.Tools.Session;
 
-public class SessionCompressTool : BaseTool
+public class SessionCompressTool : BaseTool<SessionCompressParams>
 {
-    public SessionCompressTool() : base("session_compress", "Speichert eine Zusammenfassung der Konversation und komprimiert den Verlauf.")
-    {
-    }
+    public override string Name => "session_compress";
+    public override string Description => "Speichert eine Zusammenfassung der Konversation und komprimiert den Verlauf.";
 
-    public override async Task<object?> ExecuteAsync(ParseResult result, CommandContext context)
+    protected override async Task<string> ExecuteInternalAsync(SessionCompressParams p, MessageContext context)
     {
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
-        var sess = await sessionManager.GetSessionAsync(context.Session);
-        
+        var sess = await sessionManager.GetSessionAsync(context.Session.Id);
         if (sess == null) return "Session nicht gefunden.";
 
-        var summary = result.GetValueForArgument((Argument<string>)result.CommandResult.Command.Arguments[0]);
-
         // Komprimiere den Verlauf: Historie leeren und Zusammenfassung als System-Message
+        var last = sess.MessageHistory.TakeLast(20);
         sess.MessageHistory.Clear();
-        sess.MessageHistory.Add(new() { Role = "system", Content = $"Zusammenfassung des vorherigen Gesprächs: {summary}" });
-        sess.CompactionCount++;
+        sess.MessageHistory.Add(new() { Role = "system", Content = $"Zusammenfassung des vorherigen Gesprächs:\r\n-----\r\n{p.Summary}" });
 
+        var hasasist = false;
+        foreach (var msg in last)
+        {
+            if (msg.IsTool && !hasasist) continue;
+            if (!hasasist && msg.IsAssistant) hasasist = true;
+            if (msg.IsTool && msg.Content is string str && str.Length > 100)
+            {
+                // Kürze alte Tool-Ausgaben, damit die Session nicht zu groß wird.
+                // Die Zusammenfassung sollte ja die wichtigen Infos enthalten, damit das Tool nicht mehr unbedingt nötig ist.
+                var txt = $"... [GEKÜRZT {str.Length} Zeichen]";
+                str = str[..(100 - txt.Length)] + txt;
+            }
+            sess.MessageHistory.Add(msg);
+        }
         await sessionManager.SaveToDiskAsync(sess);
         return $"Session komprimiert. Aktuelle Nachrichten: {sess.MessageHistory.Count}";
     }
+}
 
-    public override Command GetCommand()
-    {
-        var cmd = new Command(Name, Description);
-        cmd.AddArgument(new Argument<string>("summary", "Die Zusammenfassung der bisherigen Konversation"));
-        return cmd;
-    }
+public class SessionCompressParams
+{
+    [Description("Die Session Zusammenfassung für die weitere Session Nutzung")]
+    [Required]
+    public string Summary { get; set; } = string.Empty;
 }

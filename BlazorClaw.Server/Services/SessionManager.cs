@@ -168,7 +168,7 @@ namespace BlazorClaw.Server.Services
                     var systemPromptContent = await File.ReadAllTextAsync("SYSTEMPROMPT.md").ConfigureAwait(false);
                     sessionState.SystemPrompts.Add(new ChatMessage { Role = "system", Content = systemPromptContent });
                 }
-                sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(scope.ServiceProvider));
+                sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(scope.ServiceProvider, context));
 
                 if (File.Exists("AGENTS.md"))
                 {
@@ -206,6 +206,10 @@ namespace BlazorClaw.Server.Services
             var response = await httpClient.PostAsJsonAsync("chat/completions", request);
             var content = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>();
             if (content == null) throw new ArgumentNullException(nameof(content), "Invalid response");
+
+            sessionState.LastUsage = content.Usage ?? sessionState.LastUsage;
+            sessionState.Costs += content.Usage?.PromptCost ?? 0;
+            sessionState.Tokens += content.Usage?.TotalTokens ?? 0;
 
             if (content.Choices != null)
             {

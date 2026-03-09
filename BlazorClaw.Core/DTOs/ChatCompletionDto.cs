@@ -110,6 +110,10 @@ public class ChatCompletionResponse
     [JsonPropertyName("error")]
     public ApiError? Error { get; set; }
 
+    [JsonPropertyName("usage")]
+    public TokenUsage? Usage { get; set; }
+
+
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 }
@@ -127,6 +131,18 @@ public class ChatChoice
 
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
+}
+
+public class TokenUsage
+{
+    [JsonPropertyName("prompt_tokens")]
+    public double PromptTokens { get; set; }
+    [JsonPropertyName("completion_tokens")]
+    public double CompletionTokens { get; set; }
+    [JsonPropertyName("total_tokens")]
+    public double TotalTokens { get; set; }
+    [JsonPropertyName("cost")]
+    public double? PromptCost { get; set; }
 }
 
 public class ApiError
