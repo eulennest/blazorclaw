@@ -1,24 +1,31 @@
-using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
+using BlazorClaw.Core.Security.Policies;
 using BlazorClaw.Core.Tools;
-using BlazorClaw.Server.Tools.FS;
+using BlazorClaw.Core.Commands;
 
 namespace BlazorClaw.Server.Security;
 
-public class SandboxSecurityProvider(string basePath = "./") : IToolPolicyProvider
+public class SandboxSecurityProvider : IToolPolicyProvider
 {
-    private readonly string _basePath = Path.GetFullPath(basePath);
-
     public IEnumerable<ITool> FilterTools(IEnumerable<ITool> allTools, MessageContext context) => allTools;
 
     public void BeforeTool(ITool tool, object parameters, MessageContext context)
     {
-        if (parameters is RmParams rmParams)
+        if (parameters is IWorkingPaths workingPaths)
         {
-            if (rmParams.Path.Contains(".."))
-                throw new UnauthorizedAccessException("Sandbox violation: Path traversal detected.");
+            var allowed = workingPaths.GetAllowedPaths();
+            foreach (var path in allowed)
+            {
+                if (!path.StartsWith("/home/kkastl/.openclaw/workspace/memory/"))
+                {
+                    throw new UnauthorizedAccessException($"Zugriff auf Pfad {path} verweigert!");
+                }
+            }
         }
     }
 
-    public string AfterTool(ITool tool, object parameters, string result, MessageContext context) => result;
+    public string AfterTool(ITool tool, object parameters, string result, MessageContext context)
+    {
+        return result;
+    }
 }
