@@ -13,6 +13,14 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.24" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.24" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.24" />
+    <PackageReference Include="Microsoft.AspNetCore.Http" Version="2.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BlazorClaw.Core\BlazorClaw.Core.csproj" />
   </ItemGroup>
 
 </Project>
