@@ -1,0 +1,59 @@
+@page "/admin"
+@layout AdminLayout
+
+<PageTitle>Admin - Übersicht</PageTitle>
+
+<h1>Konfiguration</h1>
+<p>Übersicht über alle Konfigurationsoptionen.</p>
+
+<div class="row mt-4">
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-sliders"></i> Allgemein</h5>
+                <p class="card-text text-muted">Grundlegende Einstellungen</p>
+                <a href="admin/general" class="btn btn-primary btn-sm">Bearbeiten</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-chat-dots"></i> Kanäle</h5>
+                <p class="card-text text-muted">Telegram, Matrix, Web</p>
+                <a href="admin/channels" class="btn btn-primary btn-sm">Bearbeiten</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-plug-fill"></i> Provider</h5>
+                <p class="card-text text-muted">LLM-Anbieter</p>
+                <a href="admin/providers" class="btn btn-primary btn-sm">Bearbeiten</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-shield-lock"></i> Sicherheit</h5>
+                <p class="card-text text-muted">Policies, Rollen</p>
+                <a href="admin/security" class="btn btn-primary btn-sm">Bearbeiten</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-key-fill"></i> API-Keys</h5>
+                <p class="card-text text-muted">Token-Verwaltung</p>
+                <a href="admin/apikeys" class="btn btn-primary btn-sm">Bearbeiten</a>
+            </div>
+        </div>
+    </div>
+</div>

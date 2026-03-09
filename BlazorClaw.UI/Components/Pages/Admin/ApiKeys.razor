@@ -1,0 +1,43 @@
+@page "/admin/apikeys"
+@layout AdminLayout
+
+<PageTitle>Admin - API-Keys</PageTitle>
+
+<h2>API-Keys & Tokens</h2>
+<p class="text-muted">Verwaltung von API-Schlüsseln und Tokens.</p>
+
+<div class="mt-4">
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Diese Seite ist ein Platzhalter. Implementierung folgt...
+    </div>
+    
+    <h5 class="mt-4">Gespeicherte Keys</h5>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Typ</th>
+                <th>Zuletzt verwendet</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>OpenRouter</td>
+                <td><span class="badge bg-warning text-dark">API-Key</span></td>
+                <td>Gerade eben</td>
+                <td><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></td>
+            </tr>
+            <tr>
+                <td>Telegram Bot</td>
+                <td><span class="badge bg-info">Token</span></td>
+                <td>Gerade eben</td>
+                <td><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <button class="btn btn-primary mt-3">
+        <i class="bi bi-plus-lg"></i> Neuer Key
+    </button>
+</div>
