@@ -27,11 +27,11 @@ public class ModelSetParams
 
 public class ModelGetTool : BaseTool<ModelGetParams>
 {
-    private readonly LlmOptions _options;
+    private readonly IOptionsMonitor<LlmOptions> _optionsMonitor;
 
-    public ModelGetTool(IOptionsMonitor<LlmOptions> options)
+    public ModelGetTool(IOptionsMonitor<LlmOptions> optionsMonitor)
     {
-        _options = options.CurrentValue;
+        _optionsMonitor = optionsMonitor;
     }
 
     public override string Name => "model_get";
@@ -40,13 +40,18 @@ public class ModelGetTool : BaseTool<ModelGetParams>
     protected override Task<string> ExecuteInternalAsync(ModelGetParams p, MessageContext context)
     {
         var prop = p.Property?.ToLowerInvariant();
+        
+        // Get session model or fallback to global
+        var sessionModel = context.Session?.CurrentModel ?? _optionsMonitor.CurrentValue.Model;
+        var sessionTemp = _optionsMonitor.CurrentValue.Temperature;
+        var sessionMaxTokens = _optionsMonitor.CurrentValue.MaxTokens;
 
         return Task.FromResult(prop switch
         {
-            "model" => _options.Model,
-            "temperature" => _options.Temperature.ToString(),
-            "maxtokens" => _options.MaxTokens.ToString(),
-            _ => $"Model: {_options.Model}\nTemperature: {_options.Temperature}\nMaxTokens: {_options.MaxTokens}"
+            "model" => sessionModel,
+            "temperature" => sessionTemp.ToString(),
+            "maxtokens" => sessionMaxTokens.ToString(),
+            _ => $"Model: {sessionModel}\nTemperature: {sessionTemp}\nMaxTokens: {sessionMaxTokens}"
         });
     }
 }
@@ -67,14 +72,15 @@ public class ModelSetTool : BaseTool<ModelSetParams>
 
     protected override Task<string> ExecuteInternalAsync(ModelSetParams p, MessageContext context)
     {
-        var options = _optionsMonitor.CurrentValue;
+        if (context.Session == null)
+            return Task.FromResult("Fehler: Keine Session verfügbar");
 
         // Validate model provider exists
         if (!string.IsNullOrEmpty(p.Model))
         {
             var parts = p.Model.Split('/');
             if (parts.Length < 2)
-                return Task.FromResult($"Fehler: Modell muss Format 'provider/model' haben (z.B. openrouter/mistralai/mistral-large)");
+                return Task.FromResult("Fehler: Modell muss Format 'provider/model' haben (z.B. openrouter/mistralai/mistral-large)");
             
             var providerName = parts[0];
             var availableProviders = _providerManager.GetProviders().ToList();
@@ -82,23 +88,23 @@ public class ModelSetTool : BaseTool<ModelSetParams>
             if (!availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
                 return Task.FromResult($"Fehler: Provider '{providerName}' nicht konfiguriert. Verfügbare Provider: {string.Join(", ", availableProviders)}");
             
-            options.Model = p.Model;
+            context.Session.CurrentModel = p.Model;
         }
 
         if (p.Temperature.HasValue)
         {
             if (p.Temperature.Value < 0 || p.Temperature.Value > 2)
                 return Task.FromResult("Fehler: Temperatur muss zwischen 0 und 2 liegen");
-            options.Temperature = p.Temperature.Value;
+            _optionsMonitor.CurrentValue.Temperature = p.Temperature.Value;
         }
 
         if (p.MaxTokens.HasValue)
         {
             if (p.MaxTokens.Value <= 0)
                 return Task.FromResult("Fehler: MaxTokens muss größer als 0 sein");
-            options.MaxTokens = p.MaxTokens.Value;
+            _optionsMonitor.CurrentValue.MaxTokens = p.MaxTokens.Value;
         }
 
-        return Task.FromResult($"Einstellungen aktualisiert:\nModel: {options.Model}\nTemperature: {options.Temperature}\nMaxTokens: {options.MaxTokens}");
+        return Task.FromResult($"Einstellungen aktualisiert:\nModel: {context.Session.CurrentModel}\nTemperature: {_optionsMonitor.CurrentValue.Temperature}\nMaxTokens: {_optionsMonitor.CurrentValue.MaxTokens}");
     }
 }

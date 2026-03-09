@@ -46,6 +46,9 @@ public class ModelSwitchTool : BaseTool<ModelSwitchParams>
 
     protected override Task<string> ExecuteInternalAsync(ModelSwitchParams p, MessageContext context)
     {
+        if (context.Session == null)
+            return Task.FromResult("Fehler: Keine Session verfügbar");
+
         var shortName = p.Model.ToLowerInvariant().Trim();
         
         // Check if short name exists in map
@@ -62,8 +65,8 @@ public class ModelSwitchTool : BaseTool<ModelSwitchParams>
         if (!availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
             return Task.FromResult($"Fehler: Provider '{providerName}' nicht konfiguriert.");
 
-        // Set the model
-        _optionsMonitor.CurrentValue.Model = fullModel;
+        // Set the model on session
+        context.Session.CurrentModel = fullModel;
         
         return Task.FromResult($"Modell gewechselt zu: {fullModel}");
     }
