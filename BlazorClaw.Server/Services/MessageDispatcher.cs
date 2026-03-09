@@ -10,7 +10,7 @@ namespace BlazorClaw.Server.Services
     public class MessageDispatcher(IServiceScopeFactory scopeFactory, ILogger<MessageDispatcher> logger) : IMessageDispatcher
     {
         private readonly ConcurrentDictionary<string, Guid> _sessIds = [];
-        private IServiceScope Scope = scopeFactory.CreateScope();
+        private readonly IServiceScope Scope = scopeFactory.CreateScope();
 
         public async Task<ChatSessionState?> GetSessionAsync(MessageContext context)
         {

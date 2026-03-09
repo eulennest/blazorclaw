@@ -15,7 +15,7 @@ namespace BlazorClaw.Channels.Services
     {
         private readonly List<TelegramChannelBot> _bots = [];
 
-        private IServiceScope Scope = scopeFactory.CreateScope();
+        private readonly IServiceScope Scope = scopeFactory.CreateScope();
 
         public Task StartAsync(CancellationToken cancellationToken)
         {

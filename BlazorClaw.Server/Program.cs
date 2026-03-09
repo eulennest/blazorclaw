@@ -9,13 +9,13 @@ using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Web;
 using BlazorClaw.Server;
-using BlazorClaw.Server.Components;
-using BlazorClaw.Server.Components.Account;
 using BlazorClaw.Server.Memory;
 using BlazorClaw.Server.Security;
 using BlazorClaw.Server.Security.Vault;
 using BlazorClaw.Server.Services;
 using BlazorClaw.Server.Web;
+using BlazorClaw.UI;
+using BlazorClaw.UI.Components.Account;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -78,14 +78,12 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 
 
 // Add IdentityRedirectManager
-builder.Services.TryAddScoped<BlazorClaw.Server.Components.Account.IdentityRedirectManager>();
-
+builder.Services.TryAddScoped<IdentityRedirectManager>();
 
 builder.Services.AddCascadingAuthenticationState();
 
-builder.Services.AddScoped<IdentityUserAccessor>();
+builder.Services.TryAddScoped<IdentityUserAccessor>();
 
-builder.Services.AddScoped<IdentityRedirectManager>();
 
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
@@ -118,6 +116,7 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
     options.ForwardLimit = 2;
 });
 
+builder.Services.AddClawUI();
 
 var app = builder.Build();
 
@@ -137,7 +136,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
 
-app.MapRazorComponents<App>();
+app.MapRazorComponents<BlazorClaw.UI.Components.App>();
 app.MapControllers();
 
 app.Run();

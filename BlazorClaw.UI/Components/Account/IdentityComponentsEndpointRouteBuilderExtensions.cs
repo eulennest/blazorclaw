@@ -1,11 +1,15 @@
 ﻿using BlazorClaw.Core.Data;
-using BlazorClaw.Server.Components.Account.Pages;
-using BlazorClaw.Server.Components.Account.Pages.Manage;
+using BlazorClaw.UI.Components.Account.Pages;
+using BlazorClaw.UI.Components.Account.Pages.Manage;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 using System.Security.Claims;
 using System.Text.Json;
