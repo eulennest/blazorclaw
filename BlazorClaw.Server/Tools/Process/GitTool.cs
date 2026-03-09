@@ -1,4 +1,5 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using Microsoft.Extensions.Options;
 using System.ComponentModel;
@@ -19,13 +20,17 @@ public class GitTool(IOptions<GitOptions> options) : BaseTool<GitTool.Params>
     public override string Name => "git_exec";
     public override string Description => "Führt einen Git-Befehl aus.";
 
-    public class Params
+    public class Params : IWorkingPaths
     {
         [Required, Description("Git-Befehl und Argumente (z.B. 'status' oder 'log -n 5')")]
         public string Args { get; set; } = string.Empty;
 
-        [Description("Arbeitsverzeichnis für den Git-Befehl (optional)")]
-        public string? WorkingDirectory { get; set; }
+        [Required, Description("Arbeitsverzeichnis für den Git-Befehl")]
+        public string WorkingDirectory { get; set; } = string.Empty;
+        public IEnumerable<string> GetPaths()
+        {
+            yield return WorkingDirectory;
+        }
     }
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)

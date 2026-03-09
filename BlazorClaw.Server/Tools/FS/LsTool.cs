@@ -1,10 +1,11 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 
 namespace BlazorClaw.Server.Tools.FS;
 
-public class LsParams
+public class LsParams : IWorkingPaths
 {
     [Description("Pfad zum auflisten")]
     public string Path { get; set; } = ".";
@@ -17,6 +18,10 @@ public class LsParams
 
     [Description("Rekursiv durch Unterverzeichnisse suchen")]
     public bool? Recursive { get; set; } = false;
+    public IEnumerable<string> GetPaths()
+    {
+        yield return Path;
+    }
 }
 
 public class LsTool : BaseTool<LsParams>

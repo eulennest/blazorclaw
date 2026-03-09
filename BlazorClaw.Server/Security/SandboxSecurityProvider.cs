@@ -1,24 +1,29 @@
-using BlazorClaw.Core.Security;
-using BlazorClaw.Core.Security.Policies;
-using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Security;
+using BlazorClaw.Core.Tools;
+using Microsoft.Extensions.Options;
 
 namespace BlazorClaw.Server.Security;
 
-public class SandboxSecurityProvider : IToolPolicyProvider
+public class SandboxSecurityProvider(IOptionsMonitor<SandboxOptions>? options) : IToolPolicyProvider
 {
     public IEnumerable<ITool> FilterTools(IEnumerable<ITool> allTools, MessageContext context) => allTools;
 
     public void BeforeTool(ITool tool, object parameters, MessageContext context)
     {
-        if (parameters is IWorkingPaths workingPaths)
+        if (options?.CurrentValue.AllowedPaths.Any() ?? false)
         {
-            var allowed = workingPaths.GetAllowedPaths();
-            foreach (var path in allowed)
+            var allowed = options.CurrentValue.AllowedPaths.Select(Path.GetFullPath).ToHashSet();
+            string baseFolder = options.CurrentValue.AllowedPaths.First();
+            if (parameters is IWorkingPaths workingPaths)
             {
-                if (!path.StartsWith("/home/kkastl/.openclaw/workspace/memory/"))
+                foreach (var path in workingPaths.GetPaths())
                 {
-                    throw new UnauthorizedAccessException($"Zugriff auf Pfad {path} verweigert!");
+                    var full = Path.Combine(baseFolder, path);
+                    if (!allowed.Any(full.StartsWith))
+                    {
+                        throw new UnauthorizedAccessException($"Zugriff auf Pfad '{path}' verweigert!");
+                    }
                 }
             }
         }
@@ -28,4 +33,10 @@ public class SandboxSecurityProvider : IToolPolicyProvider
     {
         return result;
     }
+}
+
+public class SandboxOptions
+{
+    public const string Section = "Security:Sandbox";
+    public IEnumerable<string> AllowedPaths { get; set; } = [];
 }

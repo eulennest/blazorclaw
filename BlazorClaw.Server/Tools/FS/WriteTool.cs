@@ -1,4 +1,5 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -12,7 +13,7 @@ public class WriteTool : BaseTool<WriteTool.Params>
 
     public enum WriteMode { Override, Append, Create }
 
-    public class Params
+    public class Params : IWorkingPaths
     {
         [Required, Description("Pfad zur Datei")]
         public string Path { get; set; } = string.Empty;
@@ -22,6 +23,10 @@ public class WriteTool : BaseTool<WriteTool.Params>
 
         [Description("Modus: Create (Standard), Append oder Override")]
         public WriteMode? Mode { get; set; } = WriteMode.Create;
+        public IEnumerable<string> GetPaths()
+        {
+            yield return Path;
+        }
     }
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)

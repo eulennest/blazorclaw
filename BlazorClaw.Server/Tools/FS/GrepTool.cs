@@ -1,4 +1,5 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -6,7 +7,7 @@ using System.Text.Json;
 
 namespace BlazorClaw.Server.Tools.FS;
 
-public class GrepParams
+public class GrepParams : IWorkingPaths
 {
     [Description("Pfad zum Suchen")]
     public string Path { get; set; } = ".";
@@ -29,6 +30,10 @@ public class GrepParams
 
     [Description("Rekursiv durch Unterverzeichnisse suchen  (Default: true)")]
     public bool? Recursive { get; set; } = true;
+    public IEnumerable<string> GetPaths()
+    {
+        yield return Path;
+    }
 }
 
 public class GrepTool : BaseTool<GrepParams>

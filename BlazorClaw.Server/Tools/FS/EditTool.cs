@@ -1,4 +1,5 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -10,7 +11,7 @@ public class EditTool : BaseTool<EditTool.Params>
     public override string Name => "fs_edit";
     public override string Description => "Editiert eine Datei durch Ersetzen von Text (Suchen & Ersetzen).";
 
-    public class Params
+    public class Params : IWorkingPaths
     {
         [Required, Description("Pfad zur Datei")]
         public string Path { get; set; } = string.Empty;
@@ -23,6 +24,11 @@ public class EditTool : BaseTool<EditTool.Params>
 
         [Description("Wenn true, werden alle Vorkommnisse ersetzt, sonst nur das erste (Standard: false)")]
         public bool? Multiple { get; set; } = false;
+
+        public IEnumerable<string> GetPaths()
+        {
+            yield return Path;
+        }
     }
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)

@@ -1,15 +1,20 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace BlazorClaw.Server.Tools.FS;
 
-public class ReadParams
+public class ReadParams : IWorkingPaths
 {
     [Description("Pfad der zu lesenden Datei")]
     [Required]
     public string Path { get; set; } = string.Empty;
+    public IEnumerable<string> GetPaths()
+    {
+        yield return Path;
+    }
 }
 
 public class ReadTool : BaseTool<ReadParams>

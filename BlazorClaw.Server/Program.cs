@@ -12,6 +12,7 @@ using BlazorClaw.Server;
 using BlazorClaw.Server.Components;
 using BlazorClaw.Server.Components.Account;
 using BlazorClaw.Server.Memory;
+using BlazorClaw.Server.Security;
 using BlazorClaw.Server.Security.Vault;
 using BlazorClaw.Server.Services;
 using BlazorClaw.Server.Web;
@@ -38,6 +39,7 @@ builder.Services.AddHttpClient("OpenRouter", client =>
 // Add HttpClient for WebSearchProvider
 builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
 builder.Services.Configure<WebSearchOptions>(builder.Configuration.GetSection(WebSearchOptions.Section));
+builder.Services.Configure<SandboxOptions>(builder.Configuration.GetSection(SandboxOptions.Section));
 
 // Register Plugin Services
 var plugins = PluginUtils.BuildPlugins<IPluginProvider>(builder.Services.BuildServiceProvider());
