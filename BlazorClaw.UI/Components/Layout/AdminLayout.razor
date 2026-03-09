@@ -1,0 +1,35 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@inherits LayoutComponentBase
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+        <div class="admin-nav">
+            <h4>Admin Navigation</h4>
+            <NavLink href="admin/channels" Match="NavLinkMatch.All">Kanäle verwalten</NavLink>
+            <NavLink href="admin/policies" Match="NavLinkMatch.All">Policies verwalten</NavLink>
+        </div>
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <LoginDisplay />
+        </div>
+
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+<style>
+    .admin-nav {
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .admin-nav h4 {
+        color: white;
+    }
+</style>
