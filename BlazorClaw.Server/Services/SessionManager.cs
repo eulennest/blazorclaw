@@ -10,8 +10,6 @@ using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.CommandLine;
 using System.Text.Json;
-using Telegram.Bot.Types;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace BlazorClaw.Server.Services
 {
@@ -31,6 +29,7 @@ namespace BlazorClaw.Server.Services
                 // Hier später Datenbank-Lookup implementieren
                 state = new ChatSessionState
                 {
+                    Scope = scopeFactory.CreateScope(),
                     Session = new() { Id = sessionId, CurrentModel = model },
                     Provider = prov
                 };
@@ -53,6 +52,7 @@ namespace BlazorClaw.Server.Services
                     var prov = providerManager.GetProviderConfig(store.Session.CurrentModel) ?? throw new Exception($"No provider found for model {store.Session.CurrentModel}");
                     state = new ChatSessionState
                     {
+                        Scope = scopeFactory.CreateScope(),
                         Session = store.Session,
                         Provider = prov,
                         MessageHistory = store.MessageHistory
@@ -125,8 +125,7 @@ namespace BlazorClaw.Server.Services
         public async IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sessionState)
         {
             logger.LogInformation("Dispatching LLM request for session {SessionId}", sessionState.Session.Id);
-            using var scope = scopeFactory.CreateScope();
-            using var httpClient = scope.ServiceProvider.GetRequiredService<HttpClient>();
+            using var httpClient = sessionState.Services.GetRequiredService<HttpClient>();
             httpClient.BaseAddress = new Uri(sessionState.Provider.Uri.TrimEnd('/') + "/");
             if (!string.IsNullOrWhiteSpace(sessionState.Provider.Uri))
                 httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {sessionState.Provider.Token}");
@@ -135,12 +134,12 @@ namespace BlazorClaw.Server.Services
             var context = new MessageContext
             {
                 Session = sessionState.Session,
-                Provider = scope.ServiceProvider,
+                Provider = sessionState.Services,
                 UserId = sessionState.Session.Participants.FirstOrDefault()?.UserId,
             };
 
-            var toolRegistry = scope.ServiceProvider.GetRequiredService<IToolRegistry>();
-            var policyProvider = scope.ServiceProvider.GetRequiredService<IToolPolicyProvider>();
+            var toolRegistry = sessionState.Services.GetRequiredService<IToolRegistry>();
+            var policyProvider = sessionState.Services.GetRequiredService<IToolPolicyProvider>();
 
             if ((sessionState.Tools?.Count ?? 0) == 0)
             {
@@ -168,7 +167,7 @@ namespace BlazorClaw.Server.Services
                     var systemPromptContent = await File.ReadAllTextAsync("SYSTEMPROMPT.md").ConfigureAwait(false);
                     sessionState.SystemPrompts.Add(new ChatMessage { Role = "system", Content = systemPromptContent });
                 }
-                sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(scope.ServiceProvider, context));
+                sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(sessionState.Services, context));
 
                 if (File.Exists("AGENTS.md"))
                 {

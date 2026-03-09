@@ -31,7 +31,7 @@ namespace BlazorClaw.Server.Services
                     logger.LogInformation("No user ID in context. Assigned new temporary session ID {SessionId} for channel {ChannelProvider}:{ChannelId}", uid, context.Channel.ChannelProvider, context.Channel.ChannelId);
                 }
             }
-            var sm = context.Provider.GetRequiredService<ISessionManager>();
+            var sm = serviceProvider.GetRequiredService<ISessionManager>();
             var session = await sm.GetOrCreateSessionAsync(uid.Value);
             return session;
         }
@@ -53,21 +53,20 @@ namespace BlazorClaw.Server.Services
         {
             try
             {
-                using var scope = serviceProvider.CreateScope();
-                var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
+                var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
                 // Suche User via Provider "Telegram"
                 var user = await userManager.FindByLoginAsync(channelSession.ChannelProvider, channelSession.SenderId);
-                var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
 
                 var cmdContext = new MessageContext
                 {
                     UserId = user?.Id,
                     Channel = channelSession,
-                    Provider = scope.ServiceProvider,
+                    Provider = serviceProvider,
                 };
-
                 var session = await GetSessionAsync(cmdContext);
+                cmdContext.Provider = session.Services;
+
+                var sm = cmdContext.Provider.GetRequiredService<ISessionManager>();
                 cmdContext.Session = session?.Session;
 
                 if (message is string msgString)
@@ -77,7 +76,7 @@ namespace BlazorClaw.Server.Services
                         try
                         {
                             var rootCmd = await BuildRootCommand(cmdContext);
-                            var ret = await sm.DispatchCommandAsync(msgString, cmdContext, rootCmd, scope.ServiceProvider.GetRequiredService<ICommandProvider>());
+                            var ret = await sm.DispatchCommandAsync(msgString, cmdContext, rootCmd, cmdContext.Provider.GetRequiredService<ICommandProvider>());
                             if (ret != null)
                             {
                                 var textRes = Convert.ToString(ret);
