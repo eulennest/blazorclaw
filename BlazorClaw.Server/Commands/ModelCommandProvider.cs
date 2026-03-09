@@ -48,21 +48,32 @@ public class ModelSwitchCommand : ISystemCommand, ISystemCommandExecutor
 
     public Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
     {
-        string shortName;
+        string input;
         try
         {
-            shortName = result.GetRequiredValue<string>((Argument<string>)result.CommandResult.Command.Arguments[0]);
+            input = result.GetRequiredValue<string>((Argument<string>)result.CommandResult.Command.Arguments[0]);
         }
         catch
         {
-            // No argument provided - show help
             return Task.FromResult<object?>($"Verfügbare Modelle: {string.Join(", ", ModelMap.Keys)}\nUsage: /model <modell>");
         }
         
         var providerManager = context.Provider.GetRequiredService<IProviderManager>();
         
-        if (!ModelMap.TryGetValue(shortName.ToLowerInvariant(), out var fullModel))
-            return Task.FromResult<object?>($"Unbekannt. Verfügbare: {string.Join(", ", ModelMap.Keys)}");
+        // Check if full model name (contains '/')
+        string fullModel;
+        if (input.Contains('/'))
+        {
+            fullModel = input;
+        }
+        else if (ModelMap.TryGetValue(input.ToLowerInvariant(), out var mapped))
+        {
+            fullModel = mapped;
+        }
+        else
+        {
+            return Task.FromResult<object?>($"Unbekannt. Verfügbare Kurznamen: {string.Join(", ", ModelMap.Keys)}");
+        }
 
         var providerName = fullModel.Split('/')[0];
         var availableProviders = providerManager.GetProviders().ToList();
