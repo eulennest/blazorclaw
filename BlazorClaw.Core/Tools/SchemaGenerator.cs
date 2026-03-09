@@ -20,16 +20,16 @@ public static class SchemaGenerator
             Type underlyingType = Nullable.GetUnderlyingType(propType) ?? propType;
 
             // Typ-Mapping
-            string typeName = underlyingType.Name switch
-            {
-                "String" => "string",
-                "Int32" or "Int64" => "integer",
-                "Double" or "Decimal" or "Single" => "number",
-                "Boolean" => "boolean",
-                _ => underlyingType.IsEnum ? "string" : "string"
-            };
+            string typeName = GetTypeName(underlyingType);
             propInfo["type"] = typeName;
 
+            if (underlyingType.IsArray)
+            {
+                propInfo["items"] = new
+                {
+                    type = GetTypeName(underlyingType.GetElementType()!)
+                };
+            }
             if (underlyingType.IsEnum)
             {
                 propInfo["enum"] = Enum.GetNames(underlyingType);
@@ -70,4 +70,18 @@ public static class SchemaGenerator
 
         return result;
     }
+
+    public static string GetTypeName(Type type)
+    {
+        if (type.IsArray) return "array";
+        return type.Name switch
+        {
+            "String" => "string",
+            "Int32" or "Int64" => "integer",
+            "Double" or "Decimal" or "Single" => "number",
+            "Boolean" => "boolean",
+            _ => "string"
+        };
+    }
+
 }
