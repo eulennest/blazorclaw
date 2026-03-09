@@ -81,7 +81,11 @@ public class ModelSwitchCommand : ISystemCommand, ISystemCommandExecutor
         if (!availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
             return Task.FromResult<object?>($"Fehler: Provider '{providerName}' nicht konfiguriert.");
 
-        context.Provider.GetRequiredService<IOptionsMonitor<LlmOptions>>().CurrentValue.Model = fullModel;
+        // Set model for this session
+        if (context.Session != null)
+        {
+            context.Session.CurrentModel = fullModel;
+        }
         
         return Task.FromResult<object?>($"Gewechselt zu: {fullModel}");
     }
