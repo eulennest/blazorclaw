@@ -12,7 +12,7 @@ public class ExecParams
     [Required]
     public string Binary { get; set; } = string.Empty;
 
-    [Description("Argumente für die Datei  (zb. ['-t' ,'test', '-f'])")]
+    [Description("Argumente für die Datei  (zb. ['-t' ,'test name', '-f'])")]
     public string[] Args { get; set; } = [];
 }
 

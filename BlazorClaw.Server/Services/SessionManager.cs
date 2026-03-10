@@ -1,4 +1,5 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Data;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Providers;
@@ -16,36 +17,56 @@ namespace BlazorClaw.Server.Services
 
     public class SessionManager(IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options) : ISessionManager
     {
+        public string SessionStoragePath { get; set; } = "sessions";
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
 
-        public Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string? model = null)
+        public async Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string? model = null)
         {
-            if (string.IsNullOrWhiteSpace(model)) model = options.CurrentValue.Model;
-            if (!_sessions.TryGetValue(sessionId, out var state))
+            var state = await GetSessionAsync(sessionId).ConfigureAwait(false);
+
+            if (state == null)
             {
                 logger.LogInformation("Creating session {SessionId}", sessionId);
                 var scope = scopeFactory.CreateScope();
-                // Hier später Datenbank-Lookup implementieren
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var sess = await db.ChatSessions.FindAsync(sessionId);
+                model ??= sess?.CurrentModel ?? options.CurrentValue.Model;
+                if (sess == null)
+                {
+                    sess = new ChatSession
+                    {
+                        Id = sessionId,
+                        CurrentModel = model,
+                        CreatedAt = DateTime.UtcNow,
+                        LastUsedAt = DateTime.UtcNow,
+                        Title = "New Session"
+                    };
+                    db.ChatSessions.Add(sess);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
+
                 state = new ChatSessionState
                 {
                     Scope = scope,
-                    Session = new() { Id = sessionId, CurrentModel = model },
+                    Session = sess,
                     Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model) ?? throw new Exception($"No provider found for model {model}")
                 };
                 scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
 
+
                 _sessions.TryAdd(sessionId, state);
             }
-            return Task.FromResult(state);
+            return state;
         }
 
         public async Task<ChatSessionState?> GetSessionAsync(Guid sessionId)
         {
             _sessions.TryGetValue(sessionId, out var state);
+            var path = Path.Combine(SessionStoragePath, $"session_{sessionId}.json");
 
-            if (state == null && File.Exists("session_{sessionId}.json"))
+            if (state == null && File.Exists(path))
             {
-                using var jsonStream = File.OpenRead($"session_{sessionId}.json");
+                using var jsonStream = File.OpenRead(path);
                 var store = await JsonSerializer.DeserializeAsync<JsonSessionStorage>(jsonStream).ConfigureAwait(false);
                 if (store != null)
                 {
@@ -66,14 +87,34 @@ namespace BlazorClaw.Server.Services
             return state;
         }
 
-        public async Task SaveToDiskAsync(ChatSessionState sessionState)
+        public async Task SaveSessionAsync(ChatSessionState sessionState, bool newVersion = false)
         {
+            var db = sessionState.Services.GetRequiredService<ApplicationDbContext>();
+            sessionState.Session.LastUsedAt = DateTime.UtcNow;
+            db.ChatSessions
+            .Update(sessionState.Session);
+            await db.SaveChangesAsync().ConfigureAwait(false);
+            await SaveToDiskAsync(sessionState, newVersion).ConfigureAwait(false);
+        }
+
+        public async Task SaveToDiskAsync(ChatSessionState sessionState, bool newVersion = false)
+        {
+            var path = Path.Combine(SessionStoragePath, $"session_{sessionState.Session.Id}.json");
+
             var store = new JsonSessionStorage
             {
                 Session = sessionState.Session,
                 MessageHistory = sessionState.MessageHistory
             };
-            using var jsonStream = File.Create($"session_{sessionState.Session.Id}.json");
+            if (newVersion)
+            {
+                if (File.Exists(path))
+                {
+                    var newPath = Path.Combine(SessionStoragePath, $"session_{sessionState.Session.Id}_{DateTime.UtcNow:yyyyMMddHHmmss}.json");
+                    File.Move(path, newPath);
+                }
+            }
+            using var jsonStream = File.Create(path);
             await JsonSerializer.SerializeAsync(jsonStream, store, JsonHelper.DefaultOptions).ConfigureAwait(false);
         }
 
@@ -180,7 +221,7 @@ namespace BlazorClaw.Server.Services
                     count++;
                     yield return msg;
                 }
-                await SaveToDiskAsync(sessionState);
+                await SaveSessionAsync(sessionState, false);
             }
             while (count > 1 && iterations < 10);
         }

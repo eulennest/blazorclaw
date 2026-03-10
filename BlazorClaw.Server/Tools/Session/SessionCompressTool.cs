@@ -15,7 +15,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
     {
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
         var sess = await sessionManager.GetSessionAsync(context.Session!.Id);
-        if (sess == null) return "Session nicht gefunden.";
+        if (sess == null)  throw new KeyNotFoundException($"Session mit ID {context.Session.Id} nicht gefunden.");
 
         // Komprimiere den Verlauf: Historie leeren und Zusammenfassung als System-Message
         var last = sess.MessageHistory.TakeLast(20);
@@ -36,7 +36,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
             }
             sess.MessageHistory.Add(msg);
         }
-        await sessionManager.SaveToDiskAsync(sess);
+        await sessionManager.SaveSessionAsync(sess, true);
         return $"Session komprimiert. Aktuelle Nachrichten: {sess.MessageHistory.Count}";
     }
 }

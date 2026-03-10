@@ -1,5 +1,6 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.DTOs;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.CommandLine;
 
 namespace BlazorClaw.Core.Sessions;
@@ -8,7 +9,8 @@ public interface ISessionManager
 {
     Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string? model = null);
     Task<ChatSessionState?> GetSessionAsync(Guid sessionId);
-    Task SaveToDiskAsync(ChatSessionState sessionState);
+    Task SaveSessionAsync(ChatSessionState sessionState, bool newVersion = false);
+    Task SaveToDiskAsync(ChatSessionState sessionState, bool newVersion = false);
     Task AppendMessageAsync(Guid sessionId, ChatMessage message);
     IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sess, MessageContext context);
     Task<object?> DispatchCommandAsync(string cmdline, MessageContext cmdContext, RootCommand rootCmd, ICommandProvider commandProvider);
