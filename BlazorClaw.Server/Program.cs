@@ -140,5 +140,6 @@ app.UseAntiforgery();
 
 app.MapRazorComponents<BlazorClaw.UI.Components.App>();
 app.MapControllers();
+app.MapHub<BlazorClaw.Server.Hubs.ChatHub>("/chatHub");
 
 app.Run();

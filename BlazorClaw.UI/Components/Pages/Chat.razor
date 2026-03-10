@@ -1,0 +1,531 @@
+@page "/chat/{SessionId:guid}"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.SignalR.Client
+@using BlazorClaw.Core.Data
+@using BlazorClaw.Core.Models
+@using BlazorClaw.Core.Services
+@using BlazorClaw.Core.DTOs
+@inject NavigationManager Nav
+@inject ISessionQueryService SessionQueryService
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Chat - BlazorClaw</PageTitle>
+
+<div class="chat-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <button class="new-chat-btn" @onclick="NewChat">
+                <i class="bi bi-plus-lg"></i> New Chat
+            </button>
+        </div>
+        <div class="sessions-list">
+            @foreach (var session in sessions)
+            {
+                <a href="/chat/@session.Id" 
+                   class="session-item @(session.Id == SessionId ? "active" : "")">
+                    <i class="bi bi-chat-dots"></i>
+                    <span class="session-title">@session.Title</span>
+                </a>
+            }
+        </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="chat-main">
+        <div class="chat-header">
+            <h2>@currentSession?.Title</h2>
+            <select class="model-select" @bind="selectedModel">
+                <option value="openrouter/mistralai/mistral-large">Mistral Large</option>
+                <option value="openrouter/anthropic/claude-sonnet-4-6">Claude Sonnet</option>
+                <option value="openrouter/openai/gpt-4o">GPT-4o</option>
+            </select>
+        </div>
+
+        <div class="messages-container" id="messages-container">
+            @if (!messages.Any() && !isLoading)
+            {
+                <div class="empty-state">
+                    <div class="empty-icon">💬</div>
+                    <h3>How can I help you today?</h3>
+                    <p>Start a conversation by typing a message below.</p>
+                </div>
+            }
+
+            @foreach (var msg in messages)
+            {
+                <div class="message @(msg.IsUser ? "user" : "assistant")">
+                    <div class="message-avatar">
+                        @if (msg.IsUser)
+                        {
+                            <i class="bi bi-person"></i>
+                        }
+                        else
+                        {
+                            <i class="bi bi-robot"></i>
+                        }
+                    </div>
+                    <div class="message-content">
+                        @if (msg.Content is string strContent)
+                        {
+                            @((MarkupString)RenderMarkdown(strContent))
+                        }
+                        else if (msg.Content != null)
+                        {
+                            @msg.Content.ToString()
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (isLoading)
+            {
+                <div class="message assistant">
+                    <div class="message-avatar">
+                        <i class="bi bi-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="typing-indicator">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="input-area">
+            <textarea 
+                @bind="userInput" 
+                @bind:event="oninput"
+                @onkeydown="HandleKeyDown"
+                @onkeydown:preventDefault="true"
+                placeholder="Nachricht eingeben..."
+                rows="1"
+                disabled="@isLoading"></textarea>
+            <button class="send-btn" @onclick="SendMessage" disabled="@isLoading || string.IsNullOrWhiteSpace(userInput)">
+                <i class="bi bi-send"></i>
+            </button>
+        </div>
+    </main>
+</div>
+
+@code {
+    [Parameter]
+    public Guid SessionId { get; set; }
+
+    private HubConnection? hubConnection;
+    private List<ChatSession> sessions = [];
+    private List<ChatMessage> messages = [];
+    private ChatSession? currentSession;
+    private string userInput = "";
+    private string selectedModel = "openrouter/mistralai/mistral-large";
+    private bool isLoading;
+    private string? userId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        userId = UserManager.GetUserId(user);
+
+        // Load sessions
+        var isAdmin = user.IsInRole("Admin");
+        sessions = isAdmin 
+            ? await SessionQueryService.GetAllSessionsAsync()
+            : await SessionQueryService.GetSessionsForUserAsync(userId!);
+        
+        currentSession = sessions.FirstOrDefault(s => s.Id == SessionId);
+        if (currentSession != null)
+        {
+            selectedModel = currentSession.CurrentModel;
+        }
+
+        // Setup SignalR
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(Nav.ToAbsoluteUri("/chatHub"))
+            .WithAutomaticReconnect()
+            .Build();
+
+        hubConnection.On<Guid, ChatMessage>("ReceiveMessage", (sessionId, msg) =>
+        {
+            if (sessionId == SessionId)
+            {
+                messages.Add(msg);
+                StateHasChanged();
+                ScrollToBottom();
+            }
+        });
+
+        hubConnection.On<Guid>("MessageStarted", (sessionId) =>
+        {
+            if (sessionId == SessionId)
+            {
+                isLoading = true;
+                StateHasChanged();
+            }
+        });
+
+        hubConnection.On<Guid>("MessageCompleted", (sessionId) =>
+        {
+            if (sessionId == SessionId)
+            {
+                isLoading = false;
+                StateHasChanged();
+                ScrollToBottom();
+            }
+        });
+
+        hubConnection.On<Guid, string>("Error", (sessionId, error) =>
+        {
+            if (sessionId == SessionId)
+            {
+                isLoading = false;
+                messages.Add(new ChatMessage { Role = "assistant", Content = $"Error: {error}" });
+                StateHasChanged();
+            }
+        });
+
+        hubConnection.On<Guid, List<ChatMessage>>("HistoryLoaded", (sessionId, history) =>
+        {
+            if (sessionId == SessionId)
+            {
+                messages = history;
+                StateHasChanged();
+            }
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.InvokeAsync("LoadHistory", SessionId);
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(userInput) || isLoading) return;
+
+        var userMsg = new ChatMessage { Role = "user", Content = userInput };
+        messages.Add(userMsg);
+        var input = userInput;
+        userInput = "";
+        ScrollToBottom();
+
+        if (hubConnection?.State == HubConnectionState.Connected)
+        {
+            await hubConnection.SendAsync("SendMessage", SessionId, input);
+        }
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+    }
+
+    private void NewChat()
+    {
+        var newId = Guid.NewGuid();
+        Nav.NavigateTo($"/chat/{newId}");
+    }
+
+    private void ScrollToBottom()
+    {
+        InvokeAsync(async () =>
+        {
+            await Task.Delay(50);
+            var container = await JS.InvokeAsync<IJSObjectReference>("document.getElementById", "messages-container");
+            if (container != null)
+            {
+                await container.InvokeVoidAsync("scrollTop", await JS.InvokeAsync<int>("eval", "document.getElementById('messages-container').scrollHeight"));
+            }
+        });
+    }
+
+    private string RenderMarkdown(string text)
+    {
+        // Basic markdown rendering
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"```(\w+)?\n([\s\S]*?)```", "<pre><code>$2</code></pre>");
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"`([^`]+)`", "<code>$1</code>");
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\*\*([^*]+)\*\*", "<strong>$1</strong>");
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\*([^*]+)\*", "<em>$1</em>");
+        text = System.Text.RegularExpressions.Regex.Replace(text, @"\n", "<br>");
+        return text;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
+
+<style>
+    .chat-layout {
+        display: flex;
+        height: calc(100vh - 60px);
+        background: #1e1e1e;
+    }
+
+    .sidebar {
+        width: 260px;
+        background: #2d2d2d;
+        border-right: 1px solid #3d3d3d;
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+    }
+
+    .sidebar-header {
+        padding: 10px 0;
+        margin-bottom: 10px;
+    }
+
+    .new-chat-btn {
+        width: 100%;
+        padding: 12px;
+        background: #4a4a4a;
+        border: none;
+        border-radius: 8px;
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: background 0.2s;
+    }
+
+    .new-chat-btn:hover {
+        background: #5a5a5a;
+    }
+
+    .sessions-list {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .session-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        color: #a0a0a0;
+        text-decoration: none;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        transition: all 0.2s;
+    }
+
+    .session-item:hover {
+        background: #3d3d3d;
+        color: #fff;
+    }
+
+    .session-item.active {
+        background: #3d3d3d;
+        color: #fff;
+    }
+
+    .session-title {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .chat-main {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: #1e1e1e;
+    }
+
+    .chat-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #3d3d3d;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .chat-header h2 {
+        color: #fff;
+        font-size: 1.2rem;
+        margin: 0;
+    }
+
+    .model-select {
+        padding: 8px 12px;
+        background: #3d3d3d;
+        border: 1px solid #4a4a4a;
+        border-radius: 6px;
+        color: #fff;
+        cursor: pointer;
+    }
+
+    .messages-container {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+    }
+
+    .empty-state {
+        text-align: center;
+        color: #a0a0a0;
+        padding-top: 100px;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 20px;
+    }
+
+    .empty-state h3 {
+        color: #fff;
+        margin-bottom: 10px;
+    }
+
+    .message {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        max-width: 800px;
+    }
+
+    .message.user {
+        flex-direction: row-reverse;
+        margin-left: auto;
+    }
+
+    .message-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .message.user .message-avatar {
+        background: #10a37f;
+    }
+
+    .message.assistant .message-avatar {
+        background: #5436da;
+    }
+
+    .message-content {
+        padding: 12px 16px;
+        border-radius: 12px;
+        line-height: 1.5;
+        color: #fff;
+    }
+
+    .message.user .message-content {
+        background: #2d2d2d;
+    }
+
+    .message.assistant .message-content {
+        background: #2d2d2d;
+    }
+
+    .message-content code {
+        background: #3d3d3d;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: monospace;
+    }
+
+    .message-content pre {
+        background: #3d3d3d;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+    }
+
+    .message-content pre code {
+        background: none;
+        padding: 0;
+    }
+
+    .typing-indicator {
+        display: flex;
+        gap: 4px;
+    }
+
+    .typing-indicator span {
+        width: 8px;
+        height: 8px;
+        background: #a0a0a0;
+        border-radius: 50%;
+        animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+    @@keyframes bounce {
+        0%, 80%, 100% { transform: translateY(0); }
+        40% { transform: translateY(-8px); }
+    }
+
+    .input-area {
+        padding: 20px;
+        border-top: 1px solid #3d3d3d;
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+
+    .input-area textarea {
+        flex: 1;
+        padding: 14px;
+        background: #3d3d3d;
+        border: 1px solid #4a4a4a;
+        border-radius: 12px;
+        color: #fff;
+        resize: none;
+        min-height: 50px;
+        max-height: 200px;
+        font-family: inherit;
+        font-size: 1rem;
+    }
+
+    .input-area textarea:focus {
+        outline: none;
+        border-color: #10a37f;
+    }
+
+    .input-area textarea::placeholder {
+        color: #a0a0a0;
+    }
+
+    .send-btn {
+        padding: 14px 20px;
+        background: #10a37f;
+        border: none;
+        border-radius: 12px;
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .send-btn:hover:not(:disabled) {
+        background: #0d8c6d;
+    }
+
+    .send-btn:disabled {
+        background: #4a4a4a;
+        cursor: not-allowed;
+    }
+</style>
