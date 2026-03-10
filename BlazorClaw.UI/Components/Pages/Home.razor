@@ -1,76 +1,110 @@
 @page "/"
 @attribute [Authorize]
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Authorization
+@using BlazorClaw.Core.Models
+@using BlazorClaw.Core.Data
+@using BlazorClaw.Core.Services
 @inject NavigationManager Nav
+@inject ISessionQueryService SessionQueryService
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Chat - BlazorClaw</PageTitle>
+<PageTitle>Dashboard - BlazorClaw</PageTitle>
 
-<div id="chat-container">
-    <div id="messages"></div>
-    <div class="input-area">
-        <textarea id="user-input" placeholder="Nachricht eingeben..."></textarea>
-        <button id="send-btn">Senden</button>
+<h1>Willkommen zurück!</h1>
+
+<div class="mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Deine Sessions</h4>
+        <button class="btn btn-primary btn-sm" @onclick="CreateNewSession">
+            <i class="bi bi-plus-lg"></i> Neue Session
+        </button>
     </div>
+
+    @if (sessions == null)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Laden...</span>
+            </div>
+        </div>
+    }
+    else if (!sessions.Any())
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Noch keine Sessions vorhanden. Starte eine neue Session!
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Titel</th>
+                        <th>Modell</th>
+                        <th>Letzte Aktivität</th>
+                        <th>Erstellt</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var session in sessions)
+                    {
+                        <tr>
+                            <td>
+                                <a href="/chat/@session.Id" class="text-decoration-none">
+                                    <strong>@session.Title</strong>
+                                </a>
+                                @if (isAdmin && session.Participants.Any())
+                                {
+                                    <br><small class="text-muted">
+                                        @string.Join(", ", session.Participants.Select(p => p.User?.UserName ?? "Unbekannt"))
+                                    </small>
+                                }
+                            </td>
+                            <td><code class="small">@session.CurrentModel</code></td>
+                            <td>@session.LastUsedAt.ToLocalTime().ToString("g")</td>
+                            <td>@session.CreatedAt.ToLocalTime().ToString("d")</td>
+                            <td>
+                                <a href="/chat/@session.Id" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-chat"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
 
-<style>
-    #chat-container { display: flex; flex-direction: column; height: 80vh; gap: 10px; padding: 20px; }
-    #messages { flex: 1; overflow-y: auto; border: 1px solid #ccc; padding: 15px; border-radius: 8px; }
-    .message { margin-bottom: 10px; padding: 10px; border-radius: 8px; max-width: 80%; }
-    .user { background: #e0f7fa; align-self: flex-end; margin-left: auto; }
-    .assistant { background: #f5f5f5; align-self: flex-start; }
-    .input-area { display: flex; gap: 10px; }
-    textarea { flex: 1; height: 60px; padding: 10px; border: 1px solid #ccc; border-radius: 8px; }
-    button { padding: 0 20px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; }
-    .message table { border-collapse: collapse; width: 100%; margin: 10px 0; }
-    .message th, .message td { border: 1px solid #555; padding: 8px; text-align: left; }
-    .message th { background-color: #333; }
-    .message code { background: #333; padding: 2px 4px; border-radius: 4px; }
-    .message pre { background: #333; padding: 10px; border-radius: 5px; overflow-x: auto; }
-</style>
+@code {
+    private List<ChatSession>? sessions;
+    private bool isAdmin;
+    private string? userId;
 
-<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<script>
-    let chatHistory = [];
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
 
-    document.getElementById('send-btn').addEventListener('click', async () => {
-        const input = document.getElementById('user-input');
-        const content = input.value;
-        if (!content) return;
-        
-        chatHistory.push({ role: 'user', content: content });
-        
-        const msgDiv = document.createElement('div');
-        msgDiv.className = 'message user';
-        msgDiv.textContent = content;
-        document.getElementById('messages').appendChild(msgDiv);
-        input.value = '';
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            userId = UserManager.GetUserId(user);
+            isAdmin = user.IsInRole("Admin");
 
-        const response = await fetch('/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                model: 'openrouter/mistralai/mistral-large', 
-                messages: chatHistory
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'message assistant';
-            errorDiv.style.color = 'red';
-            errorDiv.textContent = 'Fehler: ' + data.error.message;
-            document.getElementById('messages').appendChild(errorDiv);
-        } else {
-            const assistantMsg = data.choices[0].message.content;
-            chatHistory.push({ role: 'assistant', content: assistantMsg });
-
-            const aiDiv = document.createElement('div');
-            aiDiv.className = 'message assistant';
-            aiDiv.innerHTML = marked.parse(assistantMsg);
-            document.getElementById('messages').appendChild(aiDiv);
+            sessions = isAdmin 
+                ? await SessionQueryService.GetAllSessionsAsync()
+                : await SessionQueryService.GetSessionsForUserAsync(userId!);
         }
-    });
-</script>
+    }
+
+    private void CreateNewSession()
+    {
+        var newSessionId = Guid.NewGuid();
+        Nav.NavigateTo($"/chat/{newSessionId}");
+    }
+}

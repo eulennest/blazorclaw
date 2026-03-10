@@ -6,6 +6,7 @@ using BlazorClaw.Core.Providers;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Security.Vault;
 using BlazorClaw.Core.Sessions;
+using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Web;
 using BlazorClaw.Server;
@@ -104,6 +105,7 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 builder.Services.AddSingleton<ISessionManager, BlazorClaw.Server.Services.SessionManager>();
 builder.Services.AddSingleton<IMessageDispatcher, MessageDispatcher>();
+builder.Services.AddScoped<ISessionQueryService, BlazorClaw.Core.Services.SessionQueryService>();
 
 builder.Services.AddHostedService<BlazorClaw.Channels.Services.TelegramBotHostedService>();
 builder.Services.AddHostedService<BlazorClaw.Channels.Services.MatrixBotHostedService>();
