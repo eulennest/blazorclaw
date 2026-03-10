@@ -100,7 +100,7 @@ namespace BlazorClaw.Server.Services
         public async Task SaveToDiskAsync(ChatSessionState sessionState, bool newVersion = false)
         {
             var path = Path.Combine(SessionStoragePath, $"session_{sessionState.Session.Id}.json");
-
+            Directory.CreateDirectory(SessionStoragePath);
             var store = new JsonSessionStorage
             {
                 Session = sessionState.Session,
