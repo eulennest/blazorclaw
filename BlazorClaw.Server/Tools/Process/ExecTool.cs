@@ -14,6 +14,10 @@ public class ExecParams
 
     [Description("Argumente für die Datei  (zb. ['-t' ,'test name', '-f'])")]
     public string[] Args { get; set; } = [];
+
+    [Description("Timeout in Sekunden (default: 60)")]
+    public int? Timeout { get; set; } = 60;
+
 }
 
 public class ExecTool : BaseTool<ExecParams>
@@ -21,7 +25,7 @@ public class ExecTool : BaseTool<ExecParams>
     public override string Name => "process_exec";
     public override string Description => "Führt ein Programm mit Parametern aus";
 
-    protected override Task<string> ExecuteInternalAsync(ExecParams p, MessageContext context)
+    protected override async Task<string> ExecuteInternalAsync(ExecParams p, MessageContext context)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -34,9 +38,21 @@ public class ExecTool : BaseTool<ExecParams>
         foreach (var arg in p.Args) startInfo.ArgumentList.Add(arg);
 
         using var process = System.Diagnostics.Process.Start(startInfo);
-        if (process == null) return Task.FromResult("Fehler beim Starten des Prozesses.");
+        if (process == null) throw new InvalidOperationException("Prozess konnte nicht gestartet werden.");
 
-        process.WaitForExit();
-        return Task.FromResult(process.StandardOutput.ReadToEnd());
+        var cs = new CancellationTokenSource(TimeSpan.FromSeconds(p.Timeout ?? 60));
+        await process.WaitForExitAsync(cs.Token).ConfigureAwait(false);
+        var exited = process.HasExited;
+        if (!exited) process.Kill(true);
+        var sb = new System.Text.StringBuilder();
+        if (!exited)
+            sb.AppendLine("WARNING: Prozess hat das Zeitlimit überschritten und wurde beendet.");
+        sb.AppendLine("ExitCode: " + process.ExitCode);
+        sb.AppendLine("Output:");
+        sb.AppendLine(process.StandardOutput.ReadToEnd());
+        sb.AppendLine("Error:");
+        sb.AppendLine(process.StandardError.ReadToEnd());
+
+        return sb.ToString();
     }
 }
