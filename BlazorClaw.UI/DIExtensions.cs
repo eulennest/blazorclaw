@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BlazorClaw.UI
 {
@@ -7,7 +7,8 @@ namespace BlazorClaw.UI
         public static IServiceCollection AddClawUI(this IServiceCollection services)
         {
             services.AddRazorPages();
-            services.AddRazorComponents();
+            services.AddRazorComponents()
+                .AddInteractiveServerRenderMode();
             return services;
         }
     }
