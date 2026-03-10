@@ -67,7 +67,7 @@ namespace BlazorClaw.Server.Services
             if (state == null && File.Exists(path))
             {
                 using var jsonStream = File.OpenRead(path);
-                var store = await JsonSerializer.DeserializeAsync<JsonSessionStorage>(jsonStream).ConfigureAwait(false);
+                var store = await JsonSerializer.DeserializeAsync<JsonSessionStorage>(jsonStream, JsonHelper.DefaultOptions).ConfigureAwait(false);
                 if (store != null)
                 {
                     var scope = scopeFactory.CreateScope();
