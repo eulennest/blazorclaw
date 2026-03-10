@@ -1,4 +1,6 @@
-﻿using System.Text.Json;
+﻿using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace BlazorClaw.Core.Utils
@@ -20,6 +22,73 @@ namespace BlazorClaw.Core.Utils
                 jo.Converters.Add(new JsonStringEnumConverter());
                 return jo;
             }
+        }
+    }
+
+    public static class DependencyInjectionExtensions
+    {
+        private static Type? constantCallSiteType;
+        private static Type? serviceIdentifierType;
+        private static ConstructorInfo? constantCallSiteConstructor;
+        private static MethodInfo? fromServiceTypeMethod;
+
+        static DependencyInjectionExtensions()
+        {
+            constantCallSiteType = typeof(ServiceProvider).Assembly.GetType("Microsoft.Extensions.DependencyInjection.ServiceLookup.ConstantCallSite");
+            serviceIdentifierType = typeof(ServiceProvider).Assembly.GetType("Microsoft.Extensions.DependencyInjection.ServiceLookup.ServiceIdentifier");
+
+            constantCallSiteConstructor = constantCallSiteType?.GetConstructor([typeof(Type), typeof(object)]);
+            fromServiceTypeMethod = serviceIdentifierType?.GetMethod("FromServiceType");
+        }
+
+        public static void AddScopedPostBuild<TService>(this ServiceProvider serviceProvider, Func<IServiceProvider, TService> implementationFactory) where TService : class
+        {
+            var serviceType = typeof(TService);
+            var callSiteFactory = serviceProvider.GetPrivatePropertyValue<object>("CallSiteFactory");
+            var serviceIdentifier = fromServiceTypeMethod?.Invoke(null, [(object)typeof(TService)]);
+            var objImplementation = implementationFactory(serviceProvider);
+            var callSite = constantCallSiteConstructor?.Invoke([typeof(TService), objImplementation]);
+            if (serviceIdentifier != null && callSite != null)
+                callSiteFactory?.CallMethod("Add", serviceIdentifier, callSite);
+        }
+        public static T? GetPrivatePropertyValue<T>(this object obj, string property)
+        {
+            var type = obj.GetType();
+            var propertyInfo = type.GetProperty(property, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy | BindingFlags.GetProperty);
+            T? value = default;
+
+            if (propertyInfo != null)
+            {
+                value = (T?)propertyInfo.GetValue(obj, null);
+            }
+            else
+            {
+                var baseType = type.BaseType;
+
+                while (baseType != null)
+                {
+                    propertyInfo = type.GetProperty(property, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.FlattenHierarchy | BindingFlags.GetProperty);
+
+                    if (propertyInfo != null)
+                    {
+                        value = (T?)propertyInfo.GetValue(obj, null);
+                        break;
+                    }
+
+                    baseType = baseType.BaseType;
+                }
+            }
+
+            return value;
+        }
+        public static T? CallMethod<T>(this object obj, string methodName, params object[] args)
+        {
+            return (T?)obj.GetType().GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance)?.Invoke(obj, args);
+        }
+
+        public static object? CallMethod(this object obj, string methodName, params object[] args)
+        {
+            return obj.GetType().GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance)?.Invoke(obj, args);
         }
     }
 }
