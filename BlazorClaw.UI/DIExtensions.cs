@@ -8,7 +8,7 @@ namespace BlazorClaw.UI
         {
             services.AddRazorPages();
             services.AddRazorComponents()
-                .AddInteractiveServerRenderMode();
+                .AddInteractiveServerComponents();
             return services;
         }
     }
