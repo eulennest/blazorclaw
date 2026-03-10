@@ -106,7 +106,6 @@
                 @bind="userInput" 
                 @bind:event="oninput"
                 @onkeydown="HandleKeyDown"
-                @onkeydown:preventDefault="true"
                 placeholder="Nachricht eingeben..."
                 rows="1"></textarea>
             <button class="send-btn" @onclick="SendMessage" disabled="@isLoading || string.IsNullOrWhiteSpace(userInput)">
