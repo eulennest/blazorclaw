@@ -27,12 +27,21 @@ public class ChatHub : Hub
         {
             var state = await _sessionManager.GetOrCreateSessionAsync(sessionId);
             
+            if (state.Provider == null)
+            {
+                _logger.LogError("Provider is null for session {SessionId}", sessionId);
+                await Clients.Caller.SendAsync("Error", sessionId, "Provider not configured");
+                return;
+            }
+            
             // Add user message to history
             var userMsg = new ChatMessage { Role = "user", Content = message };
             await _sessionManager.AppendMessageAsync(sessionId, userMsg);
             
             // Notify client that we're processing
             await Clients.Caller.SendAsync("MessageStarted", sessionId);
+
+            _logger.LogInformation("Sending to LLM with provider {Provider} for session {SessionId}", state.Provider.Uri, sessionId);
 
             // Send to LLM and stream response
             var context = new MessageContext 

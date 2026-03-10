@@ -49,7 +49,7 @@ namespace BlazorClaw.Server.Services
                 {
                     Scope = scope,
                     Session = sess,
-                    Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model) ?? throw new Exception($"No provider found for model {model}")
+                    Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model?.Split('/')[0] ?? "openrouter") ?? throw new Exception($"No provider found for model {model}")
                 };
                 scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
 
@@ -76,7 +76,7 @@ namespace BlazorClaw.Server.Services
                     {
                         Scope = scope,
                         Session = store.Session,
-                        Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model) ?? throw new Exception($"No provider found for model {model}"),
+                        Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model?.Split('/')[0] ?? "openrouter") ?? throw new Exception($"No provider found for model {model}"),
                         MessageHistory = store.MessageHistory
                     };
                     _sessions.TryAdd(sessionId, state);
