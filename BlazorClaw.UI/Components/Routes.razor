@@ -1,4 +1,6 @@
-﻿@using BlazorClaw.UI.Components.Account.Shared
+@using BlazorClaw.UI.Components.Account.Shared
+@rendermode InteractiveServer
+
 <Router AppAssembly="typeof(BlazorClaw.UI.Components.Layout.MainLayout).Assembly">
     <Found Context="routeData">
         <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(BlazorClaw.UI.Components.Layout.MainLayout)">
