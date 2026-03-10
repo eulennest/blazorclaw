@@ -57,7 +57,7 @@ public class ChatHub : Hub
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing message for session {SessionId}", sessionId);
+            _logger.LogError(ex, "Error processing message for session {SessionId}: {Error}", sessionId, ex.Message);
             await Clients.Caller.SendAsync("Error", sessionId, ex.Message);
         }
     }
