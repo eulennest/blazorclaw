@@ -19,7 +19,7 @@ public class ChatHub(IMessageDispatcher md, ISessionManager sessionManager, ILog
         var state = await sessionManager.GetOrCreateSessionAsync(sessionId);
         var bot = new WebChatChannelBot(state.Session!.Id.ToString())
         {
-            SenderId = userIdString
+            SenderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? state.Session!.Id.ToString()
         };
         try
         {
