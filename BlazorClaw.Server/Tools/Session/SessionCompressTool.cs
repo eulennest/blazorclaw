@@ -15,7 +15,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
     {
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
         var sess = await sessionManager.GetSessionAsync(context.Session!.Id);
-        if (sess == null)  throw new KeyNotFoundException($"Session mit ID {context.Session.Id} nicht gefunden.");
+        if (sess == null) throw new KeyNotFoundException($"Session mit ID {context.Session.Id} nicht gefunden.");
 
         // Komprimiere den Verlauf: Historie leeren und Zusammenfassung als System-Message
         var last = sess.MessageHistory.TakeLast(20).ToList();
@@ -25,8 +25,10 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
         var hasasist = false;
         foreach (var msg in last)
         {
-            if (msg.IsTool && !hasasist) continue;
+            if (msg.IsAssistant && (msg.ToolCalls?.Any(o => Name.Equals(o.Function.Name)) ?? false)) continue;
+            if (!hasasist && msg.IsTool) continue;
             if (!hasasist && msg.IsAssistant) hasasist = true;
+
             if (msg.IsTool && msg.Content is string str && str.Length > 100)
             {
                 // Kürze alte Tool-Ausgaben, damit die Session nicht zu groß wird.
