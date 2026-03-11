@@ -9,7 +9,7 @@ namespace BlazorClaw.Server.Tools.Session;
 public class SessionCompressTool : BaseTool<SessionCompressParams>
 {
     public override string Name => "session_compress";
-    public override string Description => "Speichert eine Zusammenfassung der Konversation und komprimiert den Verlauf.";
+    public override string Description => "Speichert eine Zusammenfassung der Konversation und komprimiert den Verlauf auf die letzten 20 Nachrichten.";
 
     protected override async Task<string> ExecuteInternalAsync(SessionCompressParams p, MessageContext context)
     {
@@ -52,7 +52,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
 
 public class SessionCompressParams
 {
-    [Description("Die Session Zusammenfassung für die weitere Session Nutzung (Max. 20000 chars)")]
+    [Description("DieSession Zusammenfassung für die weitere Session Nutzung (Max. 20000 chars)")]
     [Required(ErrorMessage = "The Summary field is required and cannot be empty.")]
     public string Summary { get; set; } = string.Empty;
 }
