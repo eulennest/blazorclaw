@@ -15,6 +15,7 @@
 @inject ISessionQueryService SessionQueryService
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<Chat> logger
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -147,6 +148,7 @@
 
         hubConnection.On<Guid, ChatMessage>("ReceiveMessage", (sessionId, msg) =>
         {
+            logger.LogInformation("Recieve ReceiveMessage for session {SessionId}: {Message}", sessionId, msg.Content);
             if (sessionId == SessionId)
             {
                 messages.Add(msg);
@@ -157,6 +159,8 @@
 
         hubConnection.On<Guid>("MessageStarted", (sessionId) =>
         {
+            logger.LogInformation("Recieve MessageStarted for session {SessionId}", sessionId);
+
             if (sessionId == SessionId)
             {
                 isLoading = true;
@@ -166,6 +170,7 @@
 
         hubConnection.On<Guid>("MessageCompleted", (sessionId) =>
         {
+            logger.LogInformation("Recieve MessageCompleted for session {SessionId}", sessionId);
             if (sessionId == SessionId)
             {
                 isLoading = false;
@@ -176,6 +181,7 @@
 
         hubConnection.On<Guid, string>("Error", (sessionId, error) =>
         {
+            logger.LogError("Recieve Error for session {SessionId}: {Error}", sessionId, error);
             if (sessionId == SessionId)
             {
                 isLoading = false;
@@ -186,6 +192,7 @@
 
         hubConnection.On<Guid, List<ChatMessage>>("HistoryLoaded", (sessionId, history) =>
         {
+            logger.LogInformation("Recieve HistoryLoaded for session {SessionId} with {MessageCount} messages", sessionId, history.Count);
             if (sessionId == SessionId)
             {
                 messages = history;
