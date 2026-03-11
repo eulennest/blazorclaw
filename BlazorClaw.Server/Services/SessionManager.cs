@@ -289,6 +289,7 @@ namespace BlazorClaw.Server.Services
                             }
                             catch (Exception ex)
                             {
+                                logger.LogError(ex, "Error: {Message}", ex.Message);
                                 msg = new ChatMessage
                                 {
                                     Role = "tool",

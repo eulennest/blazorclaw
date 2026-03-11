@@ -52,7 +52,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
 
 public class SessionCompressParams
 {
-    [Description("Die Session Zusammenfassung für die weitere Session Nutzung")]
-    [Required]
+    [Description("Die Session Zusammenfassung für die weitere Session Nutzung (Max. 20000 chars)")]
+    [Required(ErrorMessage = "The Summary field is required and cannot be empty.")]
     public string Summary { get; set; } = string.Empty;
 }
