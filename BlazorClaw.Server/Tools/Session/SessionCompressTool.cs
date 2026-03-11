@@ -9,7 +9,7 @@ namespace BlazorClaw.Server.Tools.Session;
 public class SessionCompressTool : BaseTool<SessionCompressParams>
 {
     public override string Name => "session_compress";
-    public override string Description => "Speichert eine Zusammenfassung der Konversation und komprimiert den Verlauf auf die letzten 20 Nachrichten.";
+    public override string Description => "Speichert eine Zusammenfassung der Konversation und komprimiert den Verlauf auf max. die letzten 20 Nachrichten. Tool-Ausgaben in den übrigbleibenden Nachrichten werden auf 100 Zeichen gekürzt.";
 
     protected override async Task<string> ExecuteInternalAsync(SessionCompressParams p, MessageContext context)
     {
@@ -46,7 +46,8 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
             sess.MessageHistory.Add(msg);
         }
         await sessionManager.SaveSessionAsync(sess, true);
-        return $"Session komprimiert. Aktuelle Nachrichten: {sess.MessageHistory.Count}";
+        var count = sess.MessageHistory.Count( o=> !o.IsSystem);
+        return $"Session komprimiert. Aktuelle Nachrichten: {count} (exkl. System-Events).";
     }
 }
 

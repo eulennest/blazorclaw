@@ -26,6 +26,7 @@ namespace BlazorClaw.Server.Services
                 var sb = new StringBuilder();
                 sb.AppendLine($"Current Time: {DateTime.UtcNow:R}");
                 sb.AppendLine($"Current Model: {context.Session?.CurrentModel}");
+                sb.AppendLine($"Session Title: {context.Session?.Title}");
                 sb.AppendLine($"Session ID: {context.Session?.Id}");
                 sb.AppendLine($"User ID: {context.UserId}");
                 sb.AppendLine($"Channel Provider: {context.Channel?.ChannelProvider}");
@@ -33,7 +34,7 @@ namespace BlazorClaw.Server.Services
                 sb.AppendLine($"Channel Sender ID: {context.Channel?.SenderId}");
                 if (uinfo != null)
                 {
-                    sb.AppendLine("User-Acount:");
+                    sb.AppendLine("User-Account:");
                     sb.AppendLine($" - Name: {uinfo.FirstName} {uinfo.LastName}");
                     sb.AppendLine($" - Email: {uinfo.Email}");
                 }
