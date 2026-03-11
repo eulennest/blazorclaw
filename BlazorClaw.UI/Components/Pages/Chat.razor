@@ -1,6 +1,7 @@
 @page "/chat/{SessionId:guid}"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@using Markdig
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.Web
@@ -246,15 +247,22 @@
         });
     }
 
-    private string RenderMarkdown(string text)
+    private string RenderMarkdown(string markdown)
     {
-        // Basic markdown rendering
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"```(\w+)?\n([\s\S]*?)```", "<pre><code>$2</code></pre>");
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"`([^`]+)`", "<code>$1</code>");
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"\*\*([^*]+)\*\*", "<strong>$1</strong>");
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"\*([^*]+)\*", "<em>$1</em>");
-        text = System.Text.RegularExpressions.Regex.Replace(text, @"\n", "<br>");
-        return text;
+        if (string.IsNullOrWhiteSpace(markdown))
+            return string.Empty;
+
+        // Configure Markdig pipeline
+        var pipeline = new Markdig.MarkdownPipelineBuilder()
+            .UseAdvancedExtensions()
+            .UseAutoLinks(new Markdig.Extensions.AutoLinks.AutoLinkOptions { OpenInNewWindow = true })
+            .UseReferralLinks("nofollow", "noopener", "noreferrer")
+            .UseMathematics()
+            .Build();
+
+        // Parse Markdown to HTML
+        var html = Markdig.Markdown.ToHtml(markdown, pipeline);
+        return html;
     }
 
     public async ValueTask DisposeAsync()
