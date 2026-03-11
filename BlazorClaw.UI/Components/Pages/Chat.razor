@@ -151,6 +151,7 @@
             logger.LogInformation("Recieve ReceiveMessage for session {SessionId}: {Message}", sessionId, msg.Content);
             if (sessionId == SessionId)
             {
+                logger.LogInformation("Message details - Role: {Role}, IsUser: {IsUser}", msg.Role, msg.IsUser);
                 messages.Add(msg);
                 StateHasChanged();
                 ScrollToBottom();
@@ -184,6 +185,7 @@
             logger.LogError("Recieve Error for session {SessionId}: {Error}", sessionId, error);
             if (sessionId == SessionId)
             {
+                logger.LogInformation("Error message: {Error}", error); 
                 isLoading = false;
                 messages.Add(new ChatMessage { Role = "error", Content = $"Error: {error}" });
                 StateHasChanged();
@@ -195,6 +197,7 @@
             logger.LogInformation("Recieve HistoryLoaded for session {SessionId} with {MessageCount} messages", sessionId, history.Count);
             if (sessionId == SessionId)
             {
+                logger.LogInformation("History messages: {Messages}", string.Join("\n", history.Select(m => $"{m.Role}: {m.Content}")));
                 messages = history;
                 StateHasChanged();
             }
