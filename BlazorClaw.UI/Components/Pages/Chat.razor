@@ -185,7 +185,7 @@
             logger.LogError("Recieve Error for session {SessionId}: {Error}", sessionId, error);
             if (sessionId == SessionId)
             {
-                logger.LogInformation("Error message: {Error}", error); 
+                logger.LogInformation("Error message: {Error}", error);
                 isLoading = false;
                 messages.Add(new ChatMessage { Role = "error", Content = $"Error: {error}" });
                 InvokeAsync(StateHasChanged);
@@ -206,7 +206,15 @@
         });
 
         await hubConnection.StartAsync();
-        await hubConnection.InvokeAsync("LoadHistory", SessionId);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (hubConnection != null)
+        {
+            messages.Clear();
+            await hubConnection.InvokeAsync("LoadHistory", SessionId);
+        }
     }
 
     private async Task SendMessage()
