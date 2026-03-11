@@ -1,4 +1,5 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -96,7 +97,12 @@ namespace BlazorClaw.Channels.Services
     public class TelegramChannelBot(TelegramBotClient Client) : AbstractChannelBot("Telegram")
     {
         internal TelegramBotClient Client { get; } = Client;
-        public override Task SendMessageAsync(IChannelSession channelId, object message, CancellationToken cancellationToken = default)
+        public override Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
+        {
+            return Client.SendMessage(channelId.ChannelId, Convert.ToString(message) ?? string.Empty, cancellationToken: cancellationToken);
+        }
+
+        public override Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
             return Client.SendMessage(channelId.ChannelId, Convert.ToString(message) ?? string.Empty, cancellationToken: cancellationToken);
         }

@@ -20,7 +20,8 @@ public interface IChannelBot
 {
     string ChannelProvider { get; }
     event Func<IChannelSession, object, Task>? MessageReceived; // channelId, userId, message
-    Task SendMessageAsync(IChannelSession channelId, object message, CancellationToken cancellationToken = default);
+    Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default);
+    Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default);
 }
 
 public interface IChannelSession : IChannelBot
@@ -28,7 +29,8 @@ public interface IChannelSession : IChannelBot
     string ChannelId { get; }
     string SenderId { get; }
 
-    Task SendMessageAsync(object message, CancellationToken cancellationToken = default);
+    Task SendChannelAsync(ChatMessage message, CancellationToken cancellationToken = default);
+    Task SendUserAsync(ChatMessage message, CancellationToken cancellationToken = default);
 }
 
 public class ChannelSession(IChannelBot bot, string channelId, string? senderId = null) : IChannelSession
@@ -42,14 +44,21 @@ public class ChannelSession(IChannelBot bot, string channelId, string? senderId 
         add { bot.MessageReceived += value; }
         remove { bot.MessageReceived -= value; }
     }
-    public Task SendMessageAsync(object message, CancellationToken cancellationToken = default)
+    public Task SendChannelAsync(ChatMessage message, CancellationToken cancellationToken = default)
     {
-        return bot.SendMessageAsync(this, message, cancellationToken);
+        return bot.SendChannelAsync(this, message, cancellationToken);
     }
-
-    public Task SendMessageAsync(IChannelSession channelId, object message, CancellationToken cancellationToken = default)
+    public Task SendUserAsync(ChatMessage message, CancellationToken cancellationToken = default)
     {
-        return bot.SendMessageAsync(channelId, message, cancellationToken);
+        return bot.SendUserAsync(this, message, cancellationToken);
+    }
+    public Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
+    {
+        return bot.SendChannelAsync(channelId, message, cancellationToken);
+    }
+    public Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
+    {
+        return bot.SendUserAsync(channelId, message, cancellationToken);
     }
 }
 
@@ -59,7 +68,8 @@ public abstract class AbstractChannelBot(string channelProvider) : IChannelBot
 
     public event Func<IChannelSession, object, Task>? MessageReceived;
 
-    public abstract Task SendMessageAsync(IChannelSession channelId, object message, CancellationToken cancellationToken = default);
+    public abstract Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default);
+    public abstract Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default);
 
     public Task OnMessageReceivedAsync(IChannelSession channelSession, object message)
     {

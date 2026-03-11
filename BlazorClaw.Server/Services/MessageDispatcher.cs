@@ -1,5 +1,6 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Data;
+using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
 using Microsoft.AspNetCore.Identity;
 using System.Collections.Concurrent;
@@ -80,13 +81,14 @@ namespace BlazorClaw.Server.Services
                         {
                             var rootCmd = await BuildRootCommand(cmdContext);
                             var ret = await sm.DispatchCommandAsync(msgString, cmdContext, rootCmd, cmdContext.Provider.GetRequiredService<ICommandProvider>());
+                            var msg = new ChatMessage { Role = "command", Content = Convert.ToString(ret) ?? string.Empty };
                             if (ret != null)
                             {
                                 var textRes = Convert.ToString(ret);
                                 if (!string.IsNullOrWhiteSpace(textRes))
                                 {
                                     logger.LogInformation("Sending command result to {ChannelProvider}:{ChannelId} : {Result}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, ret);
-                                    await cmdContext.Channel.SendMessageAsync(textRes);
+                                    await cmdContext.Channel.SendUserAsync(msg);
                                 }
                                 return; // Command handled, exit early
                             }
@@ -95,7 +97,7 @@ namespace BlazorClaw.Server.Services
                         {
                             logger.LogError(ex, "Error processing command '{Command}' for {ChannelProvider}:{ChannelId} : {Message}", msgString, cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, ex.Message);
                             var textRes = $"Error processing command: {ex.Message}";
-                            await cmdContext.Channel.SendMessageAsync(textRes);
+                            await cmdContext.Channel.SendUserAsync(ChatMessage.Build(ex));
                             return; // Exit early on command error
                         }
                     }
@@ -105,18 +107,14 @@ namespace BlazorClaw.Server.Services
                     await foreach (var msg in sm.DispatchToLLMAsync(session, cmdContext))
                     {
                         if (!msg.IsAssistant) continue;
-                        var content = Convert.ToString(msg.Content);
-                        if (!string.IsNullOrWhiteSpace(content))
-                        {
-                            logger.LogInformation("Sending reply to {ChannelProvider}:{ChannelId} : {content}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, content);
-                            await cmdContext.Channel.SendMessageAsync(content);
-                        }
+                            logger.LogInformation("Sending reply to {ChannelProvider}:{ChannelId} : {content}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, msg.Content);
+                            await cmdContext.Channel.SendChannelAsync(msg);
                     }
                 }
             }
             catch (Exception ex)
             {
-                await channelSession.SendMessageAsync($"Error: {ex.Message}");
+                await channelSession.SendUserAsync(ChatMessage.Build(ex));
                 logger.LogError(ex, "Error: {Messsage}", ex.Message);
             }
         }

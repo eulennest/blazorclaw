@@ -42,6 +42,15 @@ public class ChatMessage
 
     [JsonIgnore]
     public bool IsSystem => Role.Equals("system", StringComparison.OrdinalIgnoreCase);
+
+    public static ChatMessage Build(string content)
+    {
+        return new ChatMessage { Role = "user", Content = content };
+    }
+    public static ChatMessage Build(Exception ex)
+    {
+        return new ChatMessage { Role = "error", Content = $"Error: {ex.Message}" };
+    }
 }
 
 public class ToolCall

@@ -57,9 +57,9 @@ public class OpenAiController(IMessageDispatcher md, ILogger<OpenAiController> l
         public string ChannelId { get; } = channelId;
         public string SenderId { get; set; } = channelId;
 
-        public override Task SendMessageAsync(IChannelSession channelId, object message, CancellationToken cancellationToken = default)
+        public override Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            var text = Convert.ToString(message)?.Trim();
+            var text = Convert.ToString(message.Content)?.Trim();
             if (!string.IsNullOrWhiteSpace(text))
             {
                 ReceivedMessages.Add(text);
@@ -67,9 +67,23 @@ public class OpenAiController(IMessageDispatcher md, ILogger<OpenAiController> l
             return Task.CompletedTask;
         }
 
-        public Task SendMessageAsync(object message, CancellationToken cancellationToken = default)
+        public Task SendChannelAsync(ChatMessage message, CancellationToken cancellationToken = default)
         {
-            return SendMessageAsync(this, message, cancellationToken);
+            return SendChannelAsync(this, message, cancellationToken);
+        }
+        public override Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
+        {
+            var text = Convert.ToString(message.Content)?.Trim();
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                ReceivedMessages.Add(text);
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task SendUserAsync(ChatMessage message, CancellationToken cancellationToken = default)
+        {
+            return SendUserAsync(this, message, cancellationToken);
         }
     }
 }

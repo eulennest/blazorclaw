@@ -27,10 +27,10 @@ namespace BlazorClaw.Core.Utils
 
     public static class DependencyInjectionExtensions
     {
-        private static Type? constantCallSiteType;
-        private static Type? serviceIdentifierType;
-        private static ConstructorInfo? constantCallSiteConstructor;
-        private static MethodInfo? fromServiceTypeMethod;
+        private readonly static Type? constantCallSiteType;
+        private readonly static Type? serviceIdentifierType;
+        private readonly static ConstructorInfo? constantCallSiteConstructor;
+        private readonly static MethodInfo? fromServiceTypeMethod;
 
         static DependencyInjectionExtensions()
         {
@@ -45,9 +45,9 @@ namespace BlazorClaw.Core.Utils
         {
             var serviceType = typeof(TService);
             var callSiteFactory = serviceProvider.GetPrivatePropertyValue<object>("CallSiteFactory");
-            var serviceIdentifier = fromServiceTypeMethod?.Invoke(null, [(object)typeof(TService)]);
+            var serviceIdentifier = fromServiceTypeMethod?.Invoke(null, [serviceType]);
             var objImplementation = implementationFactory(serviceProvider);
-            var callSite = constantCallSiteConstructor?.Invoke([typeof(TService), objImplementation]);
+            var callSite = constantCallSiteConstructor?.Invoke([serviceType, objImplementation]);
             if (serviceIdentifier != null && callSite != null)
                 callSiteFactory?.CallMethod("Add", serviceIdentifier, callSite);
         }

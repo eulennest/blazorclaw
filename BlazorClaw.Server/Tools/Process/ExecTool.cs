@@ -37,9 +37,7 @@ public class ExecTool : BaseTool<ExecParams>
 
         foreach (var arg in p.Args) startInfo.ArgumentList.Add(arg);
 
-        using var process = System.Diagnostics.Process.Start(startInfo);
-        if (process == null) throw new InvalidOperationException("Prozess konnte nicht gestartet werden.");
-
+        using var process = System.Diagnostics.Process.Start(startInfo) ?? throw new InvalidOperationException("Prozess konnte nicht gestartet werden.");
         var cs = new CancellationTokenSource(TimeSpan.FromSeconds(p.Timeout ?? 60));
         await process.WaitForExitAsync(cs.Token).ConfigureAwait(false);
         var exited = process.HasExited;
