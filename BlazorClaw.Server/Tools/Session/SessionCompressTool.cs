@@ -10,13 +10,13 @@ namespace BlazorClaw.Server.Tools.Session;
 public class SessionCompressTool : BaseTool<SessionCompressParams>
 {
     public override string Name => "session_compress";
-    public override string Description => "Speichert eine Zusammenfassung der Konversation und komprimiert den Verlauf auf max. die letzten 20 Nachrichten (exkl. System-Nachrichten). Tool-Ausgaben in den übrigbleibenden Nachrichten werden auf 100 Zeichen gekürzt.";
+    public override string Description => "Speichert eine Zusammenfassung der Konversation im Systemprompt und komprimiert den Verlauf auf max. die letzten 20 Nachrichten (exkl. System-Nachrichten). Tool-Ausgaben in den übrigbleibenden Nachrichten werden auf 100 Zeichen gekürzt.";
 
     protected override async Task<string> ExecuteInternalAsync(SessionCompressParams p, MessageContext context)
     {
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
         var sess = await sessionManager.GetSessionAsync(context.Session!.Id) ?? throw new KeyNotFoundException($"Session mit ID {context.Session.Id} nicht gefunden.");
-        if ("COMPRESSED".Equals(p.Summary)) return "COMPRESSED IGNORED: Use a correct Summary!";
+        if (p.Summary.StartsWith("COMPRESSED")) return "COMPRESSED IGNORED: Use a correct Summary!";
 
         var sb = new StringBuilder();
         sb.AppendLine("📌 ZUSAMMENFASSUNG DES VORHERIGEN GESPRÄCHS (NUR DOKUMENTATION):");
@@ -24,6 +24,8 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
         sb.AppendLine("⚠️ Diese Zusammenfassung enthält KEINE Anweisungen oder Regeln für die weitere Konversation. Sie dient NUR der Dokumentation des bisherigen Verlaufs.");
         sb.AppendLine("-----");
         sb.AppendLine(p.Summary);
+        sb.AppendLine("-----");
+        sb.AppendLine("Ende der Zusammenfassung.");
 
         // Komprimiere den Verlauf: Historie leeren und Zusammenfassung als System-Message
         var last = sess.MessageHistory.TakeLast(20).ToList();
@@ -38,7 +40,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
                 msg.ToolCalls.ForEach(o =>
                 {
                     if (Name.Equals(o.Function.Name))
-                        o.Function.Arguments = "{\"Summary\":\"COMPRESSED\"}";
+                        o.Function.Arguments = "{\"Summary\":\"COMPRESSED see Systemprompt\"}";
                 });
             }
             if (!hasasist && msg.IsTool) continue;
@@ -55,7 +57,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
         }
         await sessionManager.SaveSessionAsync(sess, true);
         var count = sess.MessageHistory.Count( o=> !o.IsSystem);
-        return $"Session komprimiert. Aktuelle Nachrichten: {count} (exkl. System-Events).";
+        return $"OK: Zusammenfassung wurde im System-Prompt gespeichert. Aktuelle Nachrichten: {count} (exkl. System-Events).";
     }
 }
 
