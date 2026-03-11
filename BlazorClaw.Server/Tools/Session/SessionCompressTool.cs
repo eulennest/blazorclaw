@@ -9,7 +9,7 @@ namespace BlazorClaw.Server.Tools.Session;
 public class SessionCompressTool : BaseTool<SessionCompressParams>
 {
     public override string Name => "session_compress";
-    public override string Description => "Speichert eine Zusammenfassung der Konversation und komprimiert den Verlauf auf max. die letzten 20 Nachrichten. Tool-Ausgaben in den übrigbleibenden Nachrichten werden auf 100 Zeichen gekürzt.";
+    public override string Description => "Speichert eine Zusammenfassung der Konversation und komprimiert den Verlauf auf max. die letzten 20 Nachrichten (exkl. System-Nachrichten). Tool-Ausgaben in den übrigbleibenden Nachrichten werden auf 100 Zeichen gekürzt.";
 
     protected override async Task<string> ExecuteInternalAsync(SessionCompressParams p, MessageContext context)
     {
