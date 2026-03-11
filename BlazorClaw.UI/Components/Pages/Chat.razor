@@ -75,14 +75,7 @@
                         }
                     </div>
                     <div class="message-content">
-                        @if (msg.Content is string strContent)
-                        {
-                            @((MarkupString)RenderMarkdown(strContent))
-                        }
-                        else if (msg.Content != null)
-                        {
-                            @msg.Content.ToString()
-                        }
+                        @((MarkupString)RenderMarkdown(@msg.Content.ToString()))
                     </div>
                 </div>
             }
