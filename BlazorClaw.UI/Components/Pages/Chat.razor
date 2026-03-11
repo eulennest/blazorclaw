@@ -153,7 +153,7 @@
                 logger.LogInformation("Message details - Role: {Role}, IsUser: {IsUser}", msg.Role, msg.IsUser);
                 messages.Add(msg);
                 InvokeAsync(StateHasChanged);
-                InvokeAsync(ScrollToBottom);
+                ScrollToBottom();
             }
         });
 
@@ -165,7 +165,7 @@
             {
                 isLoading = true;
                 InvokeAsync(StateHasChanged);
-                InvokeAsync(ScrollToBottom);
+                ScrollToBottom();
             }
         });
 
@@ -176,7 +176,7 @@
             {
                 isLoading = false;
                 InvokeAsync(StateHasChanged);
-                InvokeAsync(ScrollToBottom);
+                ScrollToBottom();
             }
         });
 
@@ -189,7 +189,7 @@
                 isLoading = false;
                 messages.Add(new ChatMessage { Role = "error", Content = $"Error: {error}" });
                 InvokeAsync(StateHasChanged);
-                InvokeAsync(ScrollToBottom);
+                ScrollToBottom();
             }
         });
 
@@ -201,7 +201,7 @@
                 logger.LogInformation("History messages: {Messages}", string.Join("\n", history.Select(m => $"{m.Role}: {m.Content}")));
                 messages = history;
                 InvokeAsync(StateHasChanged);
-                InvokeAsync(ScrollToBottom);
+                ScrollToBottom();
             }
         });
 
@@ -244,11 +244,7 @@
         InvokeAsync(async () =>
         {
             await Task.Delay(50);
-            var container = await JS.InvokeAsync<IJSObjectReference>("document.getElementById", "messages-container");
-            if (container != null)
-            {
-                await container.InvokeVoidAsync("scrollTop", await JS.InvokeAsync<int>("eval", "document.getElementById('messages-container').scrollHeight"));
-            }
+            await JS.InvokeVoidAsync("scrollIdToEnd", new object[] { "messages-container" });
         });
     }
 
