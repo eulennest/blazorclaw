@@ -65,11 +65,11 @@ public class ChatHub : Hub, IChannelBot
 
     public Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
     {
-        return Clients.Group(channelId.ChannelId).SendAsync("ReceiveMessage", channelId.ChannelId, message, cancellationToken: cancellationToken);
+        return Clients.Group(channelId.ChannelId).SendAsync("ReceiveMessage", channelId.SessionId, message, cancellationToken: cancellationToken);
     }
     public Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
     {
-        return Clients.Caller.SendAsync("ReceiveMessage", channelId.ChannelId, message, cancellationToken: cancellationToken);
+        return Clients.Caller.SendAsync("ReceiveMessage", channelId.SessionId, message, cancellationToken: cancellationToken);
     }
 
     public Task OnMessageReceivedAsync(IChannelSession channelSession, object message)

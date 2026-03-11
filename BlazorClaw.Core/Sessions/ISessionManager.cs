@@ -28,7 +28,7 @@ public interface IChannelSession : IChannelBot
 {
     string ChannelId { get; }
     string SenderId { get; }
-    Guid SessionId { get; }
+    Guid SessionId { get; set; }
 
     Task SendChannelAsync(ChatMessage message, CancellationToken cancellationToken = default);
     Task SendUserAsync(ChatMessage message, CancellationToken cancellationToken = default);

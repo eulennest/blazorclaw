@@ -36,6 +36,7 @@ namespace BlazorClaw.Server.Services
             }
             var sm = Scope.ServiceProvider.GetRequiredService<ISessionManager>();
             var session = await sm.GetOrCreateSessionAsync(uid.Value);
+            context.Channel.SessionId = session.Session.Id;
             return session;
         }
 
