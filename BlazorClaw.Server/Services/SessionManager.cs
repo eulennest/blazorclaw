@@ -287,8 +287,11 @@ namespace BlazorClaw.Server.Services
                                     ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
                                 };
                             }
-                            if (msg != null) sessionState.MessageHistory.Add(msg); // Tool Result
-                            yield return msg;
+                            if (msg != null)
+                            {
+                                sessionState.MessageHistory.Add(msg); // Tool Result
+                                yield return msg;
+                            }
                         }
                     }
                 }
