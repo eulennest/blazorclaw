@@ -61,7 +61,7 @@ namespace BlazorClaw.Server.Services
 
         public async Task<ChatSessionState?> GetSessionAsync(Guid sessionId)
         {
-            _sessions.TryGetValue(sessionId, out var state);
+            if (_sessions.TryGetValue(sessionId, out var state)) return state;
             var path = Path.Combine(SessionStoragePath, $"session_{sessionId}.json");
 
             if (state == null && File.Exists(path))

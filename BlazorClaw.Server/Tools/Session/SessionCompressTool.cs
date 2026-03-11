@@ -18,7 +18,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
         if (sess == null)  throw new KeyNotFoundException($"Session mit ID {context.Session.Id} nicht gefunden.");
 
         // Komprimiere den Verlauf: Historie leeren und Zusammenfassung als System-Message
-        var last = sess.MessageHistory.TakeLast(20);
+        var last = sess.MessageHistory.TakeLast(20).ToList();
         sess.MessageHistory.Clear();
         sess.MessageHistory.Add(new() { Role = "system", Content = $"Zusammenfassung des vorherigen Gesprächs:\r\n-----\r\n{p.Summary}" });
 
