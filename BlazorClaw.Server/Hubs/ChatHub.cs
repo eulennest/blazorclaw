@@ -29,7 +29,10 @@ public class ChatHub : Hub, IChannelBot
         var userIdString = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString();
         logger.LogInformation("Received message for session {SessionId} from user {userIdString}", sessionId, userIdString);
 
-        var canid = new ChannelSession(this, sessionId.ToString(), userIdString);
+        var canid = new ChannelSession(this, sessionId.ToString(), userIdString)
+        {
+            SessionId = sessionId
+        };
         await SendChannelAsync(canid, ChatMessage.Build(message));
 
         try

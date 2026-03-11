@@ -186,7 +186,7 @@
             if (sessionId == SessionId)
             {
                 isLoading = false;
-                messages.Add(new ChatMessage { Role = "assistant", Content = $"Error: {error}" });
+                messages.Add(new ChatMessage { Role = "error", Content = $"Error: {error}" });
                 StateHasChanged();
             }
         });

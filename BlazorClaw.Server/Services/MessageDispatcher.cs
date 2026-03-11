@@ -17,7 +17,8 @@ namespace BlazorClaw.Server.Services
         {
             if (context?.Channel == null) return null;
 
-            Guid? uid = !string.IsNullOrWhiteSpace(context.UserId) ? Guid.Parse(context.UserId) : null;
+            Guid? uid = context.Channel.SessionId != Guid.Empty ? context.Channel.SessionId : null;
+            uid ??= !string.IsNullOrWhiteSpace(context.UserId) ? Guid.Parse(context.UserId) : null;
             if (uid == null)
             {
                 var ekey = $"{context.Channel.ChannelProvider}:{context.Channel.ChannelId}";
@@ -58,6 +59,8 @@ namespace BlazorClaw.Server.Services
                 var userManager = Scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
                 // Suche User via Provider "Telegram"
                 var user = await userManager.FindByLoginAsync(channelSession.ChannelProvider, channelSession.SenderId);
+                if (user == null && Guid.TryParse(channelSession.SenderId, out var uid))
+                    user = await userManager.FindByIdAsync(uid.ToString());
 
                 var cmdContext = new MessageContext
                 {
@@ -107,8 +110,8 @@ namespace BlazorClaw.Server.Services
                     await foreach (var msg in sm.DispatchToLLMAsync(session, cmdContext))
                     {
                         if (!msg.IsAssistant) continue;
-                            logger.LogInformation("Sending reply to {ChannelProvider}:{ChannelId} : {content}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, msg.Content);
-                            await cmdContext.Channel.SendChannelAsync(msg);
+                        logger.LogInformation("Sending reply to {ChannelProvider}:{ChannelId} : {content}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, msg.Content);
+                        await cmdContext.Channel.SendChannelAsync(msg);
                     }
                 }
             }

@@ -56,6 +56,7 @@ public class OpenAiController(IMessageDispatcher md, ILogger<OpenAiController> l
 
         public string ChannelId { get; } = channelId;
         public string SenderId { get; set; } = channelId;
+        public Guid SessionId { get; set; }
 
         public override Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {

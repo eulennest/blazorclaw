@@ -28,6 +28,7 @@ public interface IChannelSession : IChannelBot
 {
     string ChannelId { get; }
     string SenderId { get; }
+    Guid SessionId { get; }
 
     Task SendChannelAsync(ChatMessage message, CancellationToken cancellationToken = default);
     Task SendUserAsync(ChatMessage message, CancellationToken cancellationToken = default);
@@ -38,6 +39,8 @@ public class ChannelSession(IChannelBot bot, string channelId, string? senderId 
     public string ChannelProvider => bot.ChannelProvider;
     public string ChannelId { get; } = channelId;
     public string SenderId { get; } = senderId ?? channelId;
+    public Guid SessionId { get; set; }
+
 
     public event Func<IChannelSession, object, Task>? MessageReceived
     {
