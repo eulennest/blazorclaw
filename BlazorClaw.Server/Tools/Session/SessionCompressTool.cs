@@ -16,7 +16,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
     {
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
         var sess = await sessionManager.GetSessionAsync(context.Session!.Id) ?? throw new KeyNotFoundException($"Session mit ID {context.Session.Id} nicht gefunden.");
-        if ("COMRESSED".Equals(p.Summary)) return "COMPRESSED IGNORED";
+        if ("COMPRESSED".Equals(p.Summary)) return "COMPRESSED IGNORED: Use a correct Summary!";
 
         var sb = new StringBuilder();
         sb.AppendLine("📌 ZUSAMMENFASSUNG DES VORHERIGEN GESPRÄCHS (NUR DOKUMENTATION):");
