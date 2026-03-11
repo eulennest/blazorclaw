@@ -14,8 +14,8 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
     protected override async Task<string> ExecuteInternalAsync(SessionCompressParams p, MessageContext context)
     {
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
-        var sess = await sessionManager.GetSessionAsync(context.Session!.Id);
-        if (sess == null) throw new KeyNotFoundException($"Session mit ID {context.Session.Id} nicht gefunden.");
+        var sess = await sessionManager.GetSessionAsync(context.Session!.Id) ?? throw new KeyNotFoundException($"Session mit ID {context.Session.Id} nicht gefunden.");
+        if ("COMRESSED".Equals(p.Summary)) return "COMPRESSED IGNORED";
 
         // Komprimiere den Verlauf: Historie leeren und Zusammenfassung als System-Message
         var last = sess.MessageHistory.TakeLast(20).ToList();
@@ -30,7 +30,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
                 msg.ToolCalls.ForEach(o =>
                 {
                     if (Name.Equals(o.Function.Name))
-                        o.Function.Arguments = "COMPRESSED";
+                        o.Function.Arguments = "{\"Summary\":\"COMPRESSED\"}";
                 });
             }
             if (!hasasist && msg.IsTool) continue;
