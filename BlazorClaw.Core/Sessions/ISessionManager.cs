@@ -41,6 +41,11 @@ public class ChannelSession(IChannelBot bot, string channelId, string? senderId 
     public string SenderId { get; } = senderId ?? channelId;
     public Guid SessionId { get; set; }
 
+    public override string ToString()
+    {
+        return $"{ChannelProvider}:{ChannelId}, SenderId={SenderId}, SessionId={SessionId}";
+    }
+
 
     public event Func<IChannelSession, object, Task>? MessageReceived
     {

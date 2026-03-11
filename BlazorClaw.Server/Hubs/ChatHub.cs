@@ -2,7 +2,6 @@ using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
 using Microsoft.AspNetCore.SignalR;
 using System.Security.Claims;
-using static BlazorClaw.Server.Controllers.OpenAiController;
 
 namespace BlazorClaw.Server.Hubs;
 
@@ -65,10 +64,12 @@ public class ChatHub : Hub, IChannelBot
 
     public Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Sending message to channel {ChannelId} in session {SessionId}", channelId.ChannelId, channelId.SessionId);
         return Clients.Group(channelId.ChannelId).SendAsync("ReceiveMessage", channelId.SessionId, message, cancellationToken: cancellationToken);
     }
     public Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Sending message to user {UserId} in session {SessionId}", channelId.SenderId, channelId.SessionId);
         return Clients.Caller.SendAsync("ReceiveMessage", channelId.SessionId, message, cancellationToken: cancellationToken);
     }
 

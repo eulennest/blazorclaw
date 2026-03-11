@@ -75,7 +75,7 @@
                         }
                     </div>
                     <div class="message-content">
-                        @((MarkupString)RenderMarkdown(@msg.Content?.ToString()?? string.Empty))
+                        @((MarkupString)RenderMarkdown(@msg.Content?.ToString() ?? string.Empty))
                     </div>
                 </div>
             }
@@ -203,7 +203,7 @@
 
         var userMsg = new ChatMessage { Role = "user", Content = userInput };
         messages.Add(userMsg);
-        var input = userInput;
+        var input = userInput ?? string.Empty;
         userInput = "";
         ScrollToBottom();
 
