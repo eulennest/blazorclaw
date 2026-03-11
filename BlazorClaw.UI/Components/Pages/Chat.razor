@@ -61,7 +61,7 @@
                 </div>
             }
 
-            @foreach (var msg in messages)
+            @foreach (var msg in messages.ToArray())
             {
                 <div class="message @(msg.IsUser ? "own" : "other") role-@(msg.Role)">
                     <div class="message-avatar">
