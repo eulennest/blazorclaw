@@ -52,8 +52,9 @@ public class ChatHub : Hub, IChannelBot
             var state = await sessionManager.GetSessionAsync(sessionId);
             if (state != null)
             {
+                var msgs = state.MessageHistory.Where(o => !string.IsNullOrEmpty(Convert.ToString(o.Content)));
                 await Groups.AddToGroupAsync(Context.ConnectionId, sessionId.ToString());
-                await Clients.Caller.SendAsync("HistoryLoaded", sessionId, state.MessageHistory);
+                await Clients.Caller.SendAsync("HistoryLoaded", sessionId, msgs);
             }
         }
         catch (Exception ex)
@@ -64,11 +65,13 @@ public class ChatHub : Hub, IChannelBot
 
     public Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrEmpty(Convert.ToString(message.Content))) return Task.CompletedTask;
         logger.LogInformation("Sending message to channel {ChannelId} in session {SessionId}", channelId.ChannelId, channelId.SessionId);
         return Clients.Group(channelId.ChannelId).SendAsync("ReceiveMessage", channelId.SessionId, message, cancellationToken: cancellationToken);
     }
     public Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrEmpty(Convert.ToString(message.Content))) return Task.CompletedTask;
         logger.LogInformation("Sending message to user {UserId} in session {SessionId}", channelId.SenderId, channelId.SessionId);
         return Clients.Caller.SendAsync("ReceiveMessage", channelId.SessionId, message, cancellationToken: cancellationToken);
     }
