@@ -258,7 +258,7 @@ namespace BlazorClaw.Server.Services
                         foreach (var call in message.ToolCalls)
                         {
                             logger.LogInformation("Tool called: {Name} args: {Args}", call.Function.Name, call.Function.Arguments);
-                            ChatMessage? msg = null;
+                            ChatMessage msg;
                             try
                             {
                                 var tool = toolRegistry.GetTool(call.Function.Name) ?? throw new ToolNotFoundException(call.Function.Name);
@@ -269,14 +269,23 @@ namespace BlazorClaw.Server.Services
                                 result = policyProvider.AfterTool(tool, args, result, context);
                                 logger.LogDebug("Tool: {Name} Result: {result}", call.Function.Name, result);
 
-
                                 if (sessionState.MessageHistory.Any(o => o.ToolCalls?.Any(o => o.Id == call.Id) ?? false))
+                                {
                                     msg = new ChatMessage
                                     {
                                         Role = "tool",
                                         Content = result,
                                         ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
                                     };
+                                }
+                                else
+                                {
+                                    msg = new ChatMessage
+                                    {
+                                        Role = "system",
+                                        Content = $"Tool Call (tool_call_id not found in history): {result}"
+                                    };
+                                }
                             }
                             catch (Exception ex)
                             {
@@ -287,11 +296,9 @@ namespace BlazorClaw.Server.Services
                                     ExtensionData = new Dictionary<string, object> { { "tool_call_id", call.Id } }
                                 };
                             }
-                            if (msg != null)
-                            {
-                                sessionState.MessageHistory.Add(msg); // Tool Result
-                                yield return msg;
-                            }
+
+                            sessionState.MessageHistory.Add(msg); // Tool Result
+                            yield return msg;
                         }
                     }
                 }

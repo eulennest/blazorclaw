@@ -25,7 +25,14 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
         var hasasist = false;
         foreach (var msg in last)
         {
-            if (msg.IsAssistant && (msg.ToolCalls?.Any(o => Name.Equals(o.Function.Name)) ?? false)) continue;
+            if (msg.IsAssistant && (msg.ToolCalls?.Any(o => Name.Equals(o.Function.Name)) ?? false))
+            {
+                msg.ToolCalls.ForEach(o =>
+                {
+                    if (Name.Equals(o.Function.Name))
+                        o.Function.Arguments = "COMPRESSED";
+                });
+            }
             if (!hasasist && msg.IsTool) continue;
             if (!hasasist && msg.IsAssistant) hasasist = true;
 
