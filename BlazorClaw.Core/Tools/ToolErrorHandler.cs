@@ -19,6 +19,7 @@ public static class ToolErrorHandler
             { "title", "Tool error" },
             { "status", status },
             { "detail", ex.Message },
+            { "stacktrace", ex.StackTrace },
             { "tool", toolName }
         };
 
