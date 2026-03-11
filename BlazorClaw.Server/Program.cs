@@ -5,8 +5,8 @@ using BlazorClaw.Core.Plugins;
 using BlazorClaw.Core.Providers;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Security.Vault;
-using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Services;
+using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Web;
 using BlazorClaw.Server;
@@ -20,6 +20,7 @@ using BlazorClaw.UI.Components.Account;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -119,6 +120,11 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 builder.Services.AddClawUI();
+builder.Services.AddResponseCompression(opts =>
+{
+    opts.MimeTypes = ResponseCompressionDefaults.MimeTypes.Concat(
+          new[] { "application/octet-stream" });
+});
 
 var app = builder.Build();
 
@@ -130,6 +136,7 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
 }
+app.UseResponseCompression();
 app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 app.UseStaticFiles();

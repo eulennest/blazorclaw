@@ -1,6 +1,5 @@
 @page "/chat/{SessionId:guid}"
 @attribute [Authorize]
-@rendermode InteractiveServer
 @using Markdig
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
@@ -153,8 +152,8 @@
             {
                 logger.LogInformation("Message details - Role: {Role}, IsUser: {IsUser}", msg.Role, msg.IsUser);
                 messages.Add(msg);
-                StateHasChanged();
-                ScrollToBottom();
+                InvokeAsync(StateHasChanged);
+                InvokeAsync(ScrollToBottom);
             }
         });
 
@@ -165,7 +164,8 @@
             if (sessionId == SessionId)
             {
                 isLoading = true;
-                StateHasChanged();
+                InvokeAsync(StateHasChanged);
+                InvokeAsync(ScrollToBottom);
             }
         });
 
@@ -175,8 +175,8 @@
             if (sessionId == SessionId)
             {
                 isLoading = false;
-                StateHasChanged();
-                ScrollToBottom();
+                InvokeAsync(StateHasChanged);
+                InvokeAsync(ScrollToBottom);
             }
         });
 
@@ -188,7 +188,8 @@
                 logger.LogInformation("Error message: {Error}", error); 
                 isLoading = false;
                 messages.Add(new ChatMessage { Role = "error", Content = $"Error: {error}" });
-                StateHasChanged();
+                InvokeAsync(StateHasChanged);
+                InvokeAsync(ScrollToBottom);
             }
         });
 
@@ -199,7 +200,8 @@
             {
                 logger.LogInformation("History messages: {Messages}", string.Join("\n", history.Select(m => $"{m.Role}: {m.Content}")));
                 messages = history;
-                StateHasChanged();
+                InvokeAsync(StateHasChanged);
+                InvokeAsync(ScrollToBottom);
             }
         });
 
