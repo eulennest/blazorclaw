@@ -7,9 +7,11 @@
 @using Microsoft.EntityFrameworkCore
 @using BlazorClaw.Core.Data
 @using BlazorClaw.Core.Models
+@using BlazorClaw.Core.Providers
 @inject ApplicationDbContext Db
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IProviderManager ProviderManager
 
 <PageTitle>Modelle - BlazorClaw</PageTitle>
 
@@ -40,9 +42,15 @@
                     
                     <div class="mb-3">
                         <label class="form-label">Interner Name</label>
-                        <InputText @bind-Value="newModel.InternalName" class="form-control" placeholder="z.B. openrouter/mistralai/mistral-large" />
+                        <InputText @bind-Value="newModel.InternalName" class="form-control" placeholder="z.B. openrouter/mistralai/mistral-large" list="available-models" />
                         <ValidationMessage For="() => newModel.InternalName" />
                         <small class="text-muted">Muss dem Format "provider/model" entsprechen</small>
+                        <datalist id="available-models">
+                            @foreach (var model in availableModels)
+                            {
+                                <option value="@model" />
+                            }
+                        </datalist>
                     </div>
                     
                     <div class="mb-3">
@@ -107,15 +115,29 @@
     private List<ModelFavorite> models = [];
     private ModelFavorite newModel = new() { Name = "", InternalName = "" };
     private string aliasesInput = "";
+    private List<string> availableModels = [];
 
     protected override async Task OnInitializedAsync()
     {
         await LoadModels();
+        await LoadAvailableModels();
     }
 
     private async Task LoadModels()
     {
         models = await Db.ModelFavorites.OrderBy(m => m.Name).ToListAsync();
+    }
+
+    private async Task LoadAvailableModels()
+    {
+        availableModels.Clear();
+        foreach (var provider in ProviderManager.GetProviders())
+        {
+            await foreach (var model in ProviderManager.GetModelsAsync(provider))
+            {
+                availableModels.Add($"{provider}/{model}");
+            }
+        }
     }
 
     private async Task AddModel()
