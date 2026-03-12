@@ -252,11 +252,12 @@
     {
         if (string.IsNullOrWhiteSpace(userInput) || isLoading) return;
 
-        var userMsg = new ChatMessage { Role = "user", Content = userInput };
-        messages.Add(userMsg);
         var input = userInput ?? string.Empty;
         userInput = "";
-        ScrollToBottom();
+        if (currentSession != null && currentSession.CurrentModel != selectedModel)
+        {
+            currentSession.CurrentModel = selectedModel;
+        }
 
         if (hubConnection?.State == HubConnectionState.Connected)
         {
