@@ -16,6 +16,16 @@ namespace BlazorClaw.Server.Providers
             _providers = LoadFromConfig();
         }
 
+
+        public async IAsyncEnumerable<string> GetModelsAsync()
+        {
+            foreach (var item in _providers)
+            {
+                await foreach (var model in GetModelsAsync(item.Name))
+                    yield return $"{item.Name}/{model}";
+            }
+        }
+
         public async IAsyncEnumerable<string> GetModelsAsync(string provider)
         {
             var prov = _providers.FirstOrDefault(p => p.Name.Equals(provider, StringComparison.OrdinalIgnoreCase));

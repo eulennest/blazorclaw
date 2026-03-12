@@ -11,5 +11,6 @@ namespace BlazorClaw.Core.Providers
         IEnumerable<string> GetProviders();
         IProviderConfiguration? GetProviderConfig(string provider);
         IAsyncEnumerable<string> GetModelsAsync(string provider);
+        IAsyncEnumerable<string> GetModelsAsync();
     }
 }

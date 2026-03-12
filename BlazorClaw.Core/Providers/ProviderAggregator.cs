@@ -11,6 +11,15 @@ namespace BlazorClaw.Core.Providers
             var prov = _providers.FirstOrDefault(o => o.GetProviders().Contains(provider));
             return prov?.GetModelsAsync(provider) ?? AsyncEnumerable.Empty<string>();
         }
+        public async IAsyncEnumerable<string> GetModelsAsync()
+        {
+            foreach (var item in _providers)
+            {
+                await foreach (var model in item.GetModelsAsync())
+                    yield return model;
+            }
+        }
+
 
         public IProviderConfiguration? GetProviderConfig(string provider)
         {

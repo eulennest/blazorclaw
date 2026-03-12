@@ -1,7 +1,7 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Providers;
-using BlazorClaw.Core.Sessions;
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 using System.CommandLine;
 
 namespace BlazorClaw.Server.Commands;
@@ -16,16 +16,7 @@ public class ModelCommandProvider : ExecutorCommandProvider
 
 public class ModelSwitchCommand : ISystemCommand, ISystemCommandExecutor
 {
-    private static readonly Dictionary<string, string> ModelMap = new(StringComparer.OrdinalIgnoreCase)
-    {
-        { "mistral", "openrouter/mistralai/mistral-large" },
-        { "gemini", "openrouter/google/gemini-2.0-flash-exp" },
-        { "llama", "openrouter/meta-llama/llama-3.3-70b-instruct" },
-        { "gpt4", "openrouter/openai/gpt-4" },
-        { "gpt4o", "openrouter/openai/gpt-4o" },
-        { "gpt4o-mini", "openrouter/openai/gpt-4o-mini" },
-        { "claude", "openrouter/anthropic/claude-sonnet-4-20250514" },
-    };
+    private Dictionary<string, string>? modelMap;
 
     public Command GetCommand()
     {
@@ -34,47 +25,70 @@ public class ModelSwitchCommand : ISystemCommand, ISystemCommandExecutor
         return cmd;
     }
 
-    public Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
+    public async Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
     {
-        string input;
-        try
+        var input = result.GetValue<string>((Argument<string>)result.CommandResult.Command.Arguments[0]);
+        if (string.IsNullOrWhiteSpace(input))
         {
-            input = result.GetRequiredValue<string>((Argument<string>)result.CommandResult.Command.Arguments[0]);
-        }
-        catch
-        {
-            return Task.FromResult<object?>($"Verfügbare Modelle: {string.Join(", ", ModelMap.Keys)}\nUsage: /model <modell>");
-        }
-        
-        var providerManager = context.Provider.GetRequiredService<IProviderManager>();
-        
-        // Check if full model name (contains '/')
-        string fullModel;
-        if (input.Contains('/'))
-        {
-            fullModel = input;
-        }
-        else if (ModelMap.TryGetValue(input.ToLowerInvariant(), out var mapped))
-        {
-            fullModel = mapped;
-        }
-        else
-        {
-            return Task.FromResult<object?>($"Unbekannt. Verfügbare Kurznamen: {string.Join(", ", ModelMap.Keys)}");
+            return $"Aktuelles Model: {context.Session?.CurrentModel}";
         }
 
-        var providerName = fullModel.Split('/')[0];
-        var availableProviders = providerManager.GetProviders().ToList();
-        
-        if (!availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
-            return Task.FromResult<object?>($"Fehler: Provider '{providerName}' nicht konfiguriert.");
-
-        // Set model for this session
-        if (context.Session != null)
+        if (modelMap == null)
         {
-            context.Session.CurrentModel = fullModel;
+            // Build model map from database favorites
+            modelMap ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                var db = context.Provider.GetRequiredService<ApplicationDbContext>();
+
+                var favorites = await db.ModelFavorites.ToListAsync();
+
+                foreach (var fav in favorites)
+                {
+                    // Add all aliases
+                    foreach (var alias in fav.Aliases)
+                    {
+                        if (!string.IsNullOrEmpty(alias))
+                        {
+                            modelMap[alias.ToLowerInvariant()] = fav.InternalName;
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
         }
-        
-        return Task.FromResult<object?>($"Gewechselt zu: {fullModel}");
+
+        var model = await SearchModelAsync(input, context) ?? throw new Exception($"Model nicht gefunden.");
+        // Set the model on session
+        context.Session.CurrentModel = model;
+        return $"Modell gewechselt zu: {model}";
+    }
+
+    public async Task<string?> SearchModelAsync(string searchTerm, MessageContext context)
+    {
+        var _providerManager = context.Provider.GetRequiredService<IProviderManager>();
+        // Check if search term exists in map
+        if (modelMap!.TryGetValue(searchTerm, out var fullModel)) return fullModel;
+
+        // Validate provider exists
+        var cols = searchTerm.Split('/', 2);
+        var providerName = cols[0];
+        var modelName = cols.Length > 1 ? cols[1] : cols[0];
+        var availableProviders = _providerManager.GetProviders().ToList();
+
+        if (availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
+        {
+            var exists = await _providerManager.GetModelsAsync(providerName).ContainsAsync(modelName);
+            if (exists) return searchTerm;
+        }
+        var list = await _providerManager.GetModelsAsync().ToListAsync();
+
+        foreach (var model in list)
+        {
+            if (model.EndsWith(modelName)) return model;
+        }
+        return null;
     }
 }
