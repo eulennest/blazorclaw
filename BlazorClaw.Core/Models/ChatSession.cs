@@ -8,7 +8,7 @@ public class ChatSession
     [Key]
     public Guid Id { get; set; } = Guid.NewGuid();
 
-    public string Title { get; set; } = "Neuer Chat";
+    public string Title { get; set; } = $"Neuer Chat {DateTime.Now:g}";
 
     public required string CurrentModel { get; set; }
 

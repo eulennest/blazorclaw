@@ -8,6 +8,7 @@ using BlazorClaw.Core.Security.Vault;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.Web;
 using BlazorClaw.Server;
 using BlazorClaw.Server.Memory;
@@ -25,6 +26,15 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var confFile = $"appsettings.{builder.Environment.EnvironmentName}.json";
+var old = builder.Configuration.Sources.LastOrDefault(o => o is FileConfigurationSource jc && (jc.Path?.Contains(confFile) ?? false));
+if (old != null) builder.Configuration.Sources.Remove(old);
+builder.Configuration.Add<SaveableJsonConfigurationSource>(o =>
+{
+    o.Optional = true;
+    o.Path = confFile;
+});
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

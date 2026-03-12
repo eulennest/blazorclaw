@@ -281,10 +281,11 @@
         }
     }
 
-    private void NewChat()
+    private async Task NewChat()
     {
         var newId = Guid.NewGuid();
-        Nav.NavigateTo($"/chat/{newId}");
+        var sess = await sessionManager.GetOrCreateSessionAsync(newId, selectedModel);
+        if (sess != null) Nav.NavigateTo($"/chat/{sess.Session.Id}");
     }
 
     private void ScrollToBottom()

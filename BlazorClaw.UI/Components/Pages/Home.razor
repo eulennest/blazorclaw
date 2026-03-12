@@ -1,5 +1,6 @@
 @page "/"
 @attribute [Authorize]
+@using BlazorClaw.Core.Sessions
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.Components.Authorization
@@ -8,6 +9,7 @@
 @using BlazorClaw.Core.Services
 @inject NavigationManager Nav
 @inject ISessionQueryService SessionQueryService
+@inject ISessionManager sessionManager
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
@@ -102,9 +104,10 @@
         }
     }
 
-    private void CreateNewSession()
+    private async Task CreateNewSession()
     {
-        var newSessionId = Guid.NewGuid();
-        Nav.NavigateTo($"/chat/{newSessionId}");
+        var newId = Guid.NewGuid();
+        var sess = await sessionManager.GetOrCreateSessionAsync(newId);
+        if (sess != null) Nav.NavigateTo($"/chat/{sess.Session.Id}");
     }
 }

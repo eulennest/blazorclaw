@@ -39,7 +39,6 @@ namespace BlazorClaw.Server.Services
                         CurrentModel = model,
                         CreatedAt = DateTime.UtcNow,
                         LastUsedAt = DateTime.UtcNow,
-                        Title = "New Session"
                     };
                     db.ChatSessions.Add(sess);
                     await db.SaveChangesAsync().ConfigureAwait(false);
