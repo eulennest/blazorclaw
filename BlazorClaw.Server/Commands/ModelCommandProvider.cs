@@ -20,8 +20,10 @@ public class ModelSwitchCommand : ISystemCommand, ISystemCommandExecutor
 
     public Command GetCommand()
     {
-        var cmd = new Command("model", "Wechselt das Modell");
-        cmd.Add(new Argument<string>("model") { Description = "Kurzname: mistral, gemini, llama, gpt4, gpt4o, claude" });
+        var cmd = new Command("model", "Wechselt das Modell")
+        {
+            new Argument<string>("model") { Description = "Kurzname: mistral, gemini, llama, gpt4, gpt4o, claude" }
+        };
         return cmd;
     }
 

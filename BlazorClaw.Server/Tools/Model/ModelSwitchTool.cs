@@ -3,7 +3,6 @@ using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Providers;
 using BlazorClaw.Core.Tools;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -16,22 +15,9 @@ public class ModelSwitchParams
     public string Model { get; set; } = string.Empty;
 }
 
-public class ModelSwitchTool : BaseTool<ModelSwitchParams>
+public class ModelSwitchTool(IProviderManager providerManager) : BaseTool<ModelSwitchParams>
 {
-    private readonly IOptionsMonitor<LlmOptions> _optionsMonitor;
-    private readonly IProviderManager _providerManager;
-    private readonly IServiceScopeFactory _scopeFactory;
-    private Dictionary<string, string> modelMap;
-
-    public ModelSwitchTool(
-        IOptionsMonitor<LlmOptions> optionsMonitor,
-        IProviderManager providerManager,
-        IServiceScopeFactory scopeFactory)
-    {
-        _optionsMonitor = optionsMonitor;
-        _providerManager = providerManager;
-        _scopeFactory = scopeFactory;
-    }
+    private Dictionary<string, string>? modelMap;
 
     public override string Name => "model_switch";
     public override string Description => "Wechselt schnell zu einem anderen Modell (Kurzname, Alias oder Name)";
@@ -82,20 +68,20 @@ public class ModelSwitchTool : BaseTool<ModelSwitchParams>
     public async Task<string?> SearchModelAsync(string searchTerm)
     {
         // Check if search term exists in map
-        if (modelMap.TryGetValue(searchTerm, out var fullModel)) return fullModel;
+        if (modelMap?.TryGetValue(searchTerm, out var fullModel) ?? false) return fullModel;
 
         // Validate provider exists
         var cols = searchTerm.Split('/', 2);
         var providerName = cols[0];
         var modelName = cols.Length > 1 ? cols[1] : cols[0];
-        var availableProviders = _providerManager.GetProviders().ToList();
+        var availableProviders = providerManager.GetProviders().ToList();
 
         if (availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
         {
-            var exists = await _providerManager.GetModelsAsync(providerName).ContainsAsync(modelName);
+            var exists = await providerManager.GetModelsAsync(providerName).ContainsAsync(modelName);
             if (exists) return searchTerm;
         }
-        var list = await _providerManager.GetModelsAsync().ToListAsync();
+        var list = await providerManager.GetModelsAsync().ToListAsync();
 
         foreach (var model in list)
         {
