@@ -2,9 +2,20 @@
 using BlazorClaw.Core.Data;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
+using Humanizer;
+using Markdig.Syntax;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.CodeAnalysis.Elfie.Model.Structures;
+using Microsoft.VisualBasic;
+using NuGet.Protocol.Plugins;
+using ReverseMarkdown.Converters;
+using System.ComponentModel.DataAnnotations;
+using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Timers;
+using System.Xml.Linq;
+using Telegram.Bot.Types;
 
 namespace BlazorClaw.Server.Services
 {
@@ -22,8 +33,9 @@ namespace BlazorClaw.Server.Services
                     User = state.Services.GetRequiredService<UserManager<ApplicationUser>>().FindByIdAsync(context.Channel.SenderId).GetAwaiter().GetResult();
                 }
                 var uinfo = User;
+                var maxtoken = 100000;
 
-                var tokenProz = (state.LastUsage?.PromptTokens ?? 1) / 100000.0 * 100.0;
+                var tokenProz = (state.LastUsage?.PromptTokens ?? 1) /  100.0 * maxtoken;
                 var sb = new StringBuilder();
                 sb.AppendLine($"Current Time: {DateTime.UtcNow:R}");
                 sb.AppendLine($"Current Model: {context.Session?.CurrentModel}");
@@ -41,11 +53,41 @@ namespace BlazorClaw.Server.Services
                     sb.AppendLine($" - Email: {uinfo.Email}");
                 }
                 sb.AppendLine();
-                sb.AppendLine($"Token usage: {state.LastUsage?.PromptTokens} / 100k ({tokenProz} %)");
+                sb.AppendLine($"Token usage: {state.LastUsage?.PromptTokens} / {maxtoken/1000}k ({tokenProz} %)");
                 if (tokenProz > 80)
                 {
+                    sb.AppendLine("!!! WARNUNG: TOKEN LIMIT FAST ERREICHT !!!");
                     sb.AppendLine("Warning: Token usage is above 80% of the limit. Use the session_compress Tool for compression!");
+                    sb.AppendLine("Du MUSST deine Antworten extrem kurz halten. KEINE ausführlichen Erklärungen mehr. Fasse dich auf das Wesentliche!");
                 }
+                sb.AppendLine();
+                
+                // --- Kanal-spezifischer Kontext ---
+                // Annahme: context.ChannelProvider liefert dir "WebChat", "Telegram", "Matrix" etc.
+                string channel = context.Channel?.ChannelProvider.ToLower() ?? "generic";
+                sb.AppendLine($"Channel: {channel}");
+
+                // --- Dynamische Instruktion für die KI ---
+                sb.AppendLine("--- Formatierungs-Instruktionen ---");
+                if (channel == "webchat")
+                {
+                    sb.AppendLine("Du befindest dich im WebChat. Du darfst Tabellen, Markdown-Blöcke und ausführliche Formatierungen nutzen.");
+                    sb.AppendLine("Du kannst Bilder via Markdown-Image-Tag rendern.");
+                }
+                else if (channel == "telegram")
+                {
+                    sb.AppendLine("Du befindest dich in Telegram. Halte Antworten kurz, nutze einfaches Markdown (fett/kursiv) und keine komplexen Tabellen.");
+                }
+                else if (channel == "matrix")
+                {
+                    sb.AppendLine("Du befindest dich in Matrix. Nutze leichtes Markdown, vermeide aber breite Tabellen.");
+                }
+                else
+                {
+                    sb.AppendLine("Nutze leichtes Markdown, vermeide aber breite Tabellen.");
+                }
+
+                sb.AppendLine("Hinweis: Passe deine Antwort immer an die Möglichkeiten und Beschränkungen des jeweiligen Kanals an.");
                 return sb.ToString();
             }
         }
