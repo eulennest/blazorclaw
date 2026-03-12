@@ -20,74 +20,92 @@
 
 <div class="row mt-4">
     <!-- Add New Model -->
-    <div class="col-md-6">
+    <div class="col-md-5">
         <div class="card">
             <div class="card-header">
-                <h5 class="mb-0">Neues Modell hinzufügen</h5>
+                <h5 class="mb-0">@(editingModel == null ? "Neues Modell hinzufügen" : "Modell bearbeiten")</h5>
             </div>
             <div class="card-body">
-                <EditForm Model="newModel" OnValidSubmit="AddModel">
+                <EditForm Model="formModel" OnValidSubmit="HandleSubmit">
                     <DataAnnotationsValidator />
                     
                     <div class="mb-3">
                         <label class="form-label">Name</label>
-                        <InputText @bind-Value="newModel.Name" class="form-control" placeholder="z.B. Mistral Large" />
-                        <ValidationMessage For="() => newModel.Name" />
+                        <InputText @bind-Value="formModel.Name" class="form-control" placeholder="z.B. Mistral Large" />
+                        <ValidationMessage For="() => formModel.Name" />
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Beschreibung</label>
-                        <InputTextArea @bind-Value="newModel.Description" class="form-control" placeholder="Kurze Beschreibung..." rows="2" />
+                        <InputTextArea @bind-Value="formModel.Description" class="form-control" placeholder="Kurze Beschreibung..." rows="2" />
                     </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label">Provider wählen</label>
-                        <select class="form-select" @bind="selectedProvider" @bind:after="LoadProviderModels">
-                            <option value="">-- Provider auswählen --</option>
-                            @foreach (var provider in providers)
-                            {
-                                <option value="@provider">@provider</option>
-                            }
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Interner Name</label>
-                        <InputText @bind-Value="newModel.InternalName" 
-                            @oninput="OnModelInput"
-                            class="form-control" 
-                            placeholder="Tippe um zu suchen..." />
-                        <ValidationMessage For="() => newModel.InternalName" />
-                        @if (filteredModels.Any())
-                        {
-                            <ul class="list-group mt-1" style="max-height: 150px; overflow-y: auto; position: absolute; z-index: 1000; width: calc(100% - 3rem);">
-                                @foreach (var model in filteredModels)
+                    @if (editingModel == null)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Provider wählen</label>
+                            <select class="form-select" @bind="selectedProvider" @bind:after="LoadProviderModels">
+                                <option value="">-- Provider auswählen --</option>
+                                @foreach (var provider in providers)
                                 {
-                                    <li class="list-group-item list-group-item-action" 
-                                        style="cursor: pointer;" 
-                                        @onclick="() => SelectModel(model)">
-                                        @model
-                                    </li>
+                                    <option value="@provider">@provider</option>
                                 }
-                            </ul>
-                        }
-                    </div>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Interner Name</label>
+                            <InputText @bind-Value="formModel.InternalName" 
+                                @oninput="OnModelInput"
+                                class="form-control" 
+                                placeholder="Tippe um zu suchen..." />
+                            <ValidationMessage For="() => formModel.InternalName" />
+                            @if (filteredModels.Any())
+                            {
+                                <ul class="list-group mt-1" style="max-height: 150px; overflow-y: auto; position: absolute; z-index: 1000; width: calc(100% - 3rem);">
+                                    @foreach (var model in filteredModels)
+                                    {
+                                        <li class="list-group-item list-group-item-action" 
+                                            style="cursor: pointer;" 
+                                            @onclick="() => SelectModel(model)">
+                                            @model
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Interner Name</label>
+                            <InputText @bind-Value="formModel.InternalName" class="form-control" />
+                        </div>
+                    }
                     
                     <div class="mb-3">
                         <label class="form-label">Aliases (kommagetrennt)</label>
                         <InputText @bind-Value="aliasesInput" class="form-control" placeholder="mistral, large, mistral-large" />
                     </div>
                     
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-plus-lg"></i> Hinzufügen
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> @(editingModel == null ? "Hinzufügen" : "Speichern")
+                        </button>
+                        @if (editingModel != null)
+                        {
+                            <button type="button" class="btn btn-secondary" @onclick="CancelEdit">
+                                Abbrechen
+                            </button>
+                        }
+                    </div>
                 </EditForm>
             </div>
         </div>
     </div>
 
     <!-- Model List -->
-    <div class="col-md-6">
+    <div class="col-md-7">
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Gespeicherte Modelle (@models.Count)</h5>
@@ -99,31 +117,46 @@
                 }
                 else
                 {
-                    <div class="list-group">
-                        @foreach (var model in models)
-                        {
-                            <div class="list-group-item">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="mb-1">@model.Name</h6>
-                                        <code class="small">@model.InternalName</code>
-                                        @if (!string.IsNullOrEmpty(model.Description))
-                                        {
-                                            <p class="mb-1 small text-muted">@model.Description</p>
-                                        }
-                                        @if (model.Aliases.Any())
-                                        {
-                                            <small class="text-muted">
-                                                Aliases: @string.Join(", ", model.Aliases)
-                                            </small>
-                                        }
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteModel(model)">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        }
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Modell</th>
+                                    <th>Aliases</th>
+                                    <th style="width: 100px;">Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var model in models)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@model.Name</strong>
+                                            @if (!string.IsNullOrEmpty(model.Description))
+                                            {
+                                                <br><small class="text-muted">@model.Description</small>
+                                            }
+                                        </td>
+                                        <td><code class="small">@model.InternalName</code></td>
+                                        <td>
+                                            @if (model.Aliases.Any())
+                                            {
+                                                <small class="text-muted">@string.Join(", ", model.Aliases)</small>
+                                            }
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditModel(model)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteModel(model)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
                     </div>
                 }
             </div>
@@ -133,7 +166,8 @@
 
 @code {
     private List<ModelFavorite> models = [];
-    private ModelFavorite newModel = new() { Name = "", InternalName = "" };
+    private ModelFavorite formModel = new() { Name = "", InternalName = "" };
+    private ModelFavorite? editingModel;
     private string aliasesInput = "";
     private List<string> providers = [];
     private List<string> allProviderModels = [];
@@ -186,8 +220,64 @@
 
     private void SelectModel(string model)
     {
-        newModel.InternalName = model;
+        formModel.InternalName = model;
         filteredModels = [];
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (editingModel == null)
+            await AddModel();
+        else
+            await SaveEdit();
+    }
+
+    private void EditModel(ModelFavorite model)
+    {
+        editingModel = model;
+        formModel = new ModelFavorite
+        {
+            Id = model.Id,
+            Name = model.Name,
+            InternalName = model.InternalName,
+            Description = model.Description,
+            Aliases = model.Aliases.ToList()
+        };
+        aliasesInput = string.Join(", ", model.Aliases);
+    }
+
+    private void CancelEdit()
+    {
+        editingModel = null;
+        formModel = new ModelFavorite { Name = "", InternalName = "" };
+        aliasesInput = "";
+    }
+
+    private async Task SaveEdit()
+    {
+        if (editingModel == null) return;
+
+        // Parse aliases
+        if (!string.IsNullOrWhiteSpace(aliasesInput))
+        {
+            formModel.Aliases = aliasesInput
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+        }
+
+        // Update existing model
+        var existing = await Db.ModelFavorites.FindAsync(editingModel.Id);
+        if (existing != null)
+        {
+            existing.Name = formModel.Name;
+            existing.InternalName = formModel.InternalName;
+            existing.Description = formModel.Description;
+            existing.Aliases = formModel.Aliases;
+            await Db.SaveChangesAsync();
+        }
+
+        CancelEdit();
+        await LoadModels();
     }
 
     private async Task AddModel()
@@ -195,15 +285,15 @@
         // Parse aliases
         if (!string.IsNullOrWhiteSpace(aliasesInput))
         {
-            newModel.Aliases = aliasesInput
+            formModel.Aliases = aliasesInput
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                 .ToList();
         }
 
-        Db.ModelFavorites.Add(newModel);
+        Db.ModelFavorites.Add(formModel);
         await Db.SaveChangesAsync();
 
-        newModel = new ModelFavorite { Name = "", InternalName = "" };
+        formModel = new ModelFavorite { Name = "", InternalName = "" };
         aliasesInput = "";
         selectedProvider = "";
         allProviderModels = [];
