@@ -99,12 +99,12 @@ namespace BlazorClaw.Channels.Services
         internal TelegramBotClient Client { get; } = Client;
         public override Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            return Client.SendMessage(channelId.ChannelId, Convert.ToString(message) ?? string.Empty, cancellationToken: cancellationToken);
+            return Client.SendMessage(channelId.ChannelId, Convert.ToString(message.Content) ?? string.Empty, cancellationToken: cancellationToken);
         }
 
         public override Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            return Client.SendMessage(channelId.ChannelId, Convert.ToString(message) ?? string.Empty, cancellationToken: cancellationToken);
+            return Client.SendMessage(channelId.ChannelId, Convert.ToString(message.Content) ?? string.Empty, cancellationToken: cancellationToken);
         }
     }
 
