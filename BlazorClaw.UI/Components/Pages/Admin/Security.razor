@@ -107,7 +107,12 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Benutzer (@users.Count)</h5>
-                        <input type="text" class="form-control w-25" placeholder="Suchen..." @bind="userSearch" @bind:after="SearchUsers" />
+                        <div>
+                            <button class="btn btn-primary btn-sm" @onclick="OpenCreateUserModal">
+                                <i class="bi bi-plus-lg"></i> Benutzer hinzufügen
+                            </button>
+                            <input type="text" class="form-control d-inline-block w-auto" placeholder="Suchen..." @bind="userSearch" @bind:after="SearchUsers" />
+                        </div>
                     </div>
                     <div class="card-body">
                         <table class="table table-hover">
@@ -160,12 +165,16 @@
                     <button type="button" class="btn-close" @onclick="CloseUserRolesModal"></button>
                 </div>
                 <div class="modal-body">
-                    @foreach (var role in allRoles)
+                    @{
+                        var roleList = allRoles.ToList();
+                    }
+                    @foreach (var role in roleList)
                     {
+                        var roleName = role.Name ?? "";
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" 
-                                   checked="@selectedUserRoles.Contains(role.Name)"
-                                   @onchange="e => ToggleRole(role.Name, e.Value is true)" />
+                                   checked="@selectedUserRoles.Contains(roleName)"
+                                   @onchange="e => OnRoleChecked(roleName, e)" />
                             <label class="form-check-label">@role.Name</label>
                         </div>
                     }
@@ -173,6 +182,55 @@
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseUserRolesModal">Abbrechen</button>
                     <button class="btn btn-primary" @onclick="SaveUserRoles">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Create User Modal -->
+@if (showCreateUserModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Benutzer hinzufügen</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateUserModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Benutzername</label>
+                        <input type="text" class="form-control" @bind="newUserName" placeholder="Benutzername" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">E-Mail</label>
+                        <input type="email" class="form-control" @bind="newUserEmail" placeholder="email@example.com" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Passwort</label>
+                        <input type="password" class="form-control" @bind="newUserPassword" placeholder="Passwort" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Rollen</label>
+                        @{
+                            var createUserRoleList = allRoles.ToList();
+                        }
+                        @foreach (var role in createUserRoleList)
+                        {
+                            var roleName = role.Name ?? "";
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       checked="@newUserRoles.Contains(roleName)"
+                                       @onchange="e => OnNewUserRoleChecked(roleName, e)" />
+                                <label class="form-check-label">@role.Name</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseCreateUserModal">Abbrechen</button>
+                    <button class="btn btn-primary" @onclick="CreateUser">Erstellen</button>
                 </div>
             </div>
         </div>
@@ -191,9 +249,16 @@
 
     // Modal
     private bool showUserRolesModal;
+    private bool showCreateUserModal;
     private ApplicationUser? selectedUser;
     private List<string> selectedUserRoles = [];
     private List<ApplicationRole> allRoles = [];
+    
+    // New user
+    private string newUserName = "";
+    private string newUserEmail = "";
+    private string newUserPassword = "";
+    private List<string> newUserRoles = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -307,6 +372,67 @@
         else
         {
             selectedUserRoles.Remove(roleName);
+        }
+    }
+
+    private void OnRoleChecked(string roleName, ChangeEventArgs e)
+    {
+        ToggleRole(roleName, e.Value is true);
+    }
+
+    private void OnNewUserRoleChecked(string roleName, ChangeEventArgs e)
+    {
+        ToggleNewUserRole(roleName, e.Value is true);
+    }
+
+    private void OpenCreateUserModal()
+    {
+        newUserName = "";
+        newUserEmail = "";
+        newUserPassword = "";
+        newUserRoles = ["User"];
+        showCreateUserModal = true;
+    }
+
+    private void ToggleNewUserRole(string roleName, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!newUserRoles.Contains(roleName))
+                newUserRoles.Add(roleName);
+        }
+        else
+        {
+            newUserRoles.Remove(roleName);
+        }
+    }
+
+    private void CloseCreateUserModal()
+    {
+        showCreateUserModal = false;
+    }
+
+    private async Task CreateUser()
+    {
+        if (string.IsNullOrWhiteSpace(newUserName) || string.IsNullOrWhiteSpace(newUserPassword))
+            return;
+
+        var user = new ApplicationUser
+        {
+            UserName = newUserName,
+            Email = newUserEmail
+        };
+
+        var result = await UserManager.CreateAsync(user, newUserPassword);
+        if (result.Succeeded)
+        {
+            if (newUserRoles.Any())
+            {
+                await UserManager.AddToRolesAsync(user, newUserRoles);
+            }
+            
+            await LoadUsers();
+            CloseCreateUserModal();
         }
     }
 }
