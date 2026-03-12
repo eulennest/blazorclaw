@@ -155,20 +155,6 @@
             ? await SessionQueryService.GetAllSessionsAsync()
             : await SessionQueryService.GetSessionsForUserAsync(userId!);
 
-        currentSession = sessions.FirstOrDefault(s => s.Id == SessionId);
-        if (currentSession != null)
-        {
-            selectedModel = currentSession.CurrentModel;
-            if (!modelFavorites.Any(o => o.InternalName == selectedModel))
-            {
-                modelFavorites.Add(new ModelFavorite()
-                {
-                    InternalName = selectedModel,
-                    Name = selectedModel.Split('/').Last()
-                });
-            }
-        }
-
         // Setup SignalR
         hubConnection = new HubConnectionBuilder()
             .WithUrl(Nav.ToAbsoluteUri("/chatHub"))
@@ -242,6 +228,21 @@
     {
         if (hubConnection != null)
         {
+
+            currentSession = sessions.FirstOrDefault(s => s.Id == SessionId);
+            if (currentSession != null)
+            {
+                selectedModel = currentSession.CurrentModel;
+                if (!modelFavorites.Any(o => o.InternalName == selectedModel))
+                {
+                    modelFavorites.Add(new ModelFavorite()
+                    {
+                        InternalName = selectedModel,
+                        Name = selectedModel.Split('/').Last()
+                    });
+                }
+            }
+
             messages.Clear();
             await hubConnection.InvokeAsync("LoadHistory", SessionId);
         }
