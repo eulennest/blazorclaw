@@ -138,6 +138,7 @@
     private List<ModelFavorite> modelFavorites = [];
     private bool isLoading;
     private string? userId;
+    private bool isAdmin;
 
     protected override async Task OnInitializedAsync()
     {
@@ -153,10 +154,7 @@
         userId = UserManager.GetUserId(user);
 
         // Load sessions
-        var isAdmin = user.IsInRole("Admin");
-        sessions = isAdmin
-            ? await SessionQueryService.GetAllSessionsAsync()
-            : await SessionQueryService.GetSessionsForUserAsync(userId!);
+        isAdmin = user.IsInRole("Admin");
 
         // Setup SignalR
         hubConnection = new HubConnectionBuilder()
@@ -235,6 +233,9 @@
     {
         if (hubConnection != null)
         {
+            sessions = isAdmin
+                ? await SessionQueryService.GetAllSessionsAsync()
+                : await SessionQueryService.GetSessionsForUserAsync(userId!);
 
             var sesi = sessions.FirstOrDefault(s => s.Id == SessionId);
             if (sesi != null)
