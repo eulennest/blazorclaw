@@ -9,70 +9,130 @@
 <h2>LLM-Provider</h2>
 <p class="text-muted">Konfiguration der KI-Provider (OpenRouter, OpenAI, etc.).</p>
 
-<div class="mt-4">
-    <h5>Konfigurierte Provider</h5>
-
-    @if (providers == null)
-    {
-        <div class="text-center">
-            <div class="spinner-border" role="status">
-                <span class="visually-hidden">Laden...</span>
+<div class="row mt-4">
+    <!-- Provider Form -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">@(editingProvider == null ? "Neuer Provider" : "Provider bearbeiten")</h5>
+            </div>
+            <div class="card-body">
+                <EditForm Model="providerForm" OnValidSubmit="SaveProvider">
+                    <div class="mb-3">
+                        <label class="form-label">Provider Name</label>
+                        <InputText @bind-Value="providerForm.Name" class="form-control" 
+                            placeholder="z.B. openrouter" disabled="@(editingProvider != null)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Endpoint URL</label>
+                        <InputText @bind-Value="providerForm.Uri" class="form-control" 
+                            placeholder="https://openrouter.ai/api/v1/" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">API Token</label>
+                        <InputText @bind-Value="providerForm.Token" type="password" class="form-control" 
+                            placeholder="Ihr API Token" />
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Speichern
+                        </button>
+                        @if (editingProvider != null)
+                        {
+                            <button type="button" class="btn btn-secondary" @onclick="CancelEdit">
+                                Abbrechen
+                            </button>
+                        }
+                    </div>
+                </EditForm>
             </div>
         </div>
-    }
-    else if (!providers.Any())
-    {
-        <div class="alert alert-warning">
-            <i class="bi bi-exclamation-triangle"></i> Keine Provider konfiguriert.
-        </div>
-    }
-    else
-    {
-        <table class="table table-striped table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th>Name</th>
-                    <th>Endpoint</th>
-                    <th>Token</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var provider in providers)
+    </div>
+
+    <!-- Provider List -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Konfigurierte Provider</h5>
+            </div>
+            <div class="card-body">
+                @if (providers == null)
                 {
-                    <tr>
-                        <td>
-                            <strong>@provider.Key</strong>
-                        </td>
-                        <td>
-                            <code class="small">@provider.Value.Uri</code>
-                        </td>
-                        <td>
-                            <span class="badge bg-secondary">@GetMaskedToken(provider.Value.Token)</span>
-                        </td>
-                        <td>
-                            @if (!string.IsNullOrEmpty(provider.Value.Token))
-                            {
-                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Konfiguriert</span>
-                            }
-                            else
-                            {
-                                <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Token fehlt</span>
-                            }
-                        </td>
-                    </tr>
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Laden...</span>
+                        </div>
+                    </div>
                 }
-            </tbody>
-        </table>
-    }
+                else if (!providers.Any())
+                {
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Keine Provider konfiguriert.
+                    </div>
+                }
+                else
+                {
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Name</th>
+                                <th>Endpoint</th>
+                                <th>Token</th>
+                                <th>Status</th>
+                                <th>Aktionen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var provider in providers)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@provider.Key</strong>
+                                    </td>
+                                    <td>
+                                        <code class="small">@provider.Value.Uri</code>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">@GetMaskedToken(provider.Value.Token)</span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(provider.Value.Token))
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Konfiguriert</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> Token fehlt</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => EditProvider(provider.Key)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
     private Dictionary<string, IProviderConfiguration>? providers;
+    private string? editingProvider;
+    
+    private ProviderFormModel providerForm = new();
 
     protected override void OnInitialized()
     {
-        // Load providers
+        LoadProviders();
+    }
+
+    private void LoadProviders()
+    {
         var providerNames = ProviderManager.GetProviders();
         providers = new Dictionary<string, IProviderConfiguration>();
 
@@ -86,23 +146,55 @@
         }
     }
 
-    private string GetMaskedToken(string token)
+    private void EditProvider(string name)
     {
-        if ((token?.Length ?? 0) < 15) return token??string.Empty;
-        return $"{token!.Substring(0, 15)} ... {token.Substring(token.Length - 5)}";
+        editingProvider = name;
+        var config = providers?.GetValueOrDefault(name);
+        
+        providerForm = new ProviderFormModel
+        {
+            Name = name,
+            Uri = config?.Uri ?? "",
+            Token = config?.Token ?? ""
+        };
     }
 
-    private async Task SaveSettings()
+    private void CancelEdit()
     {
-        // TODO: Save to configuration
-        var provider = "";
-        var token = "";
-        var uri = "";
+        editingProvider = null;
+        providerForm = new ProviderFormModel();
+    }
 
-        await ProviderManager.SetProviderAsync(provider, new ProviderConfiguration()
-            {
-                Uri = uri,
-                Token = token
-            });
+    private async Task SaveProvider()
+    {
+        if (string.IsNullOrWhiteSpace(providerForm.Name))
+            return;
+
+        var config = new ProviderConfiguration
+        {
+            Uri = providerForm.Uri?.TrimEnd('/') + "/" ?? "",
+            Token = providerForm.Token
+        };
+
+        var success = await ProviderManager.SetProviderAsync(providerForm.Name, config);
+        
+        if (success)
+        {
+            LoadProviders();
+            CancelEdit();
+        }
+    }
+
+    private string GetMaskedToken(string token)
+    {
+        if ((token?.Length ?? 0) < 15) return "••••••••";
+        return $"{token!.Substring(0, 6)}••••••{token.Substring(token.Length - 4)}";
+    }
+
+    private class ProviderFormModel
+    {
+        public string Name { get; set; } = "";
+        public string Uri { get; set; } = "";
+        public string Token { get; set; } = "";
     }
 }
