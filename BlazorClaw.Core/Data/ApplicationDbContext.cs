@@ -9,6 +9,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ChatSession> ChatSessions { get; set; }
     public DbSet<ChatSessionParticipant> ChatSessionParticipants { get; set; }
     public DbSet<ModelFavorite> ModelFavorites { get; set; }
+    public DbSet<ChannelConfig> ChannelConfigs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
