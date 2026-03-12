@@ -89,7 +89,7 @@
     private string GetMaskedToken(string token)
     {
         if ((token?.Length ?? 0) < 15) return token??string.Empty;
-        return $"{token!.Substring(0, 15)}...{token.Substring(token.Length - 5)}";
+        return $"{token!.Substring(0, 15)} ... {token.Substring(token.Length - 5)}";
     }
 
     private async Task SaveSettings()
