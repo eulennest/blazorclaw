@@ -1,30 +1,151 @@
 @page "/admin/general"
+@using Microsoft.AspNetCore.Components.Forms
+@using BlazorClaw.Core.Providers
+@inject IConfiguration Configuration
+@inject IProviderManager ProviderManager
 
 <PageTitle>Admin - Allgemein</PageTitle>
 
 <h2>Allgemeine Einstellungen</h2>
-<p class="text-muted">Hier können grundlegende Anwendungseinstellungen vorgenommen werden.</p>
+<p class="text-muted">Grundlegende Anwendungseinstellungen.</p>
 
-<div class="mt-4">
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> Diese Seite ist ein Platzhalter. Implementierung folgt...
+<div class="row mt-4">
+    <!-- Settings Form -->
+    <div class="col-md-5">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Einstellungen</h5>
+            </div>
+            <div class="card-body">
+                <EditForm Model="settings" OnValidSubmit="SaveSettings">
+                    <h6 class="mb-3 text-muted">LLM Einstellungen</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Modell</label>
+                        <InputText @bind-Value="settings.Model" class="form-control" 
+                            placeholder="openrouter/mistralai/mistral-large" />
+                        <small class="text-muted">Format: provider/model</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Temperature</label>
+                        <InputNumber @bind-Value="settings.Temperature" class="form-control" step="0.1" min="0" max="2" />
+                        <small class="text-muted">0.0 - 2.0</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Max Tokens</label>
+                        <InputNumber @bind-Value="settings.MaxTokens" class="form-control" step="100" min="1" max="100000" />
+                    </div>
+
+                    <hr />
+                    <h6 class="mb-3 text-muted">Datenbank Einstellungen</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label">Standard Admin E-Mail</label>
+                        <InputText @bind-Value="settings.DefaultAdminEmail" class="form-control" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Standard Admin Passwort</label>
+                        <InputText @bind-Value="settings.DefaultAdminPassword" type="password" class="form-control" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg"></i> Speichern
+                    </button>
+                </EditForm>
+            </div>
+        </div>
     </div>
-    
-    <h5 class="mt-4">Aktuelle Einstellungen</h5>
-    <table class="table table-striped">
-        <tbody>
-            <tr>
-                <td>Modell</td>
-                <td><code>openrouter/mistralai/mistral-large</code></td>
-            </tr>
-            <tr>
-                <td>Temperatur</td>
-                <td>0.7</td>
-            </tr>
-            <tr>
-                <td>Max Tokens</td>
-                <td>2000</td>
-            </tr>
-        </tbody>
-    </table>
+
+    <!-- Current Settings Display -->
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Aktuelle Einstellungen</h5>
+            </div>
+            <div class="card-body">
+                <h6 class="text-muted">LLM</h6>
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <td class="text-muted" style="width: 150px;">Modell:</td>
+                        <td><code>@Configuration["Llm:Model"]</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Temperature:</td>
+                        <td>@Configuration["Llm:Temperature"]</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Max Tokens:</td>
+                        <td>@Configuration["Llm:MaxTokens"]</td>
+                    </tr>
+                </table>
+
+                <h6 class="text-muted mt-4">Datenbank</h6>
+                <table class="table table-sm table-borderless">
+                    <tr>
+                        <td class="text-muted" style="width: 150px;">Connection:</td>
+                        <td><code>@Configuration.GetConnectionString("DefaultConnection")</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted">Admin E-Mail:</td>
+                        <td>@Configuration["Database:DefaultAdminEmail"]</td>
+                    </tr>
+                </table>
+
+                <h6 class="text-muted mt-4">Provider</h6>
+                <table class="table table-sm table-borderless">
+                    @foreach (var provider in ProviderManager.GetProviders())
+                    {
+                        <tr>
+                            <td class="text-muted" style="width: 150px;">@provider:</td>
+                            <td><code>@ProviderManager.GetProviderConfig(provider)?.Uri</code></td>
+                        </tr>
+                    }
+                </table>
+
+                <div class="alert alert-warning mt-3">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    <strong>Hinweis:</strong> Änderungen werden erst nach einem Neustart des Servers wirksam.
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@code {
+    private SettingsModel settings = new();
+
+    protected override void OnInitialized()
+    {
+        // Load current settings
+        settings = new SettingsModel
+        {
+            Model = Configuration["Llm:Model"] ?? "openrouter/mistralai/mistral-large",
+            Temperature = double.TryParse(Configuration["Llm:Temperature"], out var temp) ? temp : 0.7,
+            MaxTokens = int.TryParse(Configuration["Llm:MaxTokens"], out var tokens) ? tokens : 2000,
+            DefaultAdminEmail = Configuration["Database:DefaultAdminEmail"] ?? "",
+            DefaultAdminPassword = Configuration["Database:DefaultAdminPassword"] ?? ""
+        };
+    }
+
+    private void SaveSettings()
+    {
+        // Update configuration in memory
+        Configuration["Llm:Model"] = settings.Model;
+        Configuration["Llm:Temperature"] = settings.Temperature.ToString();
+        Configuration["Llm:MaxTokens"] = settings.MaxTokens.ToString();
+        Configuration["Database:DefaultAdminEmail"] = settings.DefaultAdminEmail;
+        Configuration["Database:DefaultAdminPassword"] = settings.DefaultAdminPassword;
+    }
+
+    private class SettingsModel
+    {
+        public string Model { get; set; } = "";
+        public double Temperature { get; set; }
+        public int MaxTokens { get; set; }
+        public string DefaultAdminEmail { get; set; } = "";
+        public string DefaultAdminPassword { get; set; } = "";
+    }
+}
