@@ -1,5 +1,6 @@
 @page "/chat/{SessionId:guid}"
 @attribute [Authorize]
+@using BlazorClaw.Core.Sessions
 @using Markdig
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
@@ -13,6 +14,7 @@
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager Nav
 @inject ISessionQueryService SessionQueryService
+@inject ISessionManager sessionManager
 @inject IHttpContextAccessor contextAccessor
 @inject ApplicationDbContext Db
 @inject UserManager<ApplicationUser> UserManager
@@ -130,9 +132,9 @@
     private HubConnection? hubConnection;
     private List<ChatSession> sessions = [];
     private List<ChatMessage> messages = [];
-    private ChatSession? currentSession;
+    private ChatSessionState? currentSession;
     private string userInput = "";
-    private string selectedModel = "openrouter/mistralai/mistral-large";
+    private string selectedModel = string.Empty;
     private List<ModelFavorite> modelFavorites = [];
     private bool isLoading;
     private string? userId;
@@ -233,10 +235,12 @@
         if (hubConnection != null)
         {
 
-            currentSession = sessions.FirstOrDefault(s => s.Id == SessionId);
-            if (currentSession != null)
+            var sesi = sessions.FirstOrDefault(s => s.Id == SessionId);
+            if (sesi != null)
             {
-                selectedModel = currentSession.CurrentModel;
+                currentSession = await sessionManager.GetSessionAsync(SessionId);
+                selectedModel = currentSession?.Session.CurrentModel ?? modelFavorites.FirstOrDefault()?.InternalName ?? string.Empty;
+
                 if (!modelFavorites.Any(o => o.InternalName == selectedModel))
                 {
                     modelFavorites.Add(new ModelFavorite()
@@ -258,16 +262,16 @@
 
         var input = userInput ?? string.Empty;
         userInput = "";
-        if (currentSession != null && currentSession.CurrentModel != selectedModel)
+        if (currentSession != null && !string.IsNullOrWhiteSpace(selectedModel) && currentSession.Session.CurrentModel != selectedModel)
         {
-            currentSession.CurrentModel = selectedModel;
-            Db.ChatSessions.Update(currentSession);
+            currentSession.Session.CurrentModel = selectedModel;
+            Db.ChatSessions.Update(currentSession.Session);
             await Db.SaveChangesAsync();
         }
 
         if (hubConnection?.State == HubConnectionState.Connected)
         {
-            await hubConnection.SendAsync("SendMessage", SessionId, input);
+            _ = hubConnection.SendAsync("SendMessage", SessionId, input);
         }
     }
 
