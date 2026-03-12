@@ -28,7 +28,7 @@ namespace BlazorClaw.Server.Services
             {
                 logger.LogInformation("Creating session {SessionId}", sessionId);
                 var scope = scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var sess = await db.ChatSessions.FindAsync(sessionId);
                 model ??= sess?.CurrentModel ?? options.CurrentValue.Model;
                 if (sess == null)
@@ -88,7 +88,7 @@ namespace BlazorClaw.Server.Services
 
         public async Task SaveSessionAsync(ChatSessionState sessionState, bool newVersion = false)
         {
-            var db = sessionState.Services.GetRequiredService<ApplicationDbContext>();
+            using var db = sessionState.Services.GetRequiredService<ApplicationDbContext>();
             sessionState.Session.LastUsedAt = DateTime.UtcNow;
             db.ChatSessions
             .Update(sessionState.Session);

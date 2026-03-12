@@ -173,6 +173,7 @@
             if (sessionId == SessionId)
             {
                 logger.LogInformation("Message details - Role: {Role}, IsUser: {IsUser}", msg.Role, msg.IsUser);
+                selectedModel = currentSession.Session.CurrentModel;
                 messages.Add(msg);
                 InvokeAsync(StateHasChanged);
                 ScrollToBottom();
