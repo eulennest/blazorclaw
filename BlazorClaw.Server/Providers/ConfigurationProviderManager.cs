@@ -1,5 +1,6 @@
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Providers;
+using BlazorClaw.Core.Utils;
 
 namespace BlazorClaw.Server.Providers
 {
@@ -34,8 +35,8 @@ namespace BlazorClaw.Server.Providers
                 prov.Models ??= [];
                 try
                 {
-                    var uri = new Uri(new Uri(prov.Uri), "models");
-                    var ret = await httpClient.GetFromJsonAsync<ModelListResponse>(uri);
+                    httpClient.InitProvider(prov);
+                    var ret = await httpClient.GetFromJsonAsync<ModelListResponse>("models");
 
                     if (ret?.Data != null)
                     {

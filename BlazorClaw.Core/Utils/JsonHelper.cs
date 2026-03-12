@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using BlazorClaw.Core.Providers;
+using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -89,6 +90,16 @@ namespace BlazorClaw.Core.Utils
         public static object? CallMethod(this object obj, string methodName, params object[] args)
         {
             return obj.GetType().GetMethod(methodName, BindingFlags.Public | BindingFlags.Instance)?.Invoke(obj, args);
+        }
+    }
+
+    public static class UtilsExtensions
+    {
+        public static void InitProvider(this HttpClient httpClient, IProviderConfiguration conf)
+        {
+            httpClient.BaseAddress = new Uri(conf.Uri.TrimEnd('/') + "/");
+            if (!string.IsNullOrWhiteSpace(conf.Token))
+                httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", conf.Token);
         }
     }
 }

@@ -41,12 +41,6 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 builder.Services.AddControllers();
-builder.Services.AddHttpClient("OpenRouter", client =>
-{
-    var llmConfig = builder.Configuration.GetSection("Llm");
-    client.BaseAddress = new Uri(llmConfig["BaseUrl"] ?? "https://openrouter.ai/api/v1/");
-    client.DefaultRequestHeaders.Add("Authorization", $"Bearer {llmConfig["ApiKey"]}");
-});
 
 // Add HttpClient for WebSearchProvider
 builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
