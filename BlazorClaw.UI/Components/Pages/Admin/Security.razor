@@ -118,8 +118,8 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
+                                    <th>Name</th>
                                     <th>Benutzername</th>
-                                    <th>E-Mail</th>
                                     <th>Rollen</th>
                                     <th>Erstellt</th>
                                     <th>Aktionen</th>
@@ -129,8 +129,17 @@
                                 @foreach (var user in filteredUsers)
                                 {
                                     <tr>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(user.FirstName) || !string.IsNullOrEmpty(user.LastName))
+                                            {
+                                                <text>@user.FirstName @user.LastName</text>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
                                         <td>@user.UserName</td>
-                                        <td>@user.Email</td>
                                         <td>
                                             @foreach (var role in userRoles.GetValueOrDefault(user.Id, []))
                                             {
