@@ -41,16 +41,36 @@
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Interner Name</label>
-                        <InputText @bind-Value="newModel.InternalName" class="form-control" placeholder="z.B. openrouter/mistralai/mistral-large" list="available-models" />
-                        <ValidationMessage For="() => newModel.InternalName" />
-                        <small class="text-muted">Muss dem Format "provider/model" entsprechen</small>
-                        <datalist id="available-models">
-                            @foreach (var model in availableModels)
+                        <label class="form-label">Provider wählen</label>
+                        <select class="form-select" @bind="selectedProvider" @bind:after="LoadProviderModels">
+                            <option value="">-- Provider auswählen --</option>
+                            @foreach (var provider in providers)
                             {
-                                <option value="@model" />
+                                <option value="@provider">@provider</option>
                             }
-                        </datalist>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Interner Name</label>
+                        <InputText @bind-Value="newModel.InternalName" 
+                            @oninput="OnModelInput"
+                            class="form-control" 
+                            placeholder="Tippe um zu suchen..." />
+                        <ValidationMessage For="() => newModel.InternalName" />
+                        @if (filteredModels.Any())
+                        {
+                            <ul class="list-group mt-1" style="max-height: 150px; overflow-y: auto; position: absolute; z-index: 1000; width: calc(100% - 3rem);">
+                                @foreach (var model in filteredModels)
+                                {
+                                    <li class="list-group-item list-group-item-action" 
+                                        style="cursor: pointer;" 
+                                        @onclick="() => SelectModel(model)">
+                                        @model
+                                    </li>
+                                }
+                            </ul>
+                        }
                     </div>
                     
                     <div class="mb-3">
@@ -115,12 +135,15 @@
     private List<ModelFavorite> models = [];
     private ModelFavorite newModel = new() { Name = "", InternalName = "" };
     private string aliasesInput = "";
-    private List<string> availableModels = [];
+    private List<string> providers = [];
+    private List<string> allProviderModels = [];
+    private List<string> filteredModels = [];
+    private string selectedProvider = "";
 
     protected override async Task OnInitializedAsync()
     {
         await LoadModels();
-        await LoadAvailableModels();
+        await LoadProviders();
     }
 
     private async Task LoadModels()
@@ -128,16 +151,43 @@
         models = await Db.ModelFavorites.OrderBy(m => m.Name).ToListAsync();
     }
 
-    private async Task LoadAvailableModels()
+    private async Task LoadProviders()
     {
-        availableModels.Clear();
-        foreach (var provider in ProviderManager.GetProviders())
+        providers = ProviderManager.GetProviders().ToList();
+    }
+
+    private async Task LoadProviderModels()
+    {
+        allProviderModels.Clear();
+        filteredModels.Clear();
+        if (string.IsNullOrEmpty(selectedProvider)) return;
+
+        await foreach (var model in ProviderManager.GetModelsAsync(selectedProvider))
         {
-            await foreach (var model in ProviderManager.GetModelsAsync(provider))
-            {
-                availableModels.Add($"{provider}/{model}");
-            }
+            allProviderModels.Add($"{selectedProvider}/{model}");
         }
+    }
+
+    private void OnModelInput(ChangeEventArgs e)
+    {
+        var search = e.Value?.ToString()?.ToLower() ?? "";
+        if (string.IsNullOrEmpty(search))
+        {
+            filteredModels = [];
+        }
+        else
+        {
+            filteredModels = allProviderModels
+                .Where(m => m.ToLower().Contains(search))
+                .Take(10)
+                .ToList();
+        }
+    }
+
+    private void SelectModel(string model)
+    {
+        newModel.InternalName = model;
+        filteredModels = [];
     }
 
     private async Task AddModel()
@@ -155,6 +205,9 @@
 
         newModel = new ModelFavorite { Name = "", InternalName = "" };
         aliasesInput = "";
+        selectedProvider = "";
+        allProviderModels = [];
+        filteredModels = [];
         await LoadModels();
     }
 
