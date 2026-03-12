@@ -86,7 +86,7 @@ builder.Services.Configure<LlmOptions>(builder.Configuration.GetSection(LlmOptio
 
 // Add SQLite database
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")), ServiceLifetime.Transient);
 
 
 // Add IdentityRedirectManager

@@ -28,7 +28,7 @@ namespace BlazorClaw.Server.Services
             {
                 logger.LogInformation("Creating session {SessionId}", sessionId);
                 var scope = scopeFactory.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var sess = await db.ChatSessions.FindAsync(sessionId);
                 model ??= sess?.CurrentModel ?? options.CurrentValue.Model;
                 if (sess == null)
