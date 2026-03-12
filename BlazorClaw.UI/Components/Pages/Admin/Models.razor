@@ -1,0 +1,145 @@
+@page "/admin/models"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using BlazorClaw.Core.Data
+@using BlazorClaw.Core.Models
+@inject ApplicationDbContext Db
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Modelle - BlazorClaw</PageTitle>
+
+<h2>Model-Favoriten</h2>
+<p class="text-muted">Verwalte deine Lieblingsmodelle für den Chat.</p>
+
+<div class="row mt-4">
+    <!-- Add New Model -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Neues Modell hinzufügen</h5>
+            </div>
+            <div class="card-body">
+                <EditForm Model="newModel" OnValidSubmit="AddModel">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Name</label>
+                        <InputText @bind-Value="newModel.Name" class="form-control" placeholder="z.B. Mistral Large" />
+                        <ValidationMessage For="() => newModel.Name" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Beschreibung</label>
+                        <InputTextArea @bind-Value="newModel.Description" class="form-control" placeholder="Kurze Beschreibung..." rows="2" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Interner Name</label>
+                        <InputText @bind-Value="newModel.InternalName" class="form-control" placeholder="z.B. openrouter/mistralai/mistral-large" />
+                        <ValidationMessage For="() => newModel.InternalName" />
+                        <small class="text-muted">Muss dem Format "provider/model" entsprechen</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Aliases (kommagetrennt)</label>
+                        <InputText @bind-Value="aliasesInput" class="form-control" placeholder="mistral, large, mistral-large" />
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg"></i> Hinzufügen
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model List -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Gespeicherte Modelle (@models.Count)</h5>
+            </div>
+            <div class="card-body">
+                @if (!models.Any())
+                {
+                    <p class="text-muted">Noch keine Modelle gespeichert.</p>
+                }
+                else
+                {
+                    <div class="list-group">
+                        @foreach (var model in models)
+                        {
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">@model.Name</h6>
+                                        <code class="small">@model.InternalName</code>
+                                        @if (!string.IsNullOrEmpty(model.Description))
+                                        {
+                                            <p class="mb-1 small text-muted">@model.Description</p>
+                                        }
+                                        @if (model.Aliases.Any())
+                                        {
+                                            <small class="text-muted">
+                                                Aliases: @string.Join(", ", model.Aliases)
+                                            </small>
+                                        }
+                                    </div>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteModel(model)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<ModelFavorite> models = [];
+    private ModelFavorite newModel = new() { Name = "", InternalName = "" };
+    private string aliasesInput = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadModels();
+    }
+
+    private async Task LoadModels()
+    {
+        models = await Db.ModelFavorites.OrderBy(m => m.Name).ToListAsync();
+    }
+
+    private async Task AddModel()
+    {
+        // Parse aliases
+        if (!string.IsNullOrWhiteSpace(aliasesInput))
+        {
+            newModel.Aliases = aliasesInput
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToList();
+        }
+
+        Db.ModelFavorites.Add(newModel);
+        await Db.SaveChangesAsync();
+
+        newModel = new ModelFavorite { Name = "", InternalName = "" };
+        aliasesInput = "";
+        await LoadModels();
+    }
+
+    private async Task DeleteModel(ModelFavorite model)
+    {
+        Db.ModelFavorites.Remove(model);
+        await Db.SaveChangesAsync();
+        await LoadModels();
+    }
+}
