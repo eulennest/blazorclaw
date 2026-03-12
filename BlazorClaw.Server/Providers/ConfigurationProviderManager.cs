@@ -7,7 +7,7 @@ namespace BlazorClaw.Server.Providers
     {
         private readonly IConfiguration _configuration;
         private readonly HttpClient httpClient;
-        private readonly List<ProviderConfiguration> _providers;
+        private List<ConfigProviderConfiguration> _providers;
 
         public ConfigurationProviderManager(IConfiguration configuration, HttpClient httpClient)
         {
@@ -69,17 +69,25 @@ namespace BlazorClaw.Server.Providers
             return _providers.Select(p => p.Name);
         }
 
-        private List<ProviderConfiguration> LoadFromConfig()
+        public Task<bool> SetProviderAsync(string provider, IProviderConfiguration config)
         {
-            var list = new List<ProviderConfiguration>();
+            _configuration[$"Providers:{provider}:Uri"] = config.Uri;
+            _configuration[$"Providers:{provider}:Token"] = config.Token;
+            _providers = LoadFromConfig();
+            return Task.FromResult(true);
+        }
+
+        private List<ConfigProviderConfiguration> LoadFromConfig()
+        {
+            var list = new List<ConfigProviderConfiguration>();
             var providerSections = _configuration.GetSection("Providers").GetChildren();
             foreach (var section in providerSections)
             {
-                list.Add(new ProviderConfiguration
+                list.Add(new ConfigProviderConfiguration
                 {
                     Name = section.Key,
                     Uri = section["Uri"] ?? string.Empty,
-                    Token = section["Token"] ?? string.Empty,
+                    Token = section["Token"],
                     Models = section.GetSection("Models").Get<List<string>>() ?? []
                 });
             }
@@ -87,11 +95,9 @@ namespace BlazorClaw.Server.Providers
         }
     }
 
-    public class ProviderConfiguration : IProviderConfiguration
+    public class ConfigProviderConfiguration : ProviderConfiguration
     {
         public string Name { get; set; } = string.Empty;
-        public string Uri { get; set; } = string.Empty;
-        public string Token { get; set; } = string.Empty;
         public List<string> Models { get; set; } = [];
     }
 }

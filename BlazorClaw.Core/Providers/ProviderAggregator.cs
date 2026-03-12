@@ -37,5 +37,23 @@ namespace BlazorClaw.Core.Providers
             var parts = model.Split('/', 2);
             return parts?.FirstOrDefault() ?? "default";
         }
+
+        public async Task<bool> SetProviderAsync(string provider, IProviderConfiguration config)
+        {
+            var prov = _providers.FirstOrDefault(o => o.GetProviders().Contains(provider));
+            if (prov != null) return await prov.SetProviderAsync(provider, config);
+
+            foreach (var item in _providers)
+            {
+                try
+                {
+                    if (await item.SetProviderAsync(provider, config))
+                        return true;
+                }
+                catch (Exception)
+                { }
+            }
+            return false;
+        }
     }
 }

@@ -11,7 +11,7 @@
 
 <div class="mt-4">
     <h5>Konfigurierte Provider</h5>
-    
+
     @if (providers == null)
     {
         <div class="text-center">
@@ -33,7 +33,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Endpoint</th>
-                    <th>Model</th>
+                    <th>Token</th>
                     <th>Status</th>
                 </tr>
             </thead>
@@ -48,7 +48,7 @@
                             <code class="small">@provider.Value.Uri</code>
                         </td>
                         <td>
-                            <span class="badge bg-secondary">@GetModelForProvider(provider.Key)</span>
+                            <span class="badge bg-secondary">@GetMaskedToken(provider.Value.Token)</span>
                         </td>
                         <td>
                             @if (!string.IsNullOrEmpty(provider.Value.Token))
@@ -65,45 +65,17 @@
             </tbody>
         </table>
     }
-
-    <h5 class="mt-4">Aktuelles Modell</h5>
-    <div class="card">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <label class="form-label">Modell</label>
-                    <InputText @bind-Value="currentModel" class="form-control" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Temperatur</label>
-                    <InputNumber @bind-Value="temperature" class="form-control" step="0.1" min="0" max="2" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Max Tokens</label>
-                    <InputNumber @bind-Value="maxTokens" class="form-control" />
-                </div>
-            </div>
-            <div class="mt-3">
-                <button class="btn btn-primary" @onclick="SaveSettings">
-                    <i class="bi bi-check-lg"></i> Speichern
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
 
 @code {
     private Dictionary<string, IProviderConfiguration>? providers;
-    private string currentModel = "";
-    private double temperature = 0.7;
-    private int maxTokens = 2000;
 
     protected override void OnInitialized()
     {
         // Load providers
         var providerNames = ProviderManager.GetProviders();
         providers = new Dictionary<string, IProviderConfiguration>();
-        
+
         foreach (var name in providerNames)
         {
             var config = ProviderManager.GetProviderConfig(name);
@@ -112,26 +84,25 @@
                 providers[name] = config;
             }
         }
-
-        // Load LLM settings
-        currentModel = Configuration["Llm:Model"] ?? "openrouter/mistralai/mistral-large";
-        temperature = double.TryParse(Configuration["Llm:Temperature"], out var t) ? t : 0.7;
-        maxTokens = int.TryParse(Configuration["Llm:MaxTokens"], out var m) ? m : 2000;
     }
 
-    private string GetModelForProvider(string providerName)
+    private string GetMaskedToken(string token)
     {
-        if (currentModel.StartsWith(providerName + "/"))
-        {
-            return currentModel.Substring(providerName.Length + 1);
-        }
-        return currentModel;
+        if ((token?.Length ?? 0) < 15) return token??string.Empty;
+        return $"{token!.Substring(0, 15)}...{token.Substring(token.Length - 5)}";
     }
 
-    private void SaveSettings()
+    private async Task SaveSettings()
     {
         // TODO: Save to configuration
-        // For now, just show a message
-        Console.WriteLine($"Saving: Model={currentModel}, Temp={temperature}, MaxTokens={maxTokens}");
+        var provider = "";
+        var token = "";
+        var uri = "";
+
+        await ProviderManager.SetProviderAsync(provider, new ProviderConfiguration()
+            {
+                Uri = uri,
+                Token = token
+            });
     }
 }
