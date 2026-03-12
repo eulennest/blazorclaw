@@ -28,9 +28,9 @@ namespace BlazorClaw.Server.Services
             get
             {
                 var context = state.Services.GetRequiredService<MessageContextAccessor>().Context!;
-                if (User == null && !string.IsNullOrWhiteSpace(context.Channel?.SenderId))
+                if (User == null && !string.IsNullOrWhiteSpace(context.UserId))
                 {
-                    User = state.Services.GetRequiredService<UserManager<ApplicationUser>>().FindByIdAsync(context.Channel.SenderId).GetAwaiter().GetResult();
+                    User = state.Services.GetRequiredService<UserManager<ApplicationUser>>().FindByIdAsync(context.UserId).GetAwaiter().GetResult();
                 }
                 var uinfo = User;
                 var maxtoken = 100000;
