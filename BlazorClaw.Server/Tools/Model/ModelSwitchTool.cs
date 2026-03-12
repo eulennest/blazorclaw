@@ -1,6 +1,8 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Providers;
 using BlazorClaw.Core.Tools;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -9,7 +11,7 @@ namespace BlazorClaw.Server.Tools.Model;
 
 public class ModelSwitchParams
 {
-    [Description("Kurzname des Modells: mistral, gemini, llama, gpt4, gpt4o, gpt4o-mini")]
+    [Description("Kurzname, Alias oder Name des Modells")]
     [Required]
     public string Model { get; set; } = string.Empty;
 }
@@ -18,9 +20,10 @@ public class ModelSwitchTool : BaseTool<ModelSwitchParams>
 {
     private readonly IOptionsMonitor<LlmOptions> _optionsMonitor;
     private readonly IProviderManager _providerManager;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    // Mapping from short names to full model identifiers
-    private static readonly Dictionary<string, string> ModelMap = new(StringComparer.OrdinalIgnoreCase)
+    // Fallback model map for when database is not available
+    private static readonly Dictionary<string, string> FallbackModelMap = new(StringComparer.OrdinalIgnoreCase)
     {
         { "mistral", "openrouter/mistralai/mistral-large" },
         { "mistral-large", "openrouter/mistralai/mistral-large" },
@@ -35,27 +38,81 @@ public class ModelSwitchTool : BaseTool<ModelSwitchParams>
         { "claude-sonnet", "openrouter/anthropic/claude-sonnet-4-20250514" },
     };
 
-    public ModelSwitchTool(IOptionsMonitor<LlmOptions> optionsMonitor, IProviderManager providerManager)
+    public ModelSwitchTool(
+        IOptionsMonitor<LlmOptions> optionsMonitor, 
+        IProviderManager providerManager,
+        IServiceScopeFactory scopeFactory)
     {
         _optionsMonitor = optionsMonitor;
         _providerManager = providerManager;
+        _scopeFactory = scopeFactory;
     }
 
     public override string Name => "model_switch";
-    public override string Description => "Wechselt schnell zu einem anderen Modell (Kurzname)";
+    public override string Description => "Wechselt schnell zu einem anderen Modell (Kurzname, Alias oder Name)";
 
-    protected override Task<string> ExecuteInternalAsync(ModelSwitchParams p, MessageContext context)
+    protected override async Task<string> ExecuteInternalAsync(ModelSwitchParams p, MessageContext context)
     {
         if (context.Session == null)
-            return Task.FromResult("Fehler: Keine Session verfügbar");
+            return "Fehler: Keine Session verfügbar";
 
-        var shortName = p.Model.ToLowerInvariant().Trim();
+        var searchTerm = p.Model.ToLowerInvariant().Trim();
         
-        // Check if short name exists in map
-        if (!ModelMap.TryGetValue(shortName, out var fullModel))
+        // Build model map from database favorites
+        var modelMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        
+        try
         {
-            var available = string.Join(", ", ModelMap.Keys);
-            return Task.FromResult($"Unbekanntes Modell '{p.Model}'. Verfügbare Modelle: {available}");
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var favorites = await db.ModelFavorites.ToListAsync();
+            
+            foreach (var fav in favorites)
+            {
+                // Add InternalName as key
+                var internalKey = fav.InternalName.ToLowerInvariant();
+                modelMap[internalKey] = fav.InternalName;
+                
+                // Add Name as key (lowercase)
+                if (!string.IsNullOrEmpty(fav.Name))
+                {
+                    modelMap[fav.Name.ToLowerInvariant()] = fav.InternalName;
+                }
+                
+                // Add all aliases
+                foreach (var alias in fav.Aliases)
+                {
+                    if (!string.IsNullOrEmpty(alias))
+                    {
+                        modelMap[alias.ToLowerInvariant()] = fav.InternalName;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Fallback to static map if database fails
+            foreach (var kvp in FallbackModelMap)
+            {
+                modelMap[kvp.Key] = kvp.Value;
+            }
+        }
+
+        // If no favorites found, use fallback
+        if (!modelMap.Any())
+        {
+            foreach (var kvp in FallbackModelMap)
+            {
+                modelMap[kvp.Key] = kvp.Value;
+            }
+        }
+        
+        // Check if search term exists in map
+        if (!modelMap.TryGetValue(searchTerm, out var fullModel))
+        {
+            var available = string.Join(", ", modelMap.Keys);
+            return $"Unbekanntes Modell '{p.Model}'. Verfügbare Modelle: {available}";
         }
 
         // Validate provider exists
@@ -63,11 +120,11 @@ public class ModelSwitchTool : BaseTool<ModelSwitchParams>
         var availableProviders = _providerManager.GetProviders().ToList();
         
         if (!availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
-            return Task.FromResult($"Fehler: Provider '{providerName}' nicht konfiguriert.");
+            return $"Fehler: Provider '{providerName}' nicht konfiguriert.";
 
         // Set the model on session
         context.Session.CurrentModel = fullModel;
         
-        return Task.FromResult($"Modell gewechselt zu: {fullModel}");
+        return $"Modell gewechselt zu: {fullModel}";
     }
 }
