@@ -1,40 +1,312 @@
 @page "/admin/security"
+@attribute [Authorize]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using BlazorClaw.Core.Data
+@using BlazorClaw.Core.Models
+@inject RoleManager<ApplicationRole> RoleManager
+@inject UserManager<ApplicationUser> UserManager
+@inject ApplicationDbContext Db
 
-<PageTitle>Admin - Sicherheit</PageTitle>
+<PageTitle>Sicherheit - BlazorClaw</PageTitle>
 
-<h2>Sicherheitseinstellungen</h2>
-<p class="text-muted">Policies, Rollen und Zugriffskontrollen.</p>
+<h2>Sicherheit</h2>
+<p class="text-muted">Rollen- und Benutzerverwaltung.</p>
 
-<div class="mt-4">
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> Diese Seite ist ein Platzhalter. Implementierung folgt...
-    </div>
-    
-    <h5 class="mt-4">Rollen</h5>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Rolle</th>
-                <th>Mitglieder</th>
-                <th>Beschreibung</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Admin</td>
-                <td>1</td>
-                <td>Vollzugriff</td>
-            </tr>
-            <tr>
-                <td>User</td>
-                <td>0</td>
-                <td>Standard-Nutzer</td>
-            </tr>
-            <tr>
-                <td>Guest</td>
-                <td>0</td>
-                <td>Gast-Zugriff</td>
-            </tr>
-        </tbody>
-    </table>
+<!-- Tabs -->
+<ul class="nav nav-tabs mt-4" id="securityTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(activeTab == "roles" ? "active" : "")" @onclick="SetTabRoles">
+            <i class="bi bi-shield-lock"></i> Rollen
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(activeTab == "users" ? "active" : "")" @onclick="SetTabUsers">
+            <i class="bi bi-people"></i> Benutzer
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content mt-4">
+    <!-- ROLES TAB -->
+    @if (activeTab == "roles")
+    {
+        <div class="row">
+            <div class="col-md-5">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Neue Rolle erstellen</h5>
+                    </div>
+                    <div class="card-body">
+                        <EditForm Model="newRole" OnValidSubmit="CreateRole">
+                            <div class="mb-3">
+                                <label class="form-label">Rollename</label>
+                                <InputText @bind-Value="newRole.Name" class="form-control" placeholder="z.B. Moderator" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Beschreibung</label>
+                                <InputTextArea @bind-Value="newRole.Description" class="form-control" rows="2" />
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-plus-lg"></i> Erstellen
+                            </button>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Rollen (@roles.Count)</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Mitglieder</th>
+                                    <th>Beschreibung</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var role in roles)
+                                {
+                                    <tr>
+                                        <td><strong>@role.Name</strong></td>
+                                        <td>
+                                            <span class="badge bg-secondary">@roleMemberCounts.GetValueOrDefault(role.Id, 0)</span>
+                                        </td>
+                                        <td>@role.Description</td>
+                                        <td>
+                                            @if (role.Name != "Admin")
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteRole(role)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- USERS TAB -->
+    @if (activeTab == "users")
+    {
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Benutzer (@users.Count)</h5>
+                        <input type="text" class="form-control w-25" placeholder="Suchen..." @bind="userSearch" @bind:after="SearchUsers" />
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Benutzername</th>
+                                    <th>E-Mail</th>
+                                    <th>Rollen</th>
+                                    <th>Erstellt</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var user in filteredUsers)
+                                {
+                                    <tr>
+                                        <td>@user.UserName</td>
+                                        <td>@user.Email</td>
+                                        <td>
+                                            @foreach (var role in userRoles.GetValueOrDefault(user.Id, []))
+                                            {
+                                                <span class="badge bg-primary me-1">@role</span>
+                                            }
+                                        </td>
+                                        <td>@user.CreatedAt.ToLocalTime().ToString("d")</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenUserRolesModal(user)">
+                                                <i class="bi bi-pencil"></i> Rollen
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
+
+<!-- User Roles Modal -->
+@if (showUserRolesModal && selectedUser != null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Rollen für @selectedUser.UserName</h5>
+                    <button type="button" class="btn-close" @onclick="CloseUserRolesModal"></button>
+                </div>
+                <div class="modal-body">
+                    @foreach (var role in allRoles)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" 
+                                   checked="@selectedUserRoles.Contains(role.Name)"
+                                   @onchange="e => ToggleRole(role.Name, e.Value is true)" />
+                            <label class="form-check-label">@role.Name</label>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseUserRolesModal">Abbrechen</button>
+                    <button class="btn btn-primary" @onclick="SaveUserRoles">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string activeTab = "roles";
+    private List<ApplicationRole> roles = [];
+    private List<ApplicationUser> users = [];
+    private List<ApplicationUser> filteredUsers = [];
+    private Dictionary<string, int> roleMemberCounts = [];
+    private Dictionary<string, List<string>> userRoles = [];
+    private string userSearch = "";
+    private ApplicationRole newRole = new();
+
+    // Modal
+    private bool showUserRolesModal;
+    private ApplicationUser? selectedUser;
+    private List<string> selectedUserRoles = [];
+    private List<ApplicationRole> allRoles = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoles();
+        await LoadUsers();
+    }
+
+    private async Task LoadRoles()
+    {
+        roles = RoleManager.Roles.ToList();
+        
+        roleMemberCounts = [];
+        foreach (var role in roles)
+        {
+            var usersInRole = await UserManager.GetUsersInRoleAsync(role.Name ?? "");
+            roleMemberCounts[role.Id] = usersInRole.Count;
+        }
+    }
+
+    private void SetTabRoles() => activeTab = "roles";
+    private void SetTabUsers() => activeTab = "users";
+
+    private async Task LoadUsers()
+    {
+        users = UserManager.Users.ToList();
+        allRoles = roles.Any() ? roles : RoleManager.Roles.ToList();
+        
+        userRoles = [];
+        foreach (var user in users)
+        {
+            var userRoleList = await UserManager.GetRolesAsync(user);
+            userRoles[user.Id] = userRoleList.ToList();
+        }
+        
+        filteredUsers = users;
+    }
+
+    private async Task SearchUsers()
+    {
+        if (string.IsNullOrWhiteSpace(userSearch))
+        {
+            filteredUsers = users;
+        }
+        else
+        {
+            var search = userSearch.ToLower();
+            filteredUsers = users.Where(u => 
+                (u.UserName?.ToLower().Contains(search) ?? false) ||
+                (u.Email?.ToLower().Contains(search) ?? false)
+            ).ToList();
+        }
+    }
+
+    private async Task CreateRole()
+    {
+        if (string.IsNullOrWhiteSpace(newRole.Name)) return;
+        
+        var result = await RoleManager.CreateAsync(newRole);
+        if (result.Succeeded)
+        {
+            newRole = new ApplicationRole();
+            await LoadRoles();
+        }
+    }
+
+    private async Task DeleteRole(ApplicationRole role)
+    {
+        var result = await RoleManager.DeleteAsync(role);
+        if (result.Succeeded)
+        {
+            await LoadRoles();
+        }
+    }
+
+    private void OpenUserRolesModal(ApplicationUser user)
+    {
+        selectedUser = user;
+        selectedUserRoles = userRoles.GetValueOrDefault(user.Id, []).ToList();
+        showUserRolesModal = true;
+    }
+
+    private void CloseUserRolesModal()
+    {
+        showUserRolesModal = false;
+        selectedUser = null;
+    }
+
+    private async Task SaveUserRoles()
+    {
+        if (selectedUser == null) return;
+
+        var currentRoles = await UserManager.GetRolesAsync(selectedUser);
+        await UserManager.RemoveFromRolesAsync(selectedUser, currentRoles);
+        
+        if (selectedUserRoles.Any())
+        {
+            await UserManager.AddToRolesAsync(selectedUser, selectedUserRoles);
+        }
+
+        await LoadUsers();
+        CloseUserRolesModal();
+    }
+
+    private void ToggleRole(string roleName, bool isChecked)
+    {
+        if (isChecked)
+        {
+            if (!selectedUserRoles.Contains(roleName))
+                selectedUserRoles.Add(roleName);
+        }
+        else
+        {
+            selectedUserRoles.Remove(roleName);
+        }
+    }
+}
