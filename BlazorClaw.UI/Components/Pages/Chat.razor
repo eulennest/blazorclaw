@@ -159,6 +159,14 @@
         if (currentSession != null)
         {
             selectedModel = currentSession.CurrentModel;
+            if (!modelFavorites.Any(o => o.InternalName == selectedModel))
+            {
+                modelFavorites.Add(new ModelFavorite()
+                {
+                    InternalName = selectedModel,
+                    Name = selectedModel.Split('/').Last()
+                });
+            }
         }
 
         // Setup SignalR
