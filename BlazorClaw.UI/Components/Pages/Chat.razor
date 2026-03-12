@@ -10,8 +10,10 @@
 @using BlazorClaw.Core.Models
 @using BlazorClaw.Core.Services
 @using BlazorClaw.Core.DTOs
+@using Microsoft.EntityFrameworkCore
 @inject NavigationManager Nav
 @inject ISessionQueryService SessionQueryService
+@inject ApplicationDbContext Db
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ILogger<Chat> logger
@@ -44,11 +46,23 @@
     <main class="chat-main">
         <div class="chat-header">
             <h2>@currentSession?.Title</h2>
-            <select class="model-select" @bind="selectedModel">
-                <option value="openrouter/mistralai/mistral-large">Mistral Large</option>
-                <option value="openrouter/anthropic/claude-sonnet-4-6">Claude Sonnet</option>
-                <option value="openrouter/openai/gpt-4o">GPT-4o</option>
-            </select>
+            @if (modelFavorites.Any())
+            {
+                <select class="model-select" @bind="selectedModel">
+                    @foreach (var model in modelFavorites)
+                    {
+                        <option value="@model.InternalName">@model.Name</option>
+                    }
+                </select>
+            }
+            else
+            {
+                <select class="model-select" @bind="selectedModel">
+                    <option value="openrouter/mistralai/mistral-large">Mistral Large</option>
+                    <option value="openrouter/anthropic/claude-sonnet-4-6">Claude Sonnet</option>
+                    <option value="openrouter/openai/gpt-4o">GPT-4o</option>
+                </select>
+            }
         </div>
 
         <div class="messages-container" id="messages-container">
@@ -118,11 +132,19 @@
     private ChatSession? currentSession;
     private string userInput = "";
     private string selectedModel = "openrouter/mistralai/mistral-large";
+    private List<ModelFavorite> modelFavorites = [];
     private bool isLoading;
     private string? userId;
 
     protected override async Task OnInitializedAsync()
     {
+        // Load model favorites
+        modelFavorites = await Db.ModelFavorites.OrderBy(m => m.Name).ToListAsync();
+        if (modelFavorites.Any() && string.IsNullOrEmpty(selectedModel))
+        {
+            selectedModel = modelFavorites.First().InternalName;
+        }
+
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         var user = authState.User;
         userId = UserManager.GetUserId(user);
