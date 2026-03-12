@@ -139,8 +139,11 @@
                                         </td>
                                         <td>@user.CreatedAt.ToLocalTime().ToString("d")</td>
                                         <td>
-                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenUserRolesModal(user)">
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => OpenUserRolesModal(user)">
                                                 <i class="bi bi-pencil"></i> Rollen
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => OpenEditUserModal(user)">
+                                                <i class="bi bi-person-fill"></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -237,6 +240,35 @@
     </div>
 }
 
+<!-- Edit User Modal -->
+@if (showEditUserModal && editingEditUser != null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Benutzer bearbeiten: @editingEditUser.UserName</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditUserModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Benutzername</label>
+                        <input type="text" class="form-control" @bind="editUserName" placeholder="Benutzername" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">E-Mail</label>
+                        <input type="email" class="form-control" @bind="editUserEmail" placeholder="email@example.com" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseEditUserModal">Abbrechen</button>
+                    <button class="btn btn-primary" @onclick="SaveUserEdit">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private string activeTab = "roles";
     private List<ApplicationRole> roles = [];
@@ -250,7 +282,9 @@
     // Modal
     private bool showUserRolesModal;
     private bool showCreateUserModal;
+    private bool showEditUserModal;
     private ApplicationUser? selectedUser;
+    private ApplicationUser? editingEditUser;
     private List<string> selectedUserRoles = [];
     private List<ApplicationRole> allRoles = [];
     
@@ -259,6 +293,10 @@
     private string newUserEmail = "";
     private string newUserPassword = "";
     private List<string> newUserRoles = [];
+    
+    // Edit user
+    private string editUserName = "";
+    private string editUserEmail = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -433,6 +471,35 @@
             
             await LoadUsers();
             CloseCreateUserModal();
+        }
+    }
+
+    private void OpenEditUserModal(ApplicationUser user)
+    {
+        editingEditUser = user;
+        editUserName = user.UserName ?? "";
+        editUserEmail = user.Email ?? "";
+        showEditUserModal = true;
+    }
+
+    private void CloseEditUserModal()
+    {
+        showEditUserModal = false;
+        editingEditUser = null;
+    }
+
+    private async Task SaveUserEdit()
+    {
+        if (editingEditUser == null) return;
+
+        editingEditUser.UserName = editUserName;
+        editingEditUser.Email = editUserEmail;
+        
+        var result = await UserManager.UpdateAsync(editingEditUser);
+        if (result.Succeeded)
+        {
+            await LoadUsers();
+            CloseEditUserModal();
         }
     }
 }
