@@ -31,8 +31,8 @@ namespace BlazorClaw.Server.Providers
                     {
                         foreach (var model in ret.Data)
                         {
-                            if (!string.IsNullOrWhiteSpace(model.Name))
-                                prov.Models.Add(model.Name);
+                            if (!string.IsNullOrWhiteSpace(model.Id))
+                                prov.Models.Add(model.Id);
                         }
                     }
                 }
