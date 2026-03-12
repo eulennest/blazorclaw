@@ -1,3 +1,4 @@
+using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Providers;
 
 namespace BlazorClaw.Server.Providers
@@ -5,19 +6,47 @@ namespace BlazorClaw.Server.Providers
     public class ConfigurationProviderManager : IProviderManager
     {
         private readonly IConfiguration _configuration;
+        private readonly HttpClient httpClient;
         private readonly List<ProviderConfiguration> _providers;
 
-        public ConfigurationProviderManager(IConfiguration configuration)
+        public ConfigurationProviderManager(IConfiguration configuration, HttpClient httpClient)
         {
             _configuration = configuration;
+            this.httpClient = httpClient;
             _providers = LoadFromConfig();
         }
 
-        public IAsyncEnumerable<string> GetModelsAsync(string provider)
+        public async IAsyncEnumerable<string> GetModelsAsync(string provider)
         {
-            return _providers
-                .FirstOrDefault(p => p.Name.Equals(provider, StringComparison.OrdinalIgnoreCase))?
-                .Models.ToAsyncEnumerable() ?? AsyncEnumerable.Empty<string>();
+            var prov = _providers.FirstOrDefault(p => p.Name.Equals(provider, StringComparison.OrdinalIgnoreCase));
+            if (prov != null && (prov.Models?.Count ?? 0) == 0)
+            {
+                prov.Models ??= [];
+                try
+                {
+                    var uri = new Uri(new Uri(prov.Uri), "models");
+                    var ret = await httpClient.GetFromJsonAsync<ModelListResponse>(uri);
+
+                    if (ret?.Data != null)
+                    {
+                        foreach (var model in ret.Data)
+                        {
+                            if (!string.IsNullOrWhiteSpace(model.Name))
+                                prov.Models.Add(model.Name);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                }
+
+            }
+
+            if (prov?.Models != null)
+                foreach (var item in prov.Models)
+                {
+                    yield return item;
+                }
         }
 
         public IProviderConfiguration? GetProviderConfig(string provider)

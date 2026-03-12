@@ -12,6 +12,10 @@ public class ModelListResponse
 
     [JsonPropertyName("data")]
     public List<ModelInfo> Data { get; set; } = [];
+
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
+
 }
 
 /// <summary>
@@ -104,6 +108,10 @@ public class ModelPricing
 
     [JsonPropertyName("embedding")]
     public string? Embedding { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
+
 }
 
 /// <summary>
@@ -119,6 +127,9 @@ public class ModelArchitecture
 
     [JsonPropertyName("instruction_type")]
     public string? InstructionType { get; set; }
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
+
 }
 
 /// <summary>
@@ -131,6 +142,10 @@ public class ModelFinetuning
 
     [JsonPropertyName("hyperparameters")]
     public FinetuningHyperparameters? Hyperparameters { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
+
 }
 
 public class FinetuningHyperparameters
@@ -143,4 +158,8 @@ public class FinetuningHyperparameters
 
     [JsonPropertyName("epochs")]
     public object? Epochs { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
+
 }
