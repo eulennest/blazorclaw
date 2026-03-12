@@ -99,7 +99,10 @@ namespace BlazorClaw.Core.Utils
         {
             httpClient.BaseAddress = new Uri(conf.Uri.TrimEnd('/') + "/");
             if (!string.IsNullOrWhiteSpace(conf.Token))
+            {
                 httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", conf.Token);
+                httpClient.DefaultRequestHeaders.Add("X-Api-Key", conf.Token);
+            }
         }
     }
 }
