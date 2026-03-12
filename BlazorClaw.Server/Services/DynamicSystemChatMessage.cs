@@ -3,6 +3,7 @@ using BlazorClaw.Core.Data;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
 using Microsoft.AspNetCore.Identity;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace BlazorClaw.Server.Services
@@ -26,6 +27,7 @@ namespace BlazorClaw.Server.Services
                 var sb = new StringBuilder();
                 sb.AppendLine($"Current Time: {DateTime.UtcNow:R}");
                 sb.AppendLine($"Current Model: {context.Session?.CurrentModel}");
+                sb.AppendLine($"Current OS: {RuntimeInformation.OSDescription}");
                 sb.AppendLine($"Session Title: {context.Session?.Title}");
                 sb.AppendLine($"Session ID: {context.Session?.Id}");
                 sb.AppendLine($"User ID: {context.UserId}");
