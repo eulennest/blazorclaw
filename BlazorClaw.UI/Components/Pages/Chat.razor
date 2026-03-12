@@ -48,7 +48,7 @@
     <!-- Main Chat Area -->
     <main class="chat-main">
         <div class="chat-header">
-            <h2>@currentSession?.Title</h2>
+            <h2>@currentSession?.Session.Title</h2>
             @if (modelFavorites.Any())
             {
                 <select class="model-select" @bind="selectedModel">
