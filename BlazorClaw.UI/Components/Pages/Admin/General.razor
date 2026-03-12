@@ -38,19 +38,6 @@
                         <InputNumber @bind-Value="settings.MaxTokens" class="form-control" step="100" min="1" max="100000" />
                     </div>
 
-                    <hr />
-                    <h6 class="mb-3 text-muted">Datenbank Einstellungen</h6>
-
-                    <div class="mb-3">
-                        <label class="form-label">Standard Admin E-Mail</label>
-                        <InputText @bind-Value="settings.DefaultAdminEmail" class="form-control" />
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Standard Admin Passwort</label>
-                        <InputText @bind-Value="settings.DefaultAdminPassword" type="password" class="form-control" />
-                    </div>
-
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-check-lg"></i> Speichern
                     </button>
@@ -88,10 +75,6 @@
                         <td class="text-muted" style="width: 150px;">Connection:</td>
                         <td><code>@Configuration.GetConnectionString("DefaultConnection")</code></td>
                     </tr>
-                    <tr>
-                        <td class="text-muted">Admin E-Mail:</td>
-                        <td>@Configuration["Database:DefaultAdminEmail"]</td>
-                    </tr>
                 </table>
 
                 <h6 class="text-muted mt-4">Provider</h6>
@@ -124,20 +107,16 @@
         {
             Model = Configuration["Llm:Model"] ?? "openrouter/mistralai/mistral-large",
             Temperature = double.TryParse(Configuration["Llm:Temperature"], out var temp) ? temp : 0.7,
-            MaxTokens = int.TryParse(Configuration["Llm:MaxTokens"], out var tokens) ? tokens : 2000,
-            DefaultAdminEmail = Configuration["Database:DefaultAdminEmail"] ?? "",
-            DefaultAdminPassword = Configuration["Database:DefaultAdminPassword"] ?? ""
+            MaxTokens = int.TryParse(Configuration["Llm:MaxTokens"], out var tokens) ? tokens : 2000
         };
     }
 
     private void SaveSettings()
     {
-        // Update configuration in memory
+        // Update configuration in memory (auto-saved to file by SaveableJsonConfigurationProvider)
         Configuration["Llm:Model"] = settings.Model;
         Configuration["Llm:Temperature"] = settings.Temperature.ToString();
         Configuration["Llm:MaxTokens"] = settings.MaxTokens.ToString();
-        Configuration["Database:DefaultAdminEmail"] = settings.DefaultAdminEmail;
-        Configuration["Database:DefaultAdminPassword"] = settings.DefaultAdminPassword;
     }
 
     private class SettingsModel
@@ -145,7 +124,5 @@
         public string Model { get; set; } = "";
         public double Temperature { get; set; }
         public int MaxTokens { get; set; }
-        public string DefaultAdminEmail { get; set; } = "";
-        public string DefaultAdminPassword { get; set; } = "";
     }
 }
