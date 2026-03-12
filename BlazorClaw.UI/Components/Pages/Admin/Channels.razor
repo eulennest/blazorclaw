@@ -1,189 +1,32 @@
 @page "/admin/channels"
-@attribute [Authorize]
-@using Microsoft.AspNetCore.Authorization
-@using Microsoft.AspNetCore.Components.Authorization
-@using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.EntityFrameworkCore
-@using BlazorClaw.Core.Data
-@using BlazorClaw.Core.Models
-@inject ApplicationDbContext Db
-@inject UserManager<ApplicationUser> UserManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Kanäle - BlazorClaw</PageTitle>
+<PageTitle>Admin - Kanäle</PageTitle>
 
 <h2>Kanal-Konfiguration</h2>
-<p class="text-muted">Verwaltung der Messaging-Kanäle (Telegram, Matrix).</p>
+<p class="text-muted">Verwaltung der Messaging-Kanäle (Telegram, Matrix, Web).</p>
 
-<div class="row mt-4">
-    <!-- Add New Channel -->
-    <div class="col-md-5">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Neuen Kanal hinzufügen</h5>
-            </div>
-            <div class="card-body">
-                <EditForm Model="newChannel" OnValidSubmit="AddChannel">
-                    <DataAnnotationsValidator />
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Kanal-Typ</label>
-                        <select class="form-select" @bind="newChannel.ChannelType">
-                            <option value="Telegram">Telegram</option>
-                            <option value="Matrix">Matrix</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Kanal-ID</label>
-                        <InputText @bind-Value="newChannel.ChannelId" class="form-control" placeholder="z.B. default, alerts" />
-                        <ValidationMessage For="() => newChannel.ChannelId" />
-                        <small class="text-muted">Eindeutige ID für diesen Kanal</small>
-                    </div>
-                    
-                    @if (newChannel.ChannelType == "Telegram")
-                    {
-                        <div class="mb-3">
-                            <label class="form-label">Bot Token</label>
-                            <InputText @bind-Value="newChannel.Token" type="password" class="form-control" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" />
-                        </div>
-                    }
-                    else if (newChannel.ChannelType == "Matrix")
-                    {
-                        <div class="mb-3">
-                            <label class="form-label">Homeserver URL</label>
-                            <InputText @bind-Value="newChannel.Homeserver" class="form-control" placeholder="https://matrix.org" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Access Token</label>
-                            <InputText @bind-Value="newChannel.Token" type="password" class="form-control" placeholder="Matrix Access Token" />
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">User ID</label>
-                            <InputText @bind-Value="newChannel.UserId" class="form-control" />
-                            <small class="text-muted">Format: @("@user:homeserver.org")</small>
-                        </div>
-                    }
-                    
-                    <div class="mb-3 form-check">
-                        <InputCheckbox @bind-Value="newChannel.IsEnabled" class="form-check-input" id="enabledCheck" />
-                        <label class="form-check-label" for="enabledCheck">
-                            Aktiviert
-                        </label>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-plus-lg"></i> Hinzufügen
-                    </button>
-                </EditForm>
-            </div>
-        </div>
+<div class="mt-4">
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Diese Seite ist ein Platzhalter. Implementierung folgt...
     </div>
-
-    <!-- Channel List -->
-    <div class="col-md-7">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Konfigurierte Kanäle (@channels.Count)</h5>
-            </div>
-            <div class="card-body">
-                @if (!channels.Any())
-                {
-                    <p class="text-muted">Noch keine Kanäle konfiguriert.</p>
-                }
-                else
-                {
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Typ</th>
-                                    <th>ID</th>
-                                    <th>Status</th>
-                                    <th>Aktionen</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var channel in channels)
-                                {
-                                    <tr>
-                                        <td>
-                                            @if (channel.ChannelType == "Telegram")
-                                            {
-                                                <i class="bi bi-telegram text-primary"></i> <span>Telegram</span>
-                                            }
-                                            else if (channel.ChannelType == "Matrix")
-                                            {
-                                                <i class="bi bi-chat-dots text-success"></i> <span>Matrix</span>
-                                            }
-                                        </td>
-                                        <td><code>@channel.ChannelId</code></td>
-                                        <td>
-                                            @if (channel.IsEnabled)
-                                            {
-                                                <span class="badge bg-success">Aktiv</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-secondary">Deaktiviert</span>
-                                            }
-                                        </td>
-                                        <td>
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteChannel(channel)">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-            </div>
-        </div>
-
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="mb-0">Hinweis</h5>
-            </div>
-            <div class="card-body">
-                <p class="small text-muted">
-                    <i class="bi bi-info-circle"></i> 
-                    Nach dem Hinzufügen oder Entfernen von Kanälen muss der Server neu gestartet werden, damit die Änderungen wirksam werden.
-                </p>
-            </div>
-        </div>
-    </div>
+    
+    <h5 class="mt-4">Aktive Kanäle</h5>
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Kanal</th>
+                <th>Status</th>
+                <th>ID</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><i class="bi bi-telegram"></i> Telegram</td>
+                <td><span class="badge bg-success">Aktiv</span></td>
+                <td><code>default</code></td>
+                <td><button class="btn btn-sm btn-outline-secondary">Bearbeiten</button></td>
+            </tr>
+        </tbody>
+    </table>
 </div>
-
-@code {
-    private List<ChannelConfig> channels = [];
-    private ChannelConfig newChannel = new() { ChannelType = "Telegram", ChannelId = "" };
-
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadChannels();
-    }
-
-    private async Task LoadChannels()
-    {
-        channels = await Db.ChannelConfigs.OrderBy(c => c.ChannelType).ThenBy(c => c.ChannelId).ToListAsync();
-    }
-
-    private async Task AddChannel()
-    {
-        Db.ChannelConfigs.Add(newChannel);
-        await Db.SaveChangesAsync();
-        
-        newChannel = new ChannelConfig { ChannelType = "Telegram", ChannelId = "" };
-        await LoadChannels();
-    }
-
-    private async Task DeleteChannel(ChannelConfig channel)
-    {
-        Db.ChannelConfigs.Remove(channel);
-        await Db.SaveChangesAsync();
-        await LoadChannels();
-    }
-}
