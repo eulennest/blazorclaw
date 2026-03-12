@@ -35,7 +35,7 @@ namespace BlazorClaw.Server.Services
                 var uinfo = User;
                 var maxtoken = 100000;
 
-                var tokenProz = (state.LastUsage?.PromptTokens ?? 1) /  100.0 * maxtoken;
+                var tokenProz = (state.LastUsage?.PromptTokens ?? 1) / maxtoken * 100.0;
                 var sb = new StringBuilder();
                 sb.AppendLine($"Current Time: {DateTime.UtcNow:R}");
                 sb.AppendLine($"Current Model: {context.Session?.CurrentModel}");
