@@ -100,8 +100,12 @@ namespace BlazorClaw.Core.Utils
             httpClient.BaseAddress = new Uri(conf.Uri.TrimEnd('/') + "/");
             if (!string.IsNullOrWhiteSpace(conf.Token))
             {
+                if (conf.Uri.Contains("anthropic"))
+                {
+                    httpClient.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+                    httpClient.DefaultRequestHeaders.Add("X-Api-Key", conf.Token);
+                }
                 httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", conf.Token);
-                httpClient.DefaultRequestHeaders.Add("X-Api-Key", conf.Token);
             }
         }
     }
