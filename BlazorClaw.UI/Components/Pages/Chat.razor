@@ -257,6 +257,8 @@
         if (currentSession != null && currentSession.CurrentModel != selectedModel)
         {
             currentSession.CurrentModel = selectedModel;
+            Db.ChatSessions.Update(currentSession);
+            await Db.SaveChangesAsync();
         }
 
         if (hubConnection?.State == HubConnectionState.Connected)
