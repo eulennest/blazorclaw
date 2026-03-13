@@ -31,7 +31,10 @@ namespace BlazorClaw.Core.Speech
                 var error = await response.Content.ReadAsStringAsync();
                 throw new Exception($"OpenAI TTS Error: {error}");
             }
-            var strm = new FileStream(Path.GetTempFileName(), new FileStreamOptions() { Options = FileOptions.DeleteOnClose });
+            var strm = new FileStream(Path.GetTempFileName(), new FileStreamOptions() { 
+                Mode = FileMode.Create,
+                Access = FileAccess.ReadWrite,
+                Options = FileOptions.DeleteOnClose });
 
             using var rets = await response.Content.ReadAsStreamAsync();
             await rets.CopyToAsync(strm);
