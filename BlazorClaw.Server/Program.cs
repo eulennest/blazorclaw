@@ -44,6 +44,7 @@ builder.Services.AddControllers();
 
 // Add HttpClient for WebSearchProvider
 builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
+builder.Services.AddHttpClient<BlazorClaw.Server.Tools.ImageGenerationTool>();
 builder.Services.Configure<WebSearchOptions>(builder.Configuration.GetSection(WebSearchOptions.Section));
 builder.Services.Configure<SandboxOptions>(builder.Configuration.GetSection(SandboxOptions.Section));
 
