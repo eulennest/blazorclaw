@@ -113,19 +113,18 @@ namespace BlazorClaw.Channels.Services
             // 2. Medien (Voice/Video/File - Pipeline)
             if (message.MediaContent != null && !string.IsNullOrWhiteSpace(message.MediaContent.Url))
             {
-                var file = await GetMediaFileAsync(message.MediaContent.Url);
 
                 switch (message.MediaContent.Type.ToLower())
                 {
                     case "voice":
                         // native Sprachnachricht (Telegram UI)
-                        await Client.SendVoice(channelId.ChannelId, file);
+                        await Client.SendVoice(channelId.ChannelId, message.MediaContent.Url);
                         break;
                     case "video":
-                        await Client.SendVideo(channelId.ChannelId, file);
+                        await Client.SendVideo(channelId.ChannelId, message.MediaContent.Url);
                         break;
                     default:
-                        await Client.SendDocument(channelId.ChannelId, file);
+                        await Client.SendDocument(channelId.ChannelId, message.MediaContent.Url);
                         break;
                 }
             }
