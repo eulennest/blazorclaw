@@ -30,8 +30,7 @@ public class ImageGenerationTool(
     IConfiguration configuration,
     ILogger<ImageGenerationTool> logger,
     PathHelper env,
-    IProviderManager providerManager,
-    IHttpContextAccessor httpContextAccessor) : BaseTool<ImageGenerationParams>
+    IProviderManager providerManager) : BaseTool<ImageGenerationParams>
 {
     private readonly JsonSerializerOptions _jsonOptions = new()
     {
