@@ -102,6 +102,15 @@
                                 </div>
                             }
                         }
+                        @if (msg.MediaContent?.Type == "voice" && !string.IsNullOrWhiteSpace(msg.MediaContent.Url))
+                        {
+                            <div class="media-audio-container" style="margin-top: 10px;">
+                                <audio controls>
+                                    <source src="@UriToImageSrc(msg.MediaContent.Url)" type="audio/ogg">
+                                    Dein Browser unterstützt das Audio-Element nicht.
+                                </audio>
+                            </div>
+                        }
                     </div>
                 </div>
             }
@@ -622,4 +631,10 @@
             background: #4a4a4a;
             cursor: not-allowed;
         }
+
+    .media-audio-container audio {
+        height: 35px; /* Etwas kompakter */
+        border-radius: 20px;
+        background-color: #f1f3f4;
+    }
 </style>
