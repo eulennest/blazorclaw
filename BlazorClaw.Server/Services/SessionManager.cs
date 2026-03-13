@@ -9,6 +9,7 @@ using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Speech;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Server.Tools.Memory;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.CommandLine;
@@ -326,64 +327,69 @@ namespace BlazorClaw.Server.Services
         {
             var msg = Convert.ToString(message.Content) ?? string.Empty;
 
-            // Pattern mit 3-5 Großbuchstaben
-            var match = MediaTagRegex().Match(msg);
-
-            if (match.Success)
+            if (msg.StartsWith("["))
             {
-                string tag = match.Groups[1].Value;    // z.B. "IMAGE" oder "TTS"
-                string payload = WebUtility.HtmlDecode(match.Groups[2].Value.Trim()); // URL oder Text
-                string textContent = match.Groups[3].Value.Trim(); // Der Rest der Nachricht
+                // Pattern mit 3-5 Großbuchstaben
+                var match = MediaTagRegex().Match(msg);
+                logger.LogInformation(match.ToString());
 
-                // Logik:
-                switch (tag)
+                if (match.Success)
                 {
-                    case "IMAGE":
-                        message.Images ??= [];
-                        message.Images.Add(new Images()
-                        {
-                            Type = "image_url",
-                            ImageUrl = new ImageUrl() { Url = payload }
-                        });
-                        break;
-                    case "TTS":
-                        var ttsp = context.Provider.GetRequiredService<ITextToSpeechProvider>();
+                    string tag = match.Groups[1].Value;    // z.B. "IMAGE" oder "TTS"
+                    string payload = WebUtility.HtmlDecode(match.Groups[2].Value.Trim()); // URL oder Text
+                    string textContent = match.Groups[3].Value.Trim(); // Der Rest der Nachricht
 
-                        // 1. Stimme parsen: "[TTS:Hallo|voice:onyx]" -> "Hallo", "onyx"
-                        string finalPayload = payload;
-                        string selectedVoiceName = ""; // Default
+                    logger.LogInformation("Media TAG: {tag} ,Payload: {payload}", tag, payload);
+                    // Logik:
+                    switch (tag)
+                    {
+                        case "IMAGE":
+                            message.Images ??= [];
+                            message.Images.Add(new Images()
+                            {
+                                Type = "image_url",
+                                ImageUrl = new ImageUrl() { Url = payload }
+                            });
+                            break;
+                        case "TTS":
+                            var ttsp = context.Provider.GetRequiredService<ITextToSpeechProvider>();
 
-                        if (payload.Contains("|voice:"))
-                        {
-                            var parts = payload.Split("|voice:", 2);
-                            finalPayload = parts[0];
-                            selectedVoiceName = parts[1];
-                        }
-                        else
-                        {
-                            // Fallback: Erste verfügbare Stimme nehmen, falls kein |voice: ... angegeben
-                            var firstVoice = await ttsp.ListVoicesAsync().FirstAsync();
-                            if (firstVoice != null) selectedVoiceName = firstVoice.VoiceName; // Statt VoiceName einfach .Id nehmen
-                        }
+                            // 1. Stimme parsen: "[TTS:Hallo|voice:onyx]" -> "Hallo", "onyx"
+                            string finalPayload = payload;
+                            string selectedVoiceName = ""; // Default
 
-                        var file = await pathHelper.SaveMediaFileAsync(await ttsp.TextToSpeechAsync(selectedVoiceName, finalPayload, new object()));
-                        if (!string.IsNullOrWhiteSpace(file))
-                        {
+                            if (payload.Contains("|voice:"))
+                            {
+                                var parts = payload.Split("|voice:", 2);
+                                finalPayload = parts[0];
+                                selectedVoiceName = parts[1];
+                            }
+                            else
+                            {
+                                // Fallback: Erste verfügbare Stimme nehmen, falls kein |voice: ... angegeben
+                                var firstVoice = await ttsp.ListVoicesAsync().FirstAsync();
+                                if (firstVoice != null) selectedVoiceName = firstVoice.VoiceName; // Statt VoiceName einfach .Id nehmen
+                            }
+
+                            var file = await pathHelper.SaveMediaFileAsync(await ttsp.TextToSpeechAsync(selectedVoiceName, finalPayload, new object()));
+                            if (!string.IsNullOrWhiteSpace(file))
+                            {
+                                message.MediaContent ??= new();
+                                message.MediaContent.Type = "voice";
+                                message.MediaContent.Url = pathHelper.GetMediaUrl(file).ToString();
+                            }
+                            break;
+                        default:
                             message.MediaContent ??= new();
-                            message.MediaContent.Type = "voice";
-                            message.MediaContent.Url = pathHelper.GetMediaUrl(file).ToString();
-                        }
-                        break;
-                    default:
-                        message.MediaContent ??= new();
-                        message.MediaContent.Type = tag.ToLowerInvariant();
-                        var f = await GetMediaFileAsync(payload);
-                        message.MediaContent.Url = f ?? payload;
-                        break;
-                }
+                            message.MediaContent.Type = tag.ToLowerInvariant();
+                            var f = await GetMediaFileAsync(payload);
+                            message.MediaContent.Url = f ?? payload;
+                            break;
+                    }
 
-                // Nachricht final bereinigen
-                message.Content = textContent.Trim();
+                    // Nachricht final bereinigen
+                    message.Content = textContent.Trim();
+                }
             }
 
             if (message?.Images?.Count > 0)

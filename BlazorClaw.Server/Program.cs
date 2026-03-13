@@ -7,6 +7,7 @@ using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Security.Vault;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
+using BlazorClaw.Core.Speech;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.Web;
@@ -90,7 +91,7 @@ builder.Services.TryAddScoped<IdentityRedirectManager>();
 builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.TryAddScoped<IdentityUserAccessor>();
-
+builder.Services.TryAddScoped<ITextToSpeechProvider, OpenAiTtsProvider>();
 
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 
