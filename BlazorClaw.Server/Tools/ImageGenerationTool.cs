@@ -94,10 +94,7 @@ public class ImageGenerationTool(
             image_config = new { aspect_ratio = aspectRatio }
         };
 
-        var json = JsonSerializer.Serialize(request);
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        var response = await httpClient.PostAsync("chat/completions", content);
+        using var response = await httpClient.PostAsJsonAsync("chat/completions", request);
         var responseJson = await response.Content.ReadAsStringAsync();
 
         if (!response.IsSuccessStatusCode)

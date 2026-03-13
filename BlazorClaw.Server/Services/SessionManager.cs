@@ -235,7 +235,7 @@ namespace BlazorClaw.Server.Services
             };
 
             // 3. OpenAI Request
-            var response = await httpClient.PostAsJsonAsync("chat/completions", request);
+            using var response = await httpClient.PostAsJsonAsync("chat/completions", request);
             var content = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>();
             var ret = await response.Content.ReadAsStringAsync();
             if (content == null) throw new ArgumentNullException(nameof(content), $"Invalid response: {ret}");
