@@ -16,7 +16,7 @@ namespace BlazorClaw.Core.Services
                 {
                     Scheme = contextAccessor.HttpContext.Request.Scheme,
                     Host = contextAccessor.HttpContext.Request.Host.Host,
-                    Port = contextAccessor.HttpContext.Request.Host.Port ?? 0
+                    Port = contextAccessor.HttpContext.Request.Host.Port ?? -1
                 };
                 baseUrl = ub.Uri;
             }
