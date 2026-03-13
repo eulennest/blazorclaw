@@ -47,6 +47,7 @@ builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
 builder.Services.AddHttpClient<BlazorClaw.Server.Tools.ImageGenerationTool>();
 builder.Services.Configure<WebSearchOptions>(builder.Configuration.GetSection(WebSearchOptions.Section));
 builder.Services.Configure<SandboxOptions>(builder.Configuration.GetSection(SandboxOptions.Section));
+builder.Services.AddSingleton<PathHelper>();
 
 // Register Plugin Services
 var plugins = PluginUtils.BuildPlugins<IPluginProvider>(builder.Services.BuildServiceProvider());
@@ -55,7 +56,6 @@ foreach (var plugin in plugins)
     plugin.ConfigureServices(builder.Services);
 }
 builder.Services.TryAddSingleton<ISessionManager, SessionManager>();
-
 
 builder.Services.TryAddScoped<IVaultProvider, JsonVaultProvider>();
 builder.Services.TryAddScoped<SessionStateAccessor>();
