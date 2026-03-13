@@ -27,7 +27,6 @@ public class ImageGenerationParams
 }
 
 public class ImageGenerationTool(
-    HttpClient httpClient,
     IConfiguration configuration,
     ILogger<ImageGenerationTool> logger,
     PathHelper env,
@@ -53,10 +52,10 @@ public class ImageGenerationTool(
 
     protected override async Task<string> ExecuteInternalAsync(ImageGenerationParams p, MessageContext context)
     {
-
         var provider = configuration["Tools:ImageGen:Provider"] ?? providerManager.GetProviders().FirstOrDefault();
         if (string.IsNullOrWhiteSpace(provider)) throw new Exception("No Image Provider found!");
         var prov = providerManager.GetProviderConfig(provider) ?? throw new Exception("No Image Provider found!");
+        var httpClient = context.Provider.GetRequiredService<HttpClient>();
         httpClient.InitProvider(prov);
 
         var prompt = p.Prompt;
