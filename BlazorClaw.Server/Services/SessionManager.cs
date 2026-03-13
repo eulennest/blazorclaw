@@ -167,7 +167,9 @@ namespace BlazorClaw.Server.Services
         {
             logger.LogInformation("Dispatching LLM request for session {SessionId}", sessionState.Session.Id);
             using var httpClient = sessionState.Services.GetRequiredService<HttpClient>();
-            httpClient.InitProvider(sessionState.Provider);
+            var provMan = sessionState.Services.GetRequiredService<IProviderManager>();
+
+            httpClient.InitProvider(provMan.GetProviderConfig(sessionState.Session.CurrentModel.Split('/')[0]) ?? sessionState.Provider);
 
             var toolRegistry = sessionState.Services.GetRequiredService<IToolRegistry>();
             var policyProvider = sessionState.Services.GetRequiredService<IToolPolicyProvider>();
