@@ -1,5 +1,6 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.DTOs;
+using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,7 +13,7 @@ using Telegram.Bot.Types;
 
 namespace BlazorClaw.Channels.Services
 {
-    public class TelegramBotHostedService(IConfiguration configuration, IMessageDispatcher md, IServiceScopeFactory scopeFactory, ILogger<TelegramBotHostedService> logger) : IHostedService
+    public class TelegramBotHostedService(PathHelper pathHelper, IConfiguration configuration, IMessageDispatcher md, IServiceScopeFactory scopeFactory, ILogger<TelegramBotHostedService> logger) : IHostedService
     {
         private readonly List<TelegramChannelBot> _bots = [];
 
@@ -38,7 +39,7 @@ namespace BlazorClaw.Channels.Services
                     }
 
                     var client = new TelegramBotClient(token);
-                    var bot = new TelegramChannelBot(client);
+                    var bot = new TelegramChannelBot(client, pathHelper);
                     _bots.Add(bot);
                     md.Register(bot);
                     var receiverOptions = new ReceiverOptions
@@ -94,23 +95,23 @@ namespace BlazorClaw.Channels.Services
     }
 
 
-    public class TelegramChannelBot(TelegramBotClient Client) : AbstractChannelBot("Telegram")
+    public class TelegramChannelBot(TelegramBotClient Client, PathHelper pathHelper) : AbstractChannelBot("Telegram")
     {
         internal TelegramBotClient Client { get; } = Client;
-        public override  async Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
+        public override async Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
             var content = Convert.ToString(message.Content);
             if (message.Images?.Count > 0)
             {
                 foreach (var item in message.Images)
                 {
-                    await Client.SendPhoto(channelId.ChannelId, GetMediaFile(item.ImageUrl?.Url ?? string.Empty), content ?? string.Empty, cancellationToken: cancellationToken);
+                    await Client.SendPhoto(channelId.ChannelId, await GetMediaFileAsync(item.ImageUrl?.Url ?? string.Empty), content ?? string.Empty, cancellationToken: cancellationToken);
                     content = null;
                 }
             }
 
-            if(!string.IsNullOrWhiteSpace(content))
-            await Client.SendMessage(channelId.ChannelId, content ?? string.Empty, cancellationToken: cancellationToken);
+            if (!string.IsNullOrWhiteSpace(content))
+                await Client.SendMessage(channelId.ChannelId, content ?? string.Empty, cancellationToken: cancellationToken);
         }
 
         public override Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
@@ -119,9 +120,10 @@ namespace BlazorClaw.Channels.Services
             //return Client.SendMessage(channelId.ChannelId, Convert.ToString(message.Content) ?? string.Empty, cancellationToken: cancellationToken);
         }
 
-        protected InputFile GetMediaFile(string url)
+        protected async Task<InputFile> GetMediaFileAsync(string url)
         {
-            if (url.StartsWith("cid:")) return File.OpenRead(Path.Combine("mediafiles", url[4..]));
+            var t = await pathHelper.GetMediaFileAsync(url);
+            if (t != null) return t.Item1;
             return url;
         }
     }

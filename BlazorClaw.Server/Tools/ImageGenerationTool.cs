@@ -119,8 +119,14 @@ public class ImageGenerationTool(
             logger.LogInformation("Image saved to {Path}", mediaFile);
 
             var mediaUri = env.GetMediaUrl(mediaFile);
-
-            return $"✅ Bild generiert mit {modelKey}!\n\n**Prompt:** {prompt}\n**Size:** {size}\n**URL:** {mediaUri}\n\nYou CAN embed the image in markdown.";
+            var sb = new StringBuilder();
+            sb.AppendLine($"✅ Bild generiert mit {modelKey}");
+            sb.AppendLine($"**URL:** {mediaUri}");
+            sb.AppendLine($"**Prompt:** {prompt}");
+            sb.AppendLine($"**Size:** {size}");
+            sb.AppendLine($"INFO: You can embed the image in markdown for webchat.");
+            sb.AppendLine($"Or you can use [IMAGE:{mediaUri}] in start of your message");
+            return sb.ToString();
         }
 
         throw new Exception("Error: No Image in response");

@@ -319,6 +319,20 @@ namespace BlazorClaw.Server.Services
 
         public async Task ConvertMediaFilesAsync(ChatMessage message)
         {
+            var msg = Convert.ToString(message.Content) ?? string.Empty;
+            if (msg.StartsWith("[IMAGE:"))
+            {
+                var i = msg.IndexOf(']');
+                var path = msg[7..i];
+                message.Images ??= [];
+                message.Images.Add(new Images()
+                {
+                    Type = "image_url",
+                    ImageUrl = new ImageUrl() { Url = path }
+                });
+                message.Content = msg[(i + 1)..].Trim();
+            }
+
             if (message?.Images?.Count > 0)
             {
                 foreach (var item in message.Images)
