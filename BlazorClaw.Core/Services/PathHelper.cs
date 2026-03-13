@@ -36,7 +36,7 @@ namespace BlazorClaw.Core.Services
         public string GetBaseFolder() => env.ContentRootPath;
         public string GetMediaFolder() => Path.Combine(GetBaseFolder(), "uploads");
 
-        public async Task<Tuple<Stream, string>?> GetMediaFile(string fileName)
+        public async Task<Tuple<Stream, string>?> GetMediaFileAsync(string fileName)
         {
             if (!Guid.TryParse(Path.GetFileNameWithoutExtension(fileName), out _)) return null;
             var file = Path.Combine(GetMediaFolder(), fileName);

@@ -1,23 +1,19 @@
-using BlazorClaw.Core.DTOs;
-using BlazorClaw.Core.Sessions;
+using BlazorClaw.Core.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 
 namespace BlazorClaw.Server.Controllers;
 
 [ApiController]
-[Route("/api/")]
 [AllowAnonymous]
-public class MediaController : ControllerBase
+public class MediaController(PathHelper pathHelper) : ControllerBase
 {
-    [HttpGet("media/{fileName}")]
+    [HttpGet("/uploads/{fileName}")]
     public async Task<ActionResult> GetMediaFile(string fileName)
     {
-        if (!Guid.TryParse(Path.GetFileNameWithoutExtension(fileName), out _)) return NotFound(); 
-        var file = Path.Combine("mediafiles", fileName);
-        if (!System.IO.File.Exists(file)) return NotFound();
-        return File(System.IO.File.OpenRead(file), GetContentType(file));
+        var t = await pathHelper.GetMediaFileAsync(fileName);
+        if (t==null) return NotFound();
+        return File(t.Item1,t.Item2);
     }
 
     private string GetContentType(string filename)
