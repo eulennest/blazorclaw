@@ -93,6 +93,15 @@
                     </div>
                     <div class="message-content">
                         @((MarkupString)RenderMarkdown(@msg.Content?.ToString() ?? string.Empty))
+                        @if (msg.Images?.Count > 0)
+                        {
+                            foreach (var item in msg.Images.Where(o => !string.IsNullOrWhiteSpace(o.ImageUrl?.Url)))
+                            {
+                                <div>
+                                    <img src="@UriToImageSrc(item.ImageUrl!.Url)" />
+                                </div>
+                            }
+                        }
                     </div>
                 </div>
             }
@@ -315,6 +324,12 @@
         // Parse Markdown to HTML
         var html = Markdig.Markdown.ToHtml(markdown, pipeline);
         return html;
+    }
+
+    private string UriToImageSrc(string url)
+    {
+        if (url.StartsWith("cid:")) return $"/api/media/{url.Substring(4)}";
+        return url;
     }
 
     public async ValueTask DisposeAsync()

@@ -31,6 +31,9 @@ public class ChatMessage
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 
+    [JsonPropertyName("images")]
+    public virtual List<Images>? Images { get; set; }
+
     [JsonIgnore]
     public bool IsAssistant => Role.Equals("assistant", StringComparison.OrdinalIgnoreCase);
 
@@ -51,6 +54,29 @@ public class ChatMessage
     {
         return new ChatMessage { Role = "error", Content = $"Error: {ex.Message}" };
     }
+}
+
+public class Images
+{
+
+    [JsonPropertyName("type")]
+    public string Type { get; set; }
+
+    [JsonPropertyName("image_url")]
+    public ImageUrl? ImageUrl { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
+
+}
+
+public class ImageUrl
+{
+    [JsonPropertyName("url")]
+    public string Url { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, object>? ExtensionData { get; set; }
 }
 
 public class ToolCall

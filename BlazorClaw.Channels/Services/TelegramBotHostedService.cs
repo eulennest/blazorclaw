@@ -97,14 +97,32 @@ namespace BlazorClaw.Channels.Services
     public class TelegramChannelBot(TelegramBotClient Client) : AbstractChannelBot("Telegram")
     {
         internal TelegramBotClient Client { get; } = Client;
-        public override Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
+        public override  async Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            return Client.SendMessage(channelId.ChannelId, Convert.ToString(message.Content) ?? string.Empty, cancellationToken: cancellationToken);
+            var content = Convert.ToString(message.Content);
+            if (message.Images?.Count > 0)
+            {
+                foreach (var item in message.Images)
+                {
+                    await Client.SendPhoto(channelId.ChannelId, GetMediaFile(item.ImageUrl?.Url ?? string.Empty), content ?? string.Empty, cancellationToken: cancellationToken);
+                    content = null;
+                }
+            }
+
+            if(!string.IsNullOrWhiteSpace(content))
+            await Client.SendMessage(channelId.ChannelId, content ?? string.Empty, cancellationToken: cancellationToken);
         }
 
         public override Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            return Client.SendMessage(channelId.ChannelId, Convert.ToString(message.Content) ?? string.Empty, cancellationToken: cancellationToken);
+            return SendChannelAsync(channelId, message, cancellationToken);
+            //return Client.SendMessage(channelId.ChannelId, Convert.ToString(message.Content) ?? string.Empty, cancellationToken: cancellationToken);
+        }
+
+        protected InputFile GetMediaFile(string url)
+        {
+            if (url.StartsWith("cid:")) return File.OpenRead(Path.Combine("mediafiles", url[4..]));
+            return url;
         }
     }
 

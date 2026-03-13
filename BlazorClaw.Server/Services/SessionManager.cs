@@ -15,7 +15,7 @@ using System.Text.Json;
 namespace BlazorClaw.Server.Services
 {
 
-    public class SessionManager(IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options) : ISessionManager
+    public class SessionManager(IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options, HttpClient httpClient) : ISessionManager
     {
         public string SessionStoragePath { get; set; } = "sessions";
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
@@ -223,7 +223,7 @@ namespace BlazorClaw.Server.Services
             while (count > 1 && iterations < 10);
         }
 
-        private static async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, MessageContext context, HttpClient httpClient, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
+        private async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, MessageContext context, HttpClient httpClient, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
         {
             var request = new ChatCompletionRequest
             {
@@ -247,6 +247,9 @@ namespace BlazorClaw.Server.Services
                 foreach (var choice in content.Choices)
                 {
                     var message = choice.Message;
+
+                    await ConvertMediaFilesAsync(message);
+
                     sessionState.MessageHistory.Add(message); // Assistant Call
                     yield return message;
 
@@ -301,6 +304,57 @@ namespace BlazorClaw.Server.Services
                     }
                 }
             }
+        }
+
+        public async Task ConvertMediaFilesAsync(ChatMessage message)
+        {
+            if (message?.Images?.Count > 0)
+            {
+                foreach (var item in message.Images)
+                {
+                    if (string.IsNullOrWhiteSpace(item.ImageUrl?.Url)) continue;
+                    var f = await GetMediaFileAsync(item.ImageUrl.Url);
+                    if (f != null) item.ImageUrl.Url = f;
+                }
+            }
+        }
+
+        private async Task<string?> GetMediaFileAsync(string data)
+        {
+            if (data.StartsWith("data:"))
+            {
+                // Split the string to escape the real data
+
+                var b64 = data.Split(",".ToCharArray(), 2);
+
+                var ext = ".dat";
+                if (b64[0].Contains("image/png")) ext = ".png";
+                else if (b64[0].Contains("image/jpeg")) ext = ".jpg";
+                else if (b64[0].Contains("image/jpg")) ext = ".jpg";
+                else if (b64[0].Contains("text/")) ext = ".txt";
+
+                var filename = Path.Combine("mediafiles", $"{Guid.NewGuid()}{ext}");
+                // Convert the base 64 String to byte array
+                byte[] byteArray = Convert.FromBase64String(b64[1]);
+                await File.WriteAllBytesAsync(filename, byteArray);
+                return $"cid:{Path.GetFileName(filename)}";
+            }
+            if (data.StartsWith("http://") || data.StartsWith("htts://"))
+            {
+                var uri = new Uri(data);
+                var ext = Path.GetExtension(uri.AbsolutePath);
+                if (string.IsNullOrWhiteSpace(ext)) ext = ".dat";
+                var filename = Path.Combine("mediafiles", $"{Guid.NewGuid()}{ext}");
+
+                using var strm = await httpClient.GetStreamAsync(uri);
+                using (var fStrm = File.OpenWrite(filename))
+                {
+                    await strm.CopyToAsync(fStrm);
+                }
+                return $"cid:{Path.GetFileName(filename)}";
+            }
+
+            return null;
         }
     }
 

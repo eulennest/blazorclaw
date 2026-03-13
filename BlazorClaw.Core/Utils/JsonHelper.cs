@@ -18,7 +18,8 @@ namespace BlazorClaw.Core.Utils
                     PropertyNameCaseInsensitive = true,
                     IgnoreReadOnlyFields = true,
                     IgnoreReadOnlyProperties = true,
-                    WriteIndented = true
+                    WriteIndented = true,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
                 };
                 jo.Converters.Add(new JsonStringEnumConverter());
                 return jo;

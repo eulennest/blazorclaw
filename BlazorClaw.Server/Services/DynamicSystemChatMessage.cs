@@ -2,20 +2,9 @@
 using BlazorClaw.Core.Data;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
-using Humanizer;
-using Markdig.Syntax;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.CodeAnalysis.Elfie.Model.Structures;
-using Microsoft.VisualBasic;
-using NuGet.Protocol.Plugins;
-using ReverseMarkdown.Converters;
-using System.ComponentModel.DataAnnotations;
-using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Timers;
-using System.Xml.Linq;
-using Telegram.Bot.Types;
 
 namespace BlazorClaw.Server.Services
 {
@@ -53,7 +42,7 @@ namespace BlazorClaw.Server.Services
                     sb.AppendLine($" - Email: {uinfo.Email}");
                 }
                 sb.AppendLine();
-                sb.AppendLine($"Token usage: {state.LastUsage?.PromptTokens} / {maxtoken/1000}k ({tokenProz} %)");
+                sb.AppendLine($"Token usage: {state.LastUsage?.PromptTokens} / {maxtoken / 1000}k ({tokenProz} %)");
                 if (tokenProz > 80)
                 {
                     sb.AppendLine("!!! WARNUNG: TOKEN LIMIT FAST ERREICHT !!!");
@@ -61,7 +50,7 @@ namespace BlazorClaw.Server.Services
                     sb.AppendLine("Du MUSST deine Antworten extrem kurz halten. KEINE ausführlichen Erklärungen mehr. Fasse dich auf das Wesentliche!");
                 }
                 sb.AppendLine();
-                
+
                 // --- Kanal-spezifischer Kontext ---
                 // Annahme: context.ChannelProvider liefert dir "WebChat", "Telegram", "Matrix" etc.
                 string channel = context.Channel?.ChannelProvider.ToLower() ?? "generic";
