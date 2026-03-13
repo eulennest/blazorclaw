@@ -327,7 +327,7 @@ namespace BlazorClaw.Server.Services
         {
             var msg = Convert.ToString(message.Content) ?? string.Empty;
 
-            if (msg.StartsWith("["))
+            if (msg.StartsWith('['))
             {
                 // Pattern mit 3-5 Großbuchstaben
                 var match = MediaTagRegex().Match(msg);

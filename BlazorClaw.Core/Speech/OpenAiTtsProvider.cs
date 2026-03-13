@@ -48,7 +48,7 @@ namespace BlazorClaw.Core.Speech
             yield return new TextToSpeechVoice("fable", "Friendly and bright");
             yield return new TextToSpeechVoice("onyx", "Deep and professional");
             yield return new TextToSpeechVoice("nova", "Energetic and warm");
-            yield return new TextToSpeechVoice("shimmer", "Sophisticated and smooth";
+            yield return new TextToSpeechVoice("shimmer", "Sophisticated and smooth");
         }
     }
 
