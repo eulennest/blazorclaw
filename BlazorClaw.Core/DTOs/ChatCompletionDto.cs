@@ -28,11 +28,15 @@ public class ChatMessage
     [JsonPropertyName("tool_calls")]
     public virtual List<ToolCall>? ToolCalls { get; set; }
 
+    [JsonPropertyName("images")]
+    public virtual List<Images>? Images { get; set; }
+
+    [JsonPropertyName("media_content")]
+    public virtual MediaInfo? MediaContent { get; set; }
+
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 
-    [JsonPropertyName("images")]
-    public virtual List<Images>? Images { get; set; }
 
     [JsonIgnore]
     public bool IsAssistant => Role.Equals("assistant", StringComparison.OrdinalIgnoreCase);

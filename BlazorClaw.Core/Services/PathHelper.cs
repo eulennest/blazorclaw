@@ -59,6 +59,8 @@ namespace BlazorClaw.Core.Services
             else if (contentType.Contains("image/jpeg")) return ".jpg";
             else if (contentType.Contains("image/jpg")) return ".jpg";
             else if (contentType.Contains("text/")) return ".txt";
+            else if (contentType.Contains("audio/ogg")) return ".ogg";
+            else if (contentType.Contains("audio/mpeg")) return ".mp3";
             return ".dat";
         }
 
@@ -76,9 +78,11 @@ namespace BlazorClaw.Core.Services
                 await File.WriteAllBytesAsync(filename, byteArray);
                 return filename;
             }
-            if (data.StartsWith("http://") || data.StartsWith("htts://"))
+            if (data.StartsWith("http://") || data.StartsWith("https://"))
             {
                 var uri = new Uri(data);
+                if (uri.Host == GetBaseUrl().Host) return data;
+
                 var ext = Path.GetExtension(uri.AbsolutePath);
                 if (string.IsNullOrWhiteSpace(ext)) ext = ".dat";
                 var filename = Path.Combine(GetMediaFolder(), $"{Guid.NewGuid()}{ext}");
@@ -92,6 +96,18 @@ namespace BlazorClaw.Core.Services
             }
 
             return null;
+        }
+
+        public async Task<string?> SaveMediaFileAsync(Tuple<Stream, string>? tuple)
+        {
+            if (tuple == null) return null;
+            var ext = GetExtension(tuple.Item2);
+            var filename = Path.Combine(GetMediaFolder(), $"{Guid.NewGuid()}{ext}");
+
+            using var s = tuple.Item1;
+            using var fs = File.OpenWrite(filename);
+            await s.CopyToAsync(fs);
+            return filename;
         }
     }
 }

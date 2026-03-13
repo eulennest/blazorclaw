@@ -4,18 +4,22 @@ using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Providers;
 using BlazorClaw.Core.Security;
+using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
+using BlazorClaw.Core.Speech;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.CommandLine;
+using System.Net;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace BlazorClaw.Server.Services
 {
 
-    public class SessionManager(IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options, HttpClient httpClient) : ISessionManager
+    public partial class SessionManager(PathHelper pathHelper, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options, HttpClient httpClient) : ISessionManager
     {
         public string SessionStoragePath { get; set; } = "sessions";
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
@@ -195,6 +199,7 @@ namespace BlazorClaw.Server.Services
             if ((sessionState.SystemPrompts?.Count ?? 0) == 0)
             {
                 sessionState.SystemPrompts ??= [];
+                sessionState.SystemPrompts.Add(new DefaultSystemChatMessage());
                 if (File.Exists("SYSTEMPROMPT.md"))
                 {
                     var systemPromptContent = await File.ReadAllTextAsync("SYSTEMPROMPT.md").ConfigureAwait(false);
@@ -259,7 +264,7 @@ namespace BlazorClaw.Server.Services
                 {
                     var message = choice.Message;
 
-                    await ConvertMediaFilesAsync(message);
+                    await ConvertMediaFilesAsync(context, message);
 
                     sessionState.MessageHistory.Add(message); // Assistant Call
                     yield return message;
@@ -317,20 +322,68 @@ namespace BlazorClaw.Server.Services
             }
         }
 
-        public async Task ConvertMediaFilesAsync(ChatMessage message)
+        public async Task ConvertMediaFilesAsync(MessageContext context, ChatMessage message)
         {
             var msg = Convert.ToString(message.Content) ?? string.Empty;
-            if (msg.StartsWith("[IMAGE:"))
+
+            // Pattern mit 3-5 Großbuchstaben
+            var match = MediaTagRegex().Match(msg);
+
+            if (match.Success)
             {
-                var i = msg.IndexOf(']');
-                var path = msg[7..i];
-                message.Images ??= [];
-                message.Images.Add(new Images()
+                string tag = match.Groups[1].Value;    // z.B. "IMAGE" oder "TTS"
+                string payload = WebUtility.HtmlDecode(match.Groups[2].Value.Trim()); // URL oder Text
+                string textContent = match.Groups[3].Value.Trim(); // Der Rest der Nachricht
+
+                // Logik:
+                switch (tag)
                 {
-                    Type = "image_url",
-                    ImageUrl = new ImageUrl() { Url = path }
-                });
-                message.Content = msg[(i + 1)..].Trim();
+                    case "IMAGE":
+                        message.Images ??= [];
+                        message.Images.Add(new Images()
+                        {
+                            Type = "image_url",
+                            ImageUrl = new ImageUrl() { Url = payload }
+                        });
+                        break;
+                    case "TTS":
+                        var ttsp = context.Provider.GetRequiredService<ITextToSpeechProvider>();
+
+                        // 1. Stimme parsen: "[TTS:Hallo|voice:onyx]" -> "Hallo", "onyx"
+                        string finalPayload = payload;
+                        string selectedVoiceName = ""; // Default
+
+                        if (payload.Contains("|voice:"))
+                        {
+                            var parts = payload.Split("|voice:", 2);
+                            finalPayload = parts[0];
+                            selectedVoiceName = parts[1];
+                        }
+                        else
+                        {
+                            // Fallback: Erste verfügbare Stimme nehmen, falls kein |voice: ... angegeben
+                            var firstVoice = await ttsp.ListVoicesAsync().FirstAsync();
+                            if (firstVoice != null) selectedVoiceName = firstVoice.VoiceName; // Statt VoiceName einfach .Id nehmen
+                        }
+
+                        var file = await pathHelper.SaveMediaFileAsync(await ttsp.TextToSpeechAsync(selectedVoiceName, finalPayload, new object()));
+                        if (!string.IsNullOrWhiteSpace(file))
+                        {
+                            message.MediaContent ??= new();
+                            message.MediaContent.Type = "voice";
+                            message.MediaContent.Url = pathHelper.GetMediaUrl(file).ToString();
+                        }
+                        break;
+                    default:
+                        message.MediaContent ??= new();
+                        message.MediaContent.Type = tag.ToLowerInvariant();
+                        var f = await GetMediaFileAsync(payload);
+                        message.MediaContent.Url = f ?? payload;
+                        break;
+                }
+
+                // Nachricht final bereinigen
+                message.Content = textContent.Trim();
             }
 
             if (message?.Images?.Count > 0)
@@ -346,41 +399,13 @@ namespace BlazorClaw.Server.Services
 
         private async Task<string?> GetMediaFileAsync(string data)
         {
-            if (data.StartsWith("data:"))
-            {
-                // Split the string to escape the real data
-
-                var b64 = data.Split(",".ToCharArray(), 2);
-
-                var ext = ".dat";
-                if (b64[0].Contains("image/png")) ext = ".png";
-                else if (b64[0].Contains("image/jpeg")) ext = ".jpg";
-                else if (b64[0].Contains("image/jpg")) ext = ".jpg";
-                else if (b64[0].Contains("text/")) ext = ".txt";
-
-                var filename = Path.Combine("mediafiles", $"{Guid.NewGuid()}{ext}");
-                // Convert the base 64 String to byte array
-                byte[] byteArray = Convert.FromBase64String(b64[1]);
-                await File.WriteAllBytesAsync(filename, byteArray);
-                return $"cid:{Path.GetFileName(filename)}";
-            }
-            if (data.StartsWith("http://") || data.StartsWith("htts://"))
-            {
-                var uri = new Uri(data);
-                var ext = Path.GetExtension(uri.AbsolutePath);
-                if (string.IsNullOrWhiteSpace(ext)) ext = ".dat";
-                var filename = Path.Combine("mediafiles", $"{Guid.NewGuid()}{ext}");
-
-                using var strm = await httpClient.GetStreamAsync(uri);
-                using (var fStrm = File.OpenWrite(filename))
-                {
-                    await strm.CopyToAsync(fStrm);
-                }
-                return $"cid:{Path.GetFileName(filename)}";
-            }
-
+            var file = await pathHelper.SaveMediaFileAsync(data);
+            if (file != null) return pathHelper.GetMediaUrl(file).ToString();
             return null;
         }
+
+        [GeneratedRegex(@"^\[([A-Z]{3,5}):(.*?)\](.*)$", RegexOptions.Singleline)]
+        private static partial Regex MediaTagRegex();
     }
 
     public class JsonSessionStorage
