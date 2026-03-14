@@ -110,8 +110,8 @@
                             @switch (msg.MediaContent.Type?.ToLower())
                             {
                                 case "voice":
-                                    <div class="media-audio-container" style="margin-top: 10px;">
-                                        <audio controls style="width: 100%; height: 35px;">
+                                    <div class="media-container">
+                                        <audio controls>
                                             <source src="@UriToImageSrc(msg.MediaContent.Url)" type="audio/ogg">
                                             Dein Browser unterstützt das Audio-Element nicht.
                                         </audio>
@@ -119,8 +119,8 @@
                                     break;
 
                                 case "video":
-                                    <div class="media-video-container" style="margin-top: 10px;">
-                                        <video controls style="max-width: 100%; height: auto; border-radius: 8px;">
+                                    <div class="media-container">
+                                        <video controls>
                                             <source src="@UriToImageSrc(msg.MediaContent.Url)" type="video/mp4">
                                             Dein Browser unterstützt das Video-Element nicht.
                                         </video>
@@ -128,8 +128,8 @@
                                     break;
 
                                 case "file":
-                                    <div class="media-file-container" style="margin-top: 10px; padding: 10px; background-color: #f0f0f0; border-radius: 8px; display: inline-block;">
-                                        <a href="@UriToImageSrc(msg.MediaContent.Url)" download style="text-decoration: none; color: #0066cc; font-weight: bold;">
+                                    <div class="media-container">
+                                        <a href="@UriToImageSrc(msg.MediaContent.Url)" download>
                                             📥 Datei herunterladen
                                         </a>
                                     </div>
@@ -661,18 +661,35 @@
             cursor: not-allowed;
         }
 
-    .media-audio-container audio {
+
+    .media-container {
+        margin-top: 10px;
+    }
+
+    .media-container audio {
         height: 35px; /* Etwas kompakter */
+        width: 100%;
+        min-width: 300px;
         border-radius: 20px;
         background-color: #f1f3f4;
     }
 
-    .media-video-container video {
+    .media-container video {
+        width: 100%;
+        min-width: 300px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
     }
 
-    .media-file-container a:hover {
+    .media-container a {
+        text-decoration: none;
+        color: #0066cc; font-weight: bold;
+    }
+    .media-container a:hover {
         color: #0052a3;
         text-decoration: underline;
     }
+
 </style>
