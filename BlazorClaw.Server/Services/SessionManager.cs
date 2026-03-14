@@ -18,7 +18,7 @@ using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
 {
-    public class SessionManager(PathHelper pathHelper, IdentityUserAccessor userAccessor, IHttpContextAccessor httpContext, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options) : ISessionManager
+    public class SessionManager(PathHelper pathHelper, IHttpContextAccessor httpContext, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options) : ISessionManager
     {
         public string SessionStoragePath { get; set; } = "sessions";
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
@@ -34,6 +34,7 @@ namespace BlazorClaw.Server.Services
                 using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var sess = await db.ChatSessions.FindAsync(sessionId);
                 model ??= sess?.CurrentModel ?? options.CurrentValue.Model;
+                var userAccessor = scope.ServiceProvider.GetRequiredService<IdentityUserAccessor>();
                 if (sess == null)
                 {
                     sess = new ChatSession
