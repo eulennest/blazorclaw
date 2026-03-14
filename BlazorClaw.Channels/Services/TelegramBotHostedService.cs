@@ -76,7 +76,7 @@ namespace BlazorClaw.Channels.Services
             try
             {
                 var inst = _bots.FirstOrDefault(b => b.Client.BotId == botClient.BotId);
-                if (inst == null || update.Message?.Text == null) return;
+                if (inst == null || update.Message == null) return;
                 var telegramId = update.Message.From!.Id.ToString();
                 logger.LogInformation("Incoming Msg From: {telegramId}, Type: {Type}", telegramId, update.Message.Type);
                 await botClient.SendChatAction(update.Message.Chat.Id, Telegram.Bot.Types.Enums.ChatAction.Typing, cancellationToken: cancellationToken);
