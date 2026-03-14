@@ -12,6 +12,7 @@ using System.CommandLine.Parsing;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
+using Telegram.Bot.Types.Enums;
 
 namespace BlazorClaw.Channels.Services
 {
@@ -77,6 +78,7 @@ namespace BlazorClaw.Channels.Services
                 var inst = _bots.FirstOrDefault(b => b.Client.BotId == botClient.BotId);
                 if (inst == null || update.Message?.Text == null) return;
                 var telegramId = update.Message.From!.Id.ToString();
+                logger.LogInformation("Incoming Msg From: {telegramId}, Type: {Type}", telegramId, update.Message.Type);
                 await botClient.SendChatAction(update.Message.Chat.Id, Telegram.Bot.Types.Enums.ChatAction.Typing, cancellationToken: cancellationToken);
 
 
