@@ -477,7 +477,8 @@
         var user = new ApplicationUser
         {
             UserName = newUserName,
-            Email = newUserEmail
+            Email = newUserEmail,
+            EmailConfirmed = true
         };
 
         var result = await UserManager.CreateAsync(user, newUserPassword);
