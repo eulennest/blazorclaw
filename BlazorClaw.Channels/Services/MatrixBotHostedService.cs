@@ -103,7 +103,7 @@ namespace BlazorClaw.Channels.Services
         internal IMatrixClient Client { get; } = Client;
         public override Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            return Client.SendMessageAsync(channelId.ChannelId, Convert.ToString(message.Content) ?? string.Empty);
+            return Client.SendMessageAsync(channelId.ChannelId, message.GetTextContent() ?? string.Empty);
         }
 
         public override Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)

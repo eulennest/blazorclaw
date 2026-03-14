@@ -122,7 +122,7 @@ namespace BlazorClaw.Channels.Services
         internal TelegramBotClient Client { get; } = Client;
         public override async Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            var content = Convert.ToString(message.Content);
+            var content = message.GetTextContent() ?? string.Empty;
             if (message.Images?.Count > 0)
             {
                 foreach (var item in message.Images)
