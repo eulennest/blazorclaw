@@ -21,7 +21,6 @@ public class ChatSession
     public bool IsArchived { get; set; }
 
     // Navigation Property für Teilnehmer (Gruppen-Sitzungen)
-    public string IsDeleted { get; set; }
     public ICollection<ChatSessionParticipant> Participants { get; set; } = [];
 }
 
