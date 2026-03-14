@@ -109,7 +109,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
-builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityEmailSender>();
 
 builder.Services.AddSingleton<ISessionManager, BlazorClaw.Server.Services.SessionManager>();
 builder.Services.AddSingleton<IMessageDispatcher, MessageDispatcher>();
