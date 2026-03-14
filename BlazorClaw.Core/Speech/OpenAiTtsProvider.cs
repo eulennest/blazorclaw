@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 
 namespace BlazorClaw.Core.Speech
 {
-    public class OpenAiTtsProvider(HttpClient httpClient, IConfiguration conf, Logger<object> logger) : ITextToSpeechProvider
+    public class OpenAiTtsProvider(HttpClient httpClient, IConfiguration conf, ILogger<OpenAiTtsProvider> logger) : ITextToSpeechProvider
     {
         public string Name => "OpenAI";
         public string Description => "OpenAI Text-to-Speech API";
