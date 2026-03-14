@@ -173,8 +173,7 @@ namespace BlazorClaw.Server.Services
             logger.LogInformation("Dispatching LLM request for session {SessionId}", sessionState.Session.Id);
             using var httpClient = sessionState.Services.GetRequiredService<HttpClient>();
             var provMan = sessionState.Services.GetRequiredService<IProviderManager>();
-
-            httpClient.InitProvider(provMan.GetProviderConfig(sessionState.Session.CurrentModel.Split('/')[0]) ?? sessionState.Provider);
+            sessionState.Provider = provMan.GetProviderConfig(sessionState.Session.CurrentModel.Split('/')[0]) ?? sessionState.Provider;
 
             var toolRegistry = sessionState.Services.GetRequiredService<IToolRegistry>();
             var policyProvider = sessionState.Services.GetRequiredService<IToolPolicyProvider>();
@@ -221,7 +220,7 @@ namespace BlazorClaw.Server.Services
             {
                 iterations++;
                 count = 0;
-                await foreach (var msg in InternalDispatchToLLMAsync(sessionState, context, httpClient, toolRegistry, policyProvider, logger))
+                await foreach (var msg in InternalDispatchToLLMAsync(sessionState, context, toolRegistry, policyProvider, logger))
                 {
                     count++;
                     yield return msg;
@@ -231,7 +230,7 @@ namespace BlazorClaw.Server.Services
             while (count > 1 && iterations < 10);
         }
 
-        private async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, MessageContext context, HttpClient httpClient, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
+        private async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, MessageContext context, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
         {
             var request = new ChatCompletionRequest
             {
@@ -241,6 +240,9 @@ namespace BlazorClaw.Server.Services
             };
 
             ChatCompletionResponse? content = null;
+            var httpClient = context.Provider.GetRequiredService<HttpClient>();
+            httpClient.InitProvider(sessionState.Provider);
+            
             // 3. OpenAI Request
             using (var response = await httpClient.PostAsJsonAsync("chat/completions", request))
             {
