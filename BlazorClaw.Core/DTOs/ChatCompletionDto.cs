@@ -80,7 +80,10 @@ public class ChatMessage
                     te = JsonSerializer.Deserialize<Images>(js) ?? te;
                 yield return te;
             }
-
+        }
+        else
+        {
+            yield return new TextContentEntry() { Text = Content?.ToString() ?? string.Empty };
         }
     }
 
