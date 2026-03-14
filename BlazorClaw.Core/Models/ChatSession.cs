@@ -29,10 +29,10 @@ public class ChatSessionParticipant
     public Guid Id { get; set; } = Guid.NewGuid();
 
     public Guid SessionId { get; set; }
-    public virtual ChatSession? Session { get; set; }
+    public ChatSession? Session { get; set; }
 
     public required string UserId { get; set; }
-    public virtual ApplicationUser? User { get; set; }
+    public ApplicationUser? User { get; set; }
 }
 
 
