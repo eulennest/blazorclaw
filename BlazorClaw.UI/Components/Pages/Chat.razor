@@ -98,7 +98,7 @@
                         {
                             foreach (var item in msg.Images.Where(o => !string.IsNullOrWhiteSpace(o.ImageUrl?.Url)))
                             {
-                                <div>
+                                <div class="media-container">
                                     <img src="@UriToImageSrc(item.ImageUrl!.Url)" />
                                 </div>
                             }
@@ -109,6 +109,11 @@
                         {
                             @switch (msg.MediaContent.Type?.ToLower())
                             {
+                                case "image":
+                                    <div class="media-container">
+                                        <img src="@UriToImageSrc(msg.MediaContent.Url)"/>
+                                    </div>
+                                    break;
                                 case "voice":
                                     <div class="media-container">
                                         <audio controls>

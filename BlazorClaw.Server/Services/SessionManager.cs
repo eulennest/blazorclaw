@@ -347,12 +347,10 @@ namespace BlazorClaw.Server.Services
                     switch (tag)
                     {
                         case "IMAGE":
-                            message.Images ??= [];
-                            message.Images.Add(new Images()
-                            {
-                                Type = "image_url",
-                                ImageUrl = new ImageUrl() { Url = payload }
-                            });
+                            message.MediaContent ??= new();
+                            message.MediaContent.Type = tag.ToLowerInvariant();
+                            var f = await GetMediaFileAsync(payload);
+                            message.MediaContent.Url = f ?? payload;
                             break;
                         case "TTS":
                             var ttsp = context.Provider.GetRequiredService<ITextToSpeechProvider>();
