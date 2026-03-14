@@ -60,12 +60,6 @@
                                 <a href="/chat/@session.Id" class="text-decoration-none">
                                     <strong>@session.Title</strong>
                                 </a>
-                                @if (isAdmin && session.Participants.Any())
-                                {
-                                    <br><small class="text-muted">
-                                        @string.Join(", ", session.Participants.Select(p => p.User?.UserName ?? "Unbekannt"))
-                                    </small>
-                                }
                             </td>
                             <td><code class="small">@session.CurrentModel</code></td>
                             <td>@session.LastUsedAt.ToLocalTime().ToString("g")</td>

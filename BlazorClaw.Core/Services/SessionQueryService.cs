@@ -16,7 +16,6 @@ public class SessionQueryService(ApplicationDbContext context) : ISessionQuerySe
     {
         return await context.ChatSessions
             .Include(s => s.Participants)
-            .ThenInclude(p => p.User)
             .Where(s => s.Participants.Any(p => p.UserId == userId))
             .OrderByDescending(s => s.LastUsedAt)
             .ToListAsync();
@@ -26,7 +25,6 @@ public class SessionQueryService(ApplicationDbContext context) : ISessionQuerySe
     {
         return await context.ChatSessions
             .Include(s => s.Participants)
-            .ThenInclude(p => p.User)
             .OrderByDescending(s => s.LastUsedAt)
             .ToListAsync();
     }
