@@ -355,6 +355,7 @@
             .UseAutoLinks(new Markdig.Extensions.AutoLinks.AutoLinkOptions { OpenInNewWindow = true })
             .UseReferralLinks("nofollow", "noopener", "noreferrer")
             .UseMathematics()
+            .DisableHtml()
             .Build();
 
         // Parse Markdown to HTML
