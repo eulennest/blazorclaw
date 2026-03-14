@@ -1,6 +1,10 @@
-﻿using BlazorClaw.Core.Providers;
+﻿using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Data;
+using BlazorClaw.Core.Providers;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
@@ -113,6 +117,16 @@ namespace BlazorClaw.Core.Utils
                 httpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", conf.Token);
             }
         }
+
+        public static async Task<IList<string>> GetUserGroupsAsync(this MessageContext context)
+        {
+            if (string.IsNullOrWhiteSpace(context.UserId)) return [];
+            var userManager = context.Provider.GetRequiredService<UserManager<ApplicationUser>>();
+            var user = await userManager.FindByIdAsync(context.UserId);
+            if (user == null) return [];
+            var roles = await userManager.GetRolesAsync(user);
+            return [.. roles];
+        }
     }
 
     public class TempStream() : FileStream(Path.GetTempFileName(), new FileStreamOptions()
@@ -122,5 +136,18 @@ namespace BlazorClaw.Core.Utils
             Options = FileOptions.DeleteOnClose
     })
     { 
+    }
+
+    public class IgnoreCaseEqualityComparer : IEqualityComparer<string>
+    {
+        public bool Equals(string x, string y)
+        {
+            return x.Equals(y, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public int GetHashCode(string obj)
+        {
+            return obj.GetHashCode();
+        }
     }
 }

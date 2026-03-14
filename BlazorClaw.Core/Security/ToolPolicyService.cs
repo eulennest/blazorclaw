@@ -5,34 +5,34 @@ namespace BlazorClaw.Core.Security;
 
 public interface IToolPolicyProvider
 {
-    IEnumerable<ITool> FilterTools(IEnumerable<ITool> allTools, MessageContext context);
-    void BeforeTool(ITool tool, object parameters, MessageContext context);
-    string AfterTool(ITool tool, object parameters, string result, MessageContext context);
+    Task<IEnumerable<ITool>> FilterToolsAsync(IEnumerable<ITool> allTools, MessageContext context);
+    Task BeforeToolAsync(ITool tool, object parameters, MessageContext context);
+    Task<string> AfterToolAsync(ITool tool, object parameters, string result, MessageContext context);
 }
 
 public class ToolPolicyAggregator(IEnumerable<IToolPolicyProvider> providers) : IToolPolicyProvider
 {
-    public IEnumerable<ITool> FilterTools(IEnumerable<ITool> allTools, MessageContext context)
+    public async Task<IEnumerable<ITool>> FilterToolsAsync(IEnumerable<ITool> allTools, MessageContext context)
     {
         var result = allTools;
         foreach (var provider in providers)
         {
-            result = provider.FilterTools(result, context);
+            result = await provider.FilterToolsAsync(result, context);
         }
         return result;
     }
 
-    public void BeforeTool(ITool tool, object parameters, MessageContext context)
+    public async Task BeforeToolAsync(ITool tool, object parameters, MessageContext context)
     {
-        foreach (var provider in providers) provider.BeforeTool(tool, parameters, context);
+        foreach (var provider in providers) await provider.BeforeToolAsync(tool, parameters, context);
     }
 
-    public string AfterTool(ITool tool, object parameters, string result, MessageContext context)
+    public async Task<string> AfterToolAsync(ITool tool, object parameters, string result, MessageContext context)
     {
         var finalResult = result;
         foreach (var provider in providers)
         {
-            finalResult = provider.AfterTool(tool, parameters, finalResult, context);
+            finalResult = await provider.AfterToolAsync(tool, parameters, finalResult, context);
         }
         return finalResult;
     }

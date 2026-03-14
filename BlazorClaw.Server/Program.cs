@@ -47,7 +47,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
 builder.Services.AddHttpClient<BlazorClaw.Server.Tools.ImageGenerationTool>();
 builder.Services.Configure<WebSearchOptions>(builder.Configuration.GetSection(WebSearchOptions.Section));
-builder.Services.Configure<SandboxOptions>(builder.Configuration.GetSection(SandboxOptions.Section));
+builder.Services.Configure<SecurityOptions>(builder.Configuration.GetSection(SecurityOptions.Section));
 builder.Services.AddSingleton<PathHelper>();
 
 // Register Plugin Services

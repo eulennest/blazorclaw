@@ -10,6 +10,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ChatSessionParticipant> ChatSessionParticipants { get; set; }
     public DbSet<ModelFavorite> ModelFavorites { get; set; }
 
+    public DbSet<RateLimitTracking> RateLimitTrackings { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
@@ -24,6 +27,23 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         builder.Entity<ApplicationRole>(entity =>
         {
             entity.Property(r => r.Description).HasMaxLength(500);
+        });
+
+        // RateLimitTracking
+        builder.Entity<RateLimitTracking>(entity =>
+        {
+            entity.HasIndex(r => new { r.UserId, r.LimitKey, r.Timestamp });
+            entity.HasIndex(r => new { r.UserId, r.ToolName, r.Timestamp });
+            entity.HasIndex(r => r.Timestamp); // Für Cleanup
+        });
+
+        // AuditLog
+        builder.Entity<AuditLog>(entity =>
+        {
+            entity.HasIndex(a => new { a.UserId, a.Timestamp });
+            entity.HasIndex(a => new { a.Action, a.Timestamp });
+            entity.HasIndex(a => a.SessionId);
+            entity.HasIndex(a => a.Timestamp); // Für Cleanup
         });
     }
 }

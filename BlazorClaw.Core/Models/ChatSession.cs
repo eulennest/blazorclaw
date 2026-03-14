@@ -34,3 +34,30 @@ public class ChatSessionParticipant
     public required string UserId { get; set; }
     public virtual ApplicationUser? User { get; set; }
 }
+
+
+// Database Models
+
+public class RateLimitTracking
+{
+    [Key]
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string UserId { get; set; } = string.Empty;
+    public string? ToolName { get; set; }
+    public string? LimitKey { get; set; }
+    public int TokenCount { get; set; }
+    public bool Success { get; set; }
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+}
+
+public class AuditLog
+{
+    [Key]
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string UserId { get; set; } = string.Empty;
+    public string Action { get; set; } = string.Empty;
+    public string Details { get; set; } = string.Empty;
+    public string? Result { get; set; }
+    public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    public Guid SessionId { get; set; }
+}

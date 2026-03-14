@@ -181,7 +181,7 @@ namespace BlazorClaw.Server.Services
             {
 
                 // 2. Tools filtern und hinzufügen
-                var tools = policyProvider.FilterTools(toolRegistry.GetAllTools(), context);
+                var tools = await policyProvider.FilterToolsAsync(toolRegistry.GetAllTools(), context);
                 if (tools.Any())
                 {
                     sessionState.Tools ??= [];
@@ -284,9 +284,9 @@ namespace BlazorClaw.Server.Services
                                 var tool = toolRegistry.GetTool(call.Function.Name) ?? throw new ToolNotFoundException(call.Function.Name);
                                 var args = tool.BuidlArguments(call.Function.Arguments);
 
-                                policyProvider.BeforeTool(tool, args, context);
+                                await policyProvider.BeforeToolAsync(tool, args, context);
                                 var result = await tool.ExecuteAsync(args, context);
-                                result = policyProvider.AfterTool(tool, args, result, context);
+                                result = await policyProvider.AfterToolAsync(tool, args, result, context);
                                 logger.LogDebug("Tool: {Name} Result: {result}", call.Function.Name, result);
 
                                 if (sessionState.MessageHistory.Any(o => o.ToolCalls?.Any(o => o.Id == call.Id) ?? false))
@@ -340,7 +340,6 @@ namespace BlazorClaw.Server.Services
                 {
                     string tag = match.Groups[1].Value;    // z.B. "IMAGE" oder "TTS"
                     string payload = WebUtility.HtmlDecode(match.Groups[2].Value.Trim()); // URL oder Text
-                    string textContent = match.Groups[3].Value.Trim(); // Der Rest der Nachricht
 
                     logger.LogInformation("Media TAG: {tag} ,Payload: {payload}", tag, payload);
                     // Logik:
@@ -383,8 +382,8 @@ namespace BlazorClaw.Server.Services
                         default:
                             message.MediaContent ??= new();
                             message.MediaContent.Type = tag.ToLowerInvariant();
-                            var f = await GetMediaFileAsync(payload);
-                            message.MediaContent.Url = f ?? payload;
+                            var ft = await GetMediaFileAsync(payload);
+                            message.MediaContent.Url = ft ?? payload;
                             break;
                     }
                 }
