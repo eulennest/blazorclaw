@@ -9,17 +9,16 @@ using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Speech;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
-using BlazorClaw.Server.Tools.Memory;
+using BlazorClaw.UI.Components.Account;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.CommandLine;
 using System.Net;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 
 namespace BlazorClaw.Server.Services
 {
-    public class SessionManager(PathHelper pathHelper, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options, HttpClient httpClient) : ISessionManager
+    public class SessionManager(PathHelper pathHelper, IdentityUserAccessor userAccessor, IHttpContextAccessor httpContext, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options) : ISessionManager
     {
         public string SessionStoragePath { get; set; } = "sessions";
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
@@ -44,6 +43,12 @@ namespace BlazorClaw.Server.Services
                         CreatedAt = DateTime.UtcNow,
                         LastUsedAt = DateTime.UtcNow,
                     };
+                    if (httpContext.HttpContext != null)
+                    {
+                        var userId = (await userAccessor.GetUserAsync(httpContext.HttpContext))?.Id;
+                        if (!string.IsNullOrWhiteSpace(userId))
+                            sess.Participants.Add(new ChatSessionParticipant() { UserId = userId });
+                    }
                     db.ChatSessions.Add(sess);
                     await db.SaveChangesAsync().ConfigureAwait(false);
                 }
@@ -241,7 +246,7 @@ namespace BlazorClaw.Server.Services
             ChatCompletionResponse? content = null;
             var httpClient = context.Provider.GetRequiredService<HttpClient>();
             httpClient.InitProvider(sessionState.Provider);
-            
+
             // 3. OpenAI Request
             using (var response = await httpClient.PostAsJsonAsync("chat/completions", request))
             {
