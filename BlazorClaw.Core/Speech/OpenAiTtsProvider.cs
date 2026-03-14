@@ -1,9 +1,10 @@
 ﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
 
 namespace BlazorClaw.Core.Speech
 {
-    public class OpenAiTtsProvider(HttpClient httpClient, IConfiguration conf) : ITextToSpeechProvider
+    public class OpenAiTtsProvider(HttpClient httpClient, IConfiguration conf, Logger<OpenAiTtsProvider> logger) : ITextToSpeechProvider
     {
         public string Name => "OpenAI";
         public string Description => "OpenAI Text-to-Speech API";
@@ -35,7 +36,7 @@ namespace BlazorClaw.Core.Speech
                 Mode = FileMode.Create,
                 Access = FileAccess.ReadWrite,
                 Options = FileOptions.DeleteOnClose });
-
+            logger.LogInformation("{StatusCode} - {MediaType}", response.StatusCode, response.Content.Headers.ContentType?.MediaType);
             using var rets = await response.Content.ReadAsStreamAsync();
             await rets.CopyToAsync(strm);
             strm.Seek(0, SeekOrigin.Begin);

@@ -240,21 +240,23 @@ namespace BlazorClaw.Server.Services
                 Tools = sessionState.Tools
             };
 
+            ChatCompletionResponse? content = null;
             // 3. OpenAI Request
-            using var response = await httpClient.PostAsJsonAsync("chat/completions", request);
-            var content = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>();
-            var ret = await response.Content.ReadAsStringAsync();
-            if (content == null) throw new ArgumentNullException(nameof(content), $"Invalid response: {ret}");
-            if (!response.IsSuccessStatusCode)
+            using (var response = await httpClient.PostAsJsonAsync("chat/completions", request))
             {
-                logger.LogError(ret);
-                if (content?.Error?.Code != null)
+                content = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>();
+                var ret = await response.Content.ReadAsStringAsync();
+                if (content == null) throw new ArgumentNullException(nameof(content), $"Invalid response: {ret}");
+                if (!response.IsSuccessStatusCode)
                 {
-                    throw new Exception($"{content.Error.Message} ({content.Error.Code})");
+                    logger.LogError(ret);
+                    if (content?.Error?.Code != null)
+                    {
+                        throw new Exception($"{content.Error.Message} ({content.Error.Code})");
+                    }
                 }
             }
-
-            sessionState.LastUsage = content.Usage ?? sessionState.LastUsage;
+            sessionState.LastUsage = content!.Usage ?? sessionState.LastUsage;
             sessionState.Costs += content.Usage?.PromptCost ?? 0;
             sessionState.Tokens += content.Usage?.TotalTokens ?? 0;
 
