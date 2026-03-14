@@ -96,12 +96,13 @@ namespace BlazorClaw.Channels.Services
             }
         }
 
-        private static async Task<Tuple<Stream, string>?> DownloadVoiceMessage(ITelegramBotClient botClient, string fileId)
+        private async Task<Tuple<Stream, string>?> DownloadVoiceMessage(ITelegramBotClient botClient, string fileId)
         {
             var strm = new TempStream();
             var info = await botClient.GetInfoAndDownloadFile(fileId, strm);
+            logger.LogInformation("DownloadVoiceMessage: {FilePath}", info.FilePath);
             strm.Seek(0, SeekOrigin.Begin);
-            return Tuple.Create((Stream)strm, PathHelper.GetContentType(info.FilePath));
+            return Tuple.Create((Stream)strm, "audio/opus");
         }
 
 
