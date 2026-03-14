@@ -92,20 +92,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (HttpMethods.IsGet(HttpContext.Request.Method))
-        {
-            AuthenticationState authState = await AuthState.GetAuthenticationStateAsync();
-            var user = authState.User;
 
-            if (user is not null
-                && user.Identity is not null
-                && user.Identity.IsAuthenticated)
-            {
-                await SignInManager.SignOutAsync();
-                NavigationManager.NavigateTo("/");
-                await base.OnInitializedAsync();
-            }
-        }
         externalLoginsCount = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Count();
     }
 
