@@ -92,6 +92,7 @@
                         }
                     </div>
                     <div class="message-content">
+                        @((MarkupString)RenderMarkdown(@msg.Content?.ToString() ?? string.Empty))
                         @if (msg.Images?.Count > 0)
                         {
                             foreach (var item in msg.Images.Where(o => !string.IsNullOrWhiteSpace(o.ImageUrl?.Url)))
