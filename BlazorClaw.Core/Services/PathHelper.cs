@@ -39,18 +39,21 @@ namespace BlazorClaw.Core.Services
         public async Task<Tuple<Stream, string>?> GetMediaFileAsync(string fileName)
         {
             if (!Guid.TryParse(Path.GetFileNameWithoutExtension(fileName), out _)) return null;
-            var file = Path.Combine(GetMediaFolder(), fileName);
+            var file = Path.Combine(GetMediaFolder(), Path.GetFileName(fileName));
             if (!System.IO.File.Exists(file)) return null;
             return Tuple.Create((Stream)File.OpenRead(file), GetContentType(file));
         }
 
-        public static string GetContentType(string filename)
+        public static string GetContentType(string? filename)
         {
-            var rext = Path.GetExtension(filename).ToLowerInvariant();
-            if (rext == ".png") return "image/png";
-            if (rext == ".jpg" || rext == ".jpeg") return "image/jpeg";
-            if (rext == ".txt") return "text/plain";
-            if (rext == ".ogg") return "audio/opus";
+            if (!string.IsNullOrWhiteSpace(filename))
+            {
+                var rext = Path.GetExtension(filename).ToLowerInvariant();
+                if (rext == ".png") return "image/png";
+                if (rext == ".jpg" || rext == ".jpeg") return "image/jpeg";
+                if (rext == ".txt") return "text/plain";
+                if (rext == ".ogg") return "audio/opus";
+            }
             return "application/octet-stream";
         }
 

@@ -92,6 +92,7 @@ builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.TryAddScoped<IdentityUserAccessor>();
 builder.Services.TryAddScoped<ITextToSpeechProvider, OpenAiTtsProvider>();
+builder.Services.TryAddScoped<ISpeechToTextProvider, OpenAiTtsProvider>();
 
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
 

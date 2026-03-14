@@ -1,14 +1,16 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Data;
 using BlazorClaw.Core.DTOs;
+using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
+using BlazorClaw.Core.Speech;
 using Microsoft.AspNetCore.Identity;
 using System.Collections.Concurrent;
 using System.CommandLine;
 
 namespace BlazorClaw.Server.Services
 {
-    public class MessageDispatcher(IServiceScopeFactory scopeFactory, ILogger<MessageDispatcher> logger) : IMessageDispatcher
+    public class MessageDispatcher(PathHelper pathHelper, IServiceScopeFactory scopeFactory, ILogger<MessageDispatcher> logger) : IMessageDispatcher
     {
         private readonly ConcurrentDictionary<string, Guid> _sessIds = [];
         private readonly IServiceScope Scope = scopeFactory.CreateScope();
@@ -76,8 +78,33 @@ namespace BlazorClaw.Server.Services
                 cmdContext.Session = session?.Session;
                 var mca = cmdContext.Provider.GetRequiredService<MessageContextAccessor>();
                 mca.SetContext(cmdContext);
+                if(message is Tuple<Stream, string> strm)
+                {
+                    var file = await pathHelper.SaveMediaFileAsync(strm) ?? throw new Exception("Can't save media data");
+                    var uri = pathHelper.GetMediaUrl(file);
+                    var sst = cmdContext.Provider.GetRequiredService<ISpeechToTextProvider>();
+                    strm = await pathHelper.GetMediaFileAsync(file)!;
+                    var transText = await sst.SpeechToTextAsync(strm.Item1, strm.Item2);
 
-                if (message is string msgString)
+                    var chatMsg = new ChatMessage
+                    {
+                        Role = "user",
+                        Content = $"[VOICE MSG:{uri}] Transcription:\n{transText}"
+                    };
+                    chatMsg.MediaContent ??= new();
+                    chatMsg.MediaContent.Type = "voice";
+                    chatMsg.MediaContent.Url = uri.ToString();
+
+                    session!.MessageHistory.Add(chatMsg);
+
+                    await foreach (var msg in sm.DispatchToLLMAsync(session, cmdContext))
+                    {
+                        if (!msg.IsAssistant) continue;
+                        logger.LogInformation("Sending reply to {ChannelProvider}:{ChannelId} : {content}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, msg.Content);
+                        await cmdContext.Channel.SendChannelAsync(msg);
+                    }
+                }
+                else if (message is string msgString)
                 {
                     if (msgString.StartsWith('/'))
                     {

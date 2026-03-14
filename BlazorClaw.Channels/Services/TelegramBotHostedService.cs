@@ -2,11 +2,13 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
+using BlazorClaw.Core.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.CommandLine;
+using System.CommandLine.Parsing;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -76,13 +78,30 @@ namespace BlazorClaw.Channels.Services
                 if (inst == null || update.Message?.Text == null) return;
                 var telegramId = update.Message.From!.Id.ToString();
                 await botClient.SendChatAction(update.Message.Chat.Id, Telegram.Bot.Types.Enums.ChatAction.Typing, cancellationToken: cancellationToken);
-                await inst.OnMessageReceivedAsync(new ChannelSession(inst, telegramId), update.Message.Text);
+
+
+                if (update.Message.Voice != null)
+                {
+                    var ret = await DownloadVoiceMessage(botClient, update.Message.Voice.FileId);
+                    await inst.OnMessageReceivedAsync(new ChannelSession(inst, telegramId), ret);
+                }
+                else if (update.Message.Text != null)
+                    await inst.OnMessageReceivedAsync(new ChannelSession(inst, telegramId), update.Message.Text);
             }
             catch (Exception ex)
             {
                 logger.LogError(ex, "Error: {Messsage}", ex.Message);
             }
         }
+
+        private static async Task<Tuple<Stream, string>?> DownloadVoiceMessage(ITelegramBotClient botClient, string fileId)
+        {
+            var strm = new TempStream();
+            var info = await botClient.GetInfoAndDownloadFile(fileId, strm);
+            strm.Seek(0, SeekOrigin.Begin);
+            return Tuple.Create((Stream)strm, PathHelper.GetContentType(info.FilePath));
+        }
+
 
         public Task StopAsync(CancellationToken cancellationToken)
         {

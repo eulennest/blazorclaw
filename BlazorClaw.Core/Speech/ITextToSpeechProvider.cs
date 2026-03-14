@@ -14,6 +14,7 @@
         string Description { get; }
 
         Task<string?> SpeechToTextAsync(string data);
+        Task<string?> SpeechToTextAsync(Stream data, string contentType);
     }
 
 }

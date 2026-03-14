@@ -110,4 +110,13 @@ namespace BlazorClaw.Core.Utils
             }
         }
     }
+
+    public class TempStream() : FileStream(Path.GetTempFileName(), new FileStreamOptions()
+        {
+            Mode = FileMode.Create,
+            Access = FileAccess.ReadWrite,
+            Options = FileOptions.DeleteOnClose
+    })
+    { 
+    }
 }

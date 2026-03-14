@@ -1,10 +1,13 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using BlazorClaw.Core.Services;
+using BlazorClaw.Core.Utils;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace BlazorClaw.Core.Speech
 {
-    public class OpenAiTtsProvider(HttpClient httpClient, IConfiguration conf, ILogger<OpenAiTtsProvider> logger) : ITextToSpeechProvider
+    public class OpenAiTtsProvider(PathHelper pathHelper, HttpClient httpClient, IConfiguration conf, ILogger<OpenAiTtsProvider> logger) : ITextToSpeechProvider, ISpeechToTextProvider
     {
         public string Name => "OpenAI";
         public string Description => "OpenAI Text-to-Speech API";
@@ -32,10 +35,7 @@ namespace BlazorClaw.Core.Speech
                 var error = await response.Content.ReadAsStringAsync();
                 throw new Exception($"OpenAI TTS Error: {error}");
             }
-            var strm = new FileStream(Path.GetTempFileName(), new FileStreamOptions() { 
-                Mode = FileMode.Create,
-                Access = FileAccess.ReadWrite,
-                Options = FileOptions.DeleteOnClose });
+            var strm = new TempStream();
             logger.LogInformation("{StatusCode} - {MediaType}", response.StatusCode, response.Content.Headers.ContentType?.MediaType);
             using var rets = await response.Content.ReadAsStreamAsync();
             await rets.CopyToAsync(strm);
@@ -54,6 +54,56 @@ namespace BlazorClaw.Core.Speech
             yield return new TextToSpeechVoice("nova", "Energetic and warm");
             yield return new TextToSpeechVoice("shimmer", "Sophisticated and smooth");
         }
-    }
 
+
+
+        public async Task<string?> SpeechToTextAsync(Stream audioStream, string contentType)
+        {
+            var apiKey = conf.GetValue<string>("TTS:OpenAI:ApiKey");
+            if (string.IsNullOrEmpty(apiKey)) return null;
+
+            try
+            {
+                using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/audio/transcriptions");
+                httpRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+
+                // MultipartFormDataContent für File-Upload
+                using var content = new MultipartFormDataContent();
+                content.Add(new StringContent("whisper-1"), "model");
+                content.Add(new StringContent("de"), "language"); // Optional: Sprache (z.B. "de" für Deutsch)
+                content.Add(new StreamContent(audioStream), "file", $"audio{PathHelper.GetExtension(contentType)}");
+
+                httpRequest.Content = content;
+
+                using var response = await httpClient.SendAsync(httpRequest);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    logger.LogError("OpenAI SST Error: {Error}", error);
+                    throw new Exception($"OpenAI SST Error: {error}");
+                }
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var jsonResult = JsonDocument.Parse(responseContent);
+                var transcript = jsonResult.RootElement.GetProperty("text").GetString();
+
+                logger.LogInformation("Transcription successful: {Length} characters", transcript?.Length ?? 0);
+                return transcript;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "SST Error");
+                return null;
+            }
+        }
+
+        public async Task<string?> SpeechToTextAsync(string data)
+        {
+            data = await pathHelper.SaveMediaFileAsync(data) ?? data;
+            var strm = await pathHelper.GetMediaFileAsync(data);
+            if (strm == null) return null;
+            return await SpeechToTextAsync(strm.Item1, strm.Item2);
+        }
+    }
 }

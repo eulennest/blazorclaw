@@ -1,3 +1,5 @@
+using BlazorClaw.Core.Utils;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace BlazorClaw.Core.DTOs;
@@ -51,10 +53,42 @@ public class ChatMessage
     public bool IsSystem => Role.Equals("system", StringComparison.OrdinalIgnoreCase);
 
     [JsonIgnore]
-    public bool HasMedia => !string.IsNullOrWhiteSpace(MediaContent?.Url) || Images?.Count>0;
+    public bool HasMedia => !string.IsNullOrWhiteSpace(MediaContent?.Url) || Images?.Count > 0;
     [JsonIgnore]
     public bool HasContent => !string.IsNullOrWhiteSpace(Content?.ToString());
 
+    public IEnumerable<ContentEntry> GetContents()
+    {
+        if (Content is string str) yield return new TextContentEntry() { Text = str };
+
+        else if (Content is IEnumerable<object> obj)
+        {
+            if (obj is ContentEntry ce) yield return ce;
+            var js = JsonSerializer.Serialize(obj, JsonHelper.DefaultOptions);
+            var te = JsonSerializer.Deserialize<ContentEntry>(js);
+            if (te != null)
+            {
+                if (te.Type == "text")
+                    te = JsonSerializer.Deserialize<TextContentEntry>(js) ?? te;
+                else if (te.Type == "function")
+                    te = JsonSerializer.Deserialize<FunctionMessage>(js) ?? te;
+                else if (te.Type == "image_url")
+                    te = JsonSerializer.Deserialize<Images>(js) ?? te;
+                yield return te;
+            }
+
+        }
+    }
+
+    public string? GetTextContent()
+    {
+        return GetContents().OfType<TextContentEntry>().FirstOrDefault()?.Text;
+    }
+
+    public void SetContents(IEnumerable<ContentEntry> entrys)
+    {
+        Content = entrys;
+    }
 
     public static ChatMessage Build(string content)
     {
@@ -64,20 +98,30 @@ public class ChatMessage
     {
         return new ChatMessage { Role = "error", Content = $"Error: {ex.Message}" };
     }
+
 }
 
-public class Images
+public class TextContentEntry() : ContentEntry("text")
 {
+    [JsonPropertyName("text")]
+    public string Text { get; set; } = string.Empty;
+}
+
+public class ContentEntry(string type)
+{
+    public ContentEntry() : this(string.Empty) { }
 
     [JsonPropertyName("type")]
-    public string Type { get; set; }
-
-    [JsonPropertyName("image_url")]
-    public ImageUrl? ImageUrl { get; set; }
+    public string Type { get; set; } = type;
 
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
+}
 
+public class Images() : ContentEntry("image_url")
+{
+    [JsonPropertyName("image_url")]
+    public ImageUrl? ImageUrl { get; set; }
 }
 
 public class ImageUrl
@@ -131,16 +175,10 @@ public class ToolDefinition
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 }
-public class FunctionMessage
+public class FunctionMessage() : ContentEntry("function")
 {
-    [JsonPropertyName("type")]
-    public string Type { get; set; } = "function";
-
     [JsonPropertyName("function")]
     public required ToolDefinition Function { get; set; }
-
-    [JsonExtensionData]
-    public Dictionary<string, object>? ExtensionData { get; set; }
 }
 
 
