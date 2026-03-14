@@ -92,7 +92,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-
         externalLoginsCount = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Count();
     }
 

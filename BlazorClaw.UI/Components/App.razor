@@ -10,15 +10,23 @@
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="BlazorClaw.Server.styles.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="@RenderModeForPage" />
 </head>
 
 <body>
     <CascadingAuthenticationState>
-        <Routes />
+        <Routes @rendermode="@RenderModeForPage"/>
     </CascadingAuthenticationState>
     <script src="app.js"></script>
     <script src="_framework/blazor.web.js"></script>
 </body>
 
 </html>
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    private IComponentRenderMode? RenderModeForPage => HttpContext.Request.Path.StartsWithSegments("/Account")
+        ? null
+        : InteractiveServer;
+}
