@@ -3,11 +3,15 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace BlazorClaw.Core.Utils
 {
-    public class JsonHelper
+    public partial class JsonHelper
     {
+        [GeneratedRegex(@"^\[([A-Z]{3,5}):(.*?)\](.*)$", RegexOptions.Singleline)]
+        public static partial Regex MediaTagRegex();
+
         public static JsonSerializerOptions DefaultOptions
         {
             get

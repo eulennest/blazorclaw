@@ -1,6 +1,10 @@
+using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Utils;
+using Microsoft.Extensions.Logging;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace BlazorClaw.Core.DTOs;
 
@@ -82,7 +86,14 @@ public class ChatMessage
 
     public string? GetTextContent()
     {
-        return GetContents().OfType<TextContentEntry>().FirstOrDefault()?.Text;
+        var str = GetContents().OfType<TextContentEntry>().FirstOrDefault()?.Text;
+        if (str?.StartsWith('[') ?? false)
+        {
+            var match = JsonHelper.MediaTagRegex().Match(str);
+            if (match.Success)
+                str = match.Groups[3].Value.Trim(); // Der Rest der Nachricht
+        }
+        return str;
     }
 
     public void SetContents(IEnumerable<ContentEntry> entrys)

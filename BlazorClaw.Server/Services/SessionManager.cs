@@ -19,8 +19,7 @@ using System.Text.RegularExpressions;
 
 namespace BlazorClaw.Server.Services
 {
-
-    public partial class SessionManager(PathHelper pathHelper, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options, HttpClient httpClient) : ISessionManager
+    public class SessionManager(PathHelper pathHelper, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options, HttpClient httpClient) : ISessionManager
     {
         public string SessionStoragePath { get; set; } = "sessions";
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
@@ -334,7 +333,7 @@ namespace BlazorClaw.Server.Services
             if (msg.StartsWith('['))
             {
                 // Pattern mit 3-5 Großbuchstaben
-                var match = MediaTagRegex().Match(msg);
+                var match = JsonHelper.MediaTagRegex().Match(msg);
                 logger.LogInformation(match.ToString());
 
                 if (match.Success)
@@ -390,9 +389,6 @@ namespace BlazorClaw.Server.Services
                             message.MediaContent.Url = f ?? payload;
                             break;
                     }
-
-                    // Nachricht final bereinigen
-                    message.Content = textContent.Trim();
                 }
             }
 
@@ -414,8 +410,6 @@ namespace BlazorClaw.Server.Services
             return null;
         }
 
-        [GeneratedRegex(@"^\[([A-Z]{3,5}):(.*?)\](.*)$", RegexOptions.Singleline)]
-        private static partial Regex MediaTagRegex();
     }
 
     public class JsonSessionStorage

@@ -93,7 +93,7 @@
                         }
                     </div>
                     <div class="message-content">
-                        @((MarkupString)RenderMarkdown(@msg.Content?.ToString() ?? string.Empty))
+                        @((MarkupString)RenderMarkdown(@msg.GetTextContent() ?? string.Empty))
                         @if (msg.Images?.Count > 0)
                         {
                             foreach (var item in msg.Images.Where(o => !string.IsNullOrWhiteSpace(o.ImageUrl?.Url)))
@@ -266,7 +266,7 @@
             logger.LogInformation("Recieve HistoryLoaded for session {SessionId} with {MessageCount} messages", sessionId, history.Count);
             if (sessionId == SessionId)
             {
-                logger.LogInformation("History messages: {Messages}", string.Join("\n", history.Select(m => $"{m.Role}: {m.Content}")));
+                logger.LogInformation("History messages: {Count}", history.Count);
                 messages = history;
                 InvokeAsync(StateHasChanged);
                 ScrollToBottom();
