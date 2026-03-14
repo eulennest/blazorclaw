@@ -50,6 +50,12 @@ public class ChatMessage
     [JsonIgnore]
     public bool IsSystem => Role.Equals("system", StringComparison.OrdinalIgnoreCase);
 
+    [JsonIgnore]
+    public bool HasMedia => !string.IsNullOrWhiteSpace(MediaContent?.Url) || Images?.Count>0;
+    [JsonIgnore]
+    public bool HasContent => !string.IsNullOrWhiteSpace(Content?.ToString());
+
+
     public static ChatMessage Build(string content)
     {
         return new ChatMessage { Role = "user", Content = content };

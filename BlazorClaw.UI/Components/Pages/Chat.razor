@@ -82,7 +82,7 @@
             {
                 <div class="message @(msg.IsUser ? "own" : "other") role-@(msg.Role)">
                     <div class="message-avatar">
-                        @if (msg.IsUser)
+                        @if (msg.IsUser)w
                         {
                             <i class="bi bi-person"></i>
                         }
@@ -92,7 +92,6 @@
                         }
                     </div>
                     <div class="message-content">
-                        @((MarkupString)RenderMarkdown(@msg.Content?.ToString() ?? string.Empty))
                         @if (msg.Images?.Count > 0)
                         {
                             foreach (var item in msg.Images.Where(o => !string.IsNullOrWhiteSpace(o.ImageUrl?.Url)))
@@ -215,9 +214,12 @@
             {
                 logger.LogInformation("Message details - Role: {Role}, IsUser: {IsUser}", msg.Role, msg.IsUser);
                 selectedModel = currentSession.Session.CurrentModel;
-                messages.Add(msg);
-                InvokeAsync(StateHasChanged);
-                ScrollToBottom();
+                if (msg.HasContent || msg.HasMedia)
+                {
+                    messages.Add(msg);
+                    InvokeAsync(StateHasChanged);
+                    ScrollToBottom();
+                }
             }
         });
 
