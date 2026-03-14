@@ -40,7 +40,7 @@ namespace BlazorClaw.Core.Speech
             using var rets = await response.Content.ReadAsStreamAsync();
             await rets.CopyToAsync(strm);
             strm.Seek(0, SeekOrigin.Begin);
-            return Tuple.Create((Stream)strm, response.Content.Headers.ContentType?.MediaType ?? "audio/ogg");
+            return Tuple.Create((Stream)strm, response.Content.Headers.ContentType?.MediaType ?? "audio/opus");
         }
 
         public async IAsyncEnumerable<ITextToSpeechVoice> ListVoicesAsync()

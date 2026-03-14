@@ -50,6 +50,7 @@ namespace BlazorClaw.Core.Services
             if (rext == ".png") return "image/png";
             if (rext == ".jpg" || rext == ".jpeg") return "image/jpeg";
             if (rext == ".txt") return "text/plain";
+            if (rext == ".ogg") return "audio/opus";
             return "application/octet-stream";
         }
 
@@ -59,6 +60,7 @@ namespace BlazorClaw.Core.Services
             else if (contentType.Contains("image/jpeg")) return ".jpg";
             else if (contentType.Contains("image/jpg")) return ".jpg";
             else if (contentType.Contains("text/")) return ".txt";
+            else if (contentType.Contains("audio/opus")) return ".ogg";
             else if (contentType.Contains("audio/ogg")) return ".ogg";
             else if (contentType.Contains("audio/mpeg")) return ".mp3";
             return ".dat";
