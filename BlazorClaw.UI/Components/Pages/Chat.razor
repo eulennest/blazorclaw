@@ -102,15 +102,40 @@
                                 </div>
                             }
                         }
-                        @if (msg.MediaContent?.Type == "voice" && !string.IsNullOrWhiteSpace(msg.MediaContent.Url))
+
+                        @* Media Content (Voice, Video, File) *@
+                        @if (msg.MediaContent != null && !string.IsNullOrWhiteSpace(msg.MediaContent.Url))
                         {
-                            <div class="media-audio-container" style="margin-top: 10px;">
-                                <audio controls>
-                                    <source src="@UriToImageSrc(msg.MediaContent.Url)" type="audio/ogg">
-                                    Dein Browser unterstützt das Audio-Element nicht.
-                                </audio>
-                            </div>
+                            @switch (msg.MediaContent.Type?.ToLower())
+                            {
+                                case "voice":
+                                    <div class="media-audio-container" style="margin-top: 10px;">
+                                        <audio controls style="width: 100%; height: 35px;">
+                                            <source src="@UriToImageSrc(msg.MediaContent.Url)" type="audio/ogg">
+                                            Dein Browser unterstützt das Audio-Element nicht.
+                                        </audio>
+                                    </div>
+                                    break;
+
+                                case "video":
+                                    <div class="media-video-container" style="margin-top: 10px;">
+                                        <video controls style="max-width: 100%; height: auto; border-radius: 8px;">
+                                            <source src="@UriToImageSrc(msg.MediaContent.Url)" type="video/mp4">
+                                            Dein Browser unterstützt das Video-Element nicht.
+                                        </video>
+                                    </div>
+                                    break;
+
+                                case "file":
+                                    <div class="media-file-container" style="margin-top: 10px; padding: 10px; background-color: #f0f0f0; border-radius: 8px; display: inline-block;">
+                                        <a href="@UriToImageSrc(msg.MediaContent.Url)" download style="text-decoration: none; color: #0066cc; font-weight: bold;">
+                                            📥 Datei herunterladen
+                                        </a>
+                                    </div>
+                                    break;
+                            }
                         }
+
                     </div>
                 </div>
             }
@@ -337,7 +362,6 @@
 
     private string UriToImageSrc(string url)
     {
-        if (url.StartsWith("cid:")) return $"/api/media/{url.Substring(4)}";
         return url;
     }
 
@@ -636,5 +660,14 @@
         height: 35px; /* Etwas kompakter */
         border-radius: 20px;
         background-color: #f1f3f4;
+    }
+
+    .media-video-container video {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .media-file-container a:hover {
+        color: #0052a3;
+        text-decoration: underline;
     }
 </style>
