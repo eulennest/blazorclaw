@@ -32,7 +32,7 @@ public class FileSystemMemorySearchProvider() : IMemorySearchProvider
 
                         if (queries.Any(q => sectionText.Contains(q, StringComparison.OrdinalIgnoreCase)))
                         {
-                            yield return $"File: {Path.GetFileName(file)}\n{sectionText}";
+                            yield return $"[PARTIAL SECTION FROM File: {Path.GetFileName(file)}]\n{sectionText}";
                         }
                         i = sectionEnd - 1;
                     }
