@@ -13,7 +13,7 @@ namespace BlazorClaw.Core.Utils
 {
     public partial class JsonHelper
     {
-        [GeneratedRegex(@"^\[([A-Z]{3,5}):(.*?)\](.*)$", RegexOptions.Singleline)]
+        [GeneratedRegex(@"^(?:[\*\s]{0,3})\[([A-Z]{3,5}):(.*?)\](?:[\*\s]{0,3})(.*)$", RegexOptions.Singleline)]
         public static partial Regex MediaTagRegex();
 
         public static JsonSerializerOptions DefaultOptions

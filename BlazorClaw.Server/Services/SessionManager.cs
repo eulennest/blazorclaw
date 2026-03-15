@@ -343,7 +343,7 @@ namespace BlazorClaw.Server.Services
         {
             var msg = Convert.ToString(message.Content) ?? string.Empty;
 
-            if (msg.StartsWith('['))
+            if (msg[..4].Contains('['))
             {
                 // Pattern mit 3-5 Großbuchstaben
                 var match = JsonHelper.MediaTagRegex().Match(msg);
