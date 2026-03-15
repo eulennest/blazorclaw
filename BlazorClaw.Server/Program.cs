@@ -69,7 +69,6 @@ builder.Services.TryAddScoped<IToolPolicyProvider>(sp => new ToolPolicyAggregato
 builder.Services.TryAddScoped<IMessagePolicyProvider>(sp => new MessagePolicyAggregator(PluginUtils.BuildPlugins<IMessagePolicyProvider>(sp, typeof(MessagePolicyAggregator))));
 
 // Memory Search
-builder.Services.Configure<FileSystemMemoryOptions>(builder.Configuration.GetSection(FileSystemMemoryOptions.Section));
 builder.Services.TryAddScoped<IMemorySearchProvider>(sp => new MemorySearchAggregator(PluginUtils.BuildPlugins<IMemorySearchProvider>(sp, typeof(MemorySearchAggregator))));
 
 // Commands
