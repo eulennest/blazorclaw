@@ -102,6 +102,7 @@
 
 
 
+
                             @if (msg.Images?.Count > 0)
                             {
                                 foreach (var item in msg.Images.Where(o => !string.IsNullOrWhiteSpace(o.ImageUrl?.Url)))
@@ -258,12 +259,10 @@
                 logger.LogInformation("Message details - Role: {Role}, IsUser: {IsUser}", msg.Role, msg.IsUser);
                 if (!string.IsNullOrWhiteSpace(currentSession?.Session.CurrentModel))
                     selectedModel = currentSession.Session.CurrentModel;
-                if (msg.HasContent || msg.HasMedia)
-                {
-                    messages.Add(msg);
-                    InvokeAsync(StateHasChanged);
-                    ScrollToBottom();
-                }
+
+                messages.Add(msg);
+                InvokeAsync(StateHasChanged);
+                ScrollToBottom();
             }
         });
 

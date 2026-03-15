@@ -52,7 +52,7 @@ public class ChatHub : Hub, IChannelBot
             var state = await sessionManager.GetSessionAsync(sessionId);
             if (state != null)
             {
-                var msgs = state.MessageHistory.Where(o => o.HasMedia || o.HasContent);
+                var msgs = state.MessageHistory;
                 await Groups.AddToGroupAsync(Context.ConnectionId, sessionId.ToString());
                 await Clients.Caller.SendAsync("HistoryLoaded", sessionId, msgs);
             }
