@@ -10,15 +10,17 @@ namespace BlazorClaw.Server.Tools.Memory
             var pathH = context.Provider.GetRequiredService<PathHelper>();
             var userId = context.UserId?.ToLowerInvariant();
             if (!Guid.TryParse(userId, out var uuid)) uuid = context.Session?.Id ?? Guid.NewGuid();
-            return Path.Combine(pathH.GetBaseFolder(), "memory", uuid.ToString());
+            return Path.GetFullPath(Path.Combine(pathH.GetBaseFolder(), "memory", uuid.ToString()));
         }
 
         public static string GetMemoryPath(string filename, MessageContext context)
         {
             var path = GetMemoryBasePath(context);
-            var safeFileName = Path.GetFileName(filename);
-            if (!safeFileName.EndsWith(".md")) safeFileName += ".md";
-            return Path.Combine(path, safeFileName);
+            if (!filename.EndsWith(".md")) filename += ".md";
+            var fpath = Path.GetFullPath(Path.Combine(path, filename));
+            if (!fpath.StartsWith(path)) throw new InvalidOperationException("Path not allowed");
+            return fpath;
         }
     }
 }
+    
