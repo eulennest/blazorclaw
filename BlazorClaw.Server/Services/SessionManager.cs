@@ -214,12 +214,15 @@ namespace BlazorClaw.Server.Services
                 }
                 sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(sessionState));
 
-                var agentsPath = MemoryToolUtils.GetMemoryPath("AGENTS.md", context);
-
-                if (File.Exists(agentsPath))
+                List<string> files = ["AGENTS.md", "IDENTITY.md", "SOUL.md", "USER.md"];
+                foreach (var item in files)
                 {
-                    var agentPromptContent = await File.ReadAllTextAsync(agentsPath).ConfigureAwait(false);
-                    sessionState.SystemPrompts.Add(new ChatMessage { Role = "system", Content = "[Memory: AGENTS.md]" + Environment.NewLine + "-----" + Environment.NewLine + agentPromptContent });
+                    var agentsPath = MemoryToolUtils.GetMemoryPath(item, context);
+                    if (File.Exists(agentsPath))
+                    {
+                        var agentPromptContent = await File.ReadAllTextAsync(agentsPath).ConfigureAwait(false);
+                        sessionState.SystemPrompts.Add(new ChatMessage { Role = "system", Content = $"[Memory: {item}]" + Environment.NewLine + "-----" + Environment.NewLine + agentPromptContent });
+                    }
                 }
             }
 
