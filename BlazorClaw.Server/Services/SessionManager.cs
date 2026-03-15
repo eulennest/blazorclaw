@@ -9,6 +9,7 @@ using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Speech;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Server.Tools.Memory;
 using BlazorClaw.UI.Components.Account;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
@@ -205,6 +206,7 @@ namespace BlazorClaw.Server.Services
             {
                 sessionState.SystemPrompts ??= [];
                 sessionState.SystemPrompts.Add(new DefaultSystemChatMessage());
+
                 if (File.Exists("SYSTEMPROMPT.md"))
                 {
                     var systemPromptContent = await File.ReadAllTextAsync("SYSTEMPROMPT.md").ConfigureAwait(false);
@@ -212,10 +214,12 @@ namespace BlazorClaw.Server.Services
                 }
                 sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(sessionState));
 
-                if (File.Exists("AGENTS.md"))
+                var agentsPath = MemoryToolUtils.GetMemoryPath("AGENTS.md", context);
+
+                if (File.Exists(agentsPath))
                 {
-                    var agentPromptContent = await File.ReadAllTextAsync("AGENTS.md").ConfigureAwait(false);
-                    sessionState.SystemPrompts.Add(new ChatMessage { Role = "system", Content = "[File: AGENTS.md]" + Environment.NewLine + "-----" + Environment.NewLine + agentPromptContent });
+                    var agentPromptContent = await File.ReadAllTextAsync(agentsPath).ConfigureAwait(false);
+                    sessionState.SystemPrompts.Add(new ChatMessage { Role = "system", Content = "[Memory: AGENTS.md]" + Environment.NewLine + "-----" + Environment.NewLine + agentPromptContent });
                 }
             }
 

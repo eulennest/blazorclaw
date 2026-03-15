@@ -31,10 +31,10 @@ namespace BlazorClaw.Server.Services
                 sb.AppendLine($"Current OS: {RuntimeInformation.OSDescription}");
                 sb.AppendLine($"Session Title: {context.Session?.Title}");
                 sb.AppendLine($"Session ID: {context.Session?.Id}");
-                sb.AppendLine($"User ID: {context.UserId}");
                 sb.AppendLine($"Channel Provider: {context.Channel?.ChannelProvider}");
                 sb.AppendLine($"Channel ID: {context.Channel?.ChannelId}");
                 sb.AppendLine($"Channel Sender ID: {context.Channel?.SenderId}");
+                sb.AppendLine($"User ID: {context.UserId}");
                 if (uinfo != null)
                 {
                     sb.AppendLine("User-Account:");
