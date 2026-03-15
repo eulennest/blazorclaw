@@ -40,6 +40,9 @@ public class ChatMessage
     [JsonPropertyName("media_content")]
     public virtual MediaInfo? MediaContent { get; set; }
 
+    [JsonPropertyName("reasoning")]
+    public virtual string? Reasoning { get; set; }
+
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 

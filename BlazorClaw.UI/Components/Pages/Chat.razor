@@ -103,6 +103,8 @@
 
 
 
+
+
                             @if (msg.Images?.Count > 0)
                             {
                                 foreach (var item in msg.Images.Where(o => !string.IsNullOrWhiteSpace(o.ImageUrl?.Url)))
@@ -151,32 +153,48 @@
                             }
                         }
 
-                        @if (showTools && msg.ToolCalls?.Count > 0)
+                        @if (showTools)
                         {
-                            foreach (var item in msg.ToolCalls)
+                            if (!string.IsNullOrWhiteSpace(msg.Reasoning))
                             {
-                                <div class="card mb-2 bg-light">
+                                <div class="card mb-2 bg-dark reasoning">
                                     <div class="card-body p-2">
                                         <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <small><span class="badge bg-primary badge-sm"><!--!--><i class="bi bi-play-circle"></i> Tool: @item.Function.Name</span></small><!--!-->
-                                        </div><div class="p-2 rounded border border-primary">
-                                            <strong>@item.Function.Name</strong>
-                                            <pre class="mb-0 mt-1 small">@item.Function.Arguments</pre>
-                                        </div>
+                                            <small>
+                                                <!--!--><span class="badge bg-info badge-sm">
+                                                    <i class="bi bi-lightbulb"></i> Thinking
+                                                </span>
+                                            </small><!--!-->
+                                        </div><pre class="mb-0 small text-muted fst-italic">@msg.Reasoning.Trim()</pre>
                                     </div>
                                 </div>
                             }
-                        }
-                        @if (showTools && msg.IsTool)
-                        {
-                            <div class="card mb-2 bg-light">
-                                <div class="card-body p-2">
-                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                        <small><span class="badge bg-secondary badge-sm"><i class="bi bi-wrench"></i> Tool Output:</span></small>
+                            @if (msg.ToolCalls?.Count > 0)
+                            {
+                                foreach (var item in msg.ToolCalls)
+                                {
+                                    <div class="card mb-2 bg-dark tool_call">
+                                        <div class="card-body p-2">
+                                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                                <small><span class="badge bg-primary badge-sm"><!--!--><i class="bi bi-play-circle"></i> Tool: @item.Function.Name</span></small><!--!-->
+                                            </div><div class="p-2 rounded border border-primary">
+                                                <pre class="mb-0 mt-1 small">@item.Function.Arguments</pre>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <pre class="mb-0 small">@msg.Content</pre>
+                                }
+                            }
+                            @if (msg.IsTool)
+                            {
+                                <div class="card mb-2 bg-dark tool_output">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <small><span class="badge bg-secondary badge-sm"><i class="bi bi-wrench"></i> Tool Output:</span></small>
+                                        </div>
+                                        <pre class="mb-0 small">@msg.Content</pre>
+                                    </div>
                                 </div>
-                            </div>
+                            }
                         }
                     </div>
                 </div>
@@ -742,5 +760,9 @@
         border-radius: 4px;
         max-height: 400px;
         overflow-y: auto;
+    }
+
+    .reasoning pre {
+        border-left: 3px solid #0dcaf0;
     }
 </style>
