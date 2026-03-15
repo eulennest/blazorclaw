@@ -151,7 +151,7 @@ namespace BlazorClaw.Channels.Services
             }
 
             if (!string.IsNullOrWhiteSpace(content))
-                await Client.SendMessage(channelId.ChannelId, content ?? string.Empty, cancellationToken: cancellationToken);
+                await Client.SendMessage(channelId.ChannelId, content,ParseMode.MarkdownV2, cancellationToken: cancellationToken);
         }
 
         public override Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
