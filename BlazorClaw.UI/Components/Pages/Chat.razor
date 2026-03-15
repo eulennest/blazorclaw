@@ -99,6 +99,9 @@
                             @((MarkupString)RenderMarkdown(@msg.GetTextContent() ?? string.Empty))
                     
 
+
+
+
                             @if (msg.Images?.Count > 0)
                             {
                                 foreach (var item in msg.Images.Where(o => !string.IsNullOrWhiteSpace(o.ImageUrl?.Url)))
@@ -151,14 +154,14 @@
                         {
                             foreach (var item in msg.ToolCalls)
                             {
-                                <div class="card-body p-2">
-                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                        <small><span class="badge bg-primary badge-sm"><!--!--><i class="bi bi-play-circle"></i> Tool: exec</span></small><!--!-->
-                                    </div><div class="bg-white p-2 rounded border border-primary">
-                                        <strong>@item.Function.Name</strong>
-                                        <pre class="mb-0 mt-1 small" style="white-space: pre-wrap; word-break: break-word; max-height: 200px; overflow-y: auto;">
-                                                                            @item.Function.Arguments
-                                                                            </pre>
+                                <div class="card mb-2 bg-light">
+                                    <div class="card-body p-2">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <small><span class="badge bg-primary badge-sm"><!--!--><i class="bi bi-play-circle"></i> Tool: @item.Function.Name</span></small><!--!-->
+                                        </div><div class="p-2 rounded border border-primary">
+                                            <strong>@item.Function.Name</strong>
+                                            <pre class="mb-0 mt-1 small">@item.Function.Arguments</pre>
+                                        </div>
                                     </div>
                                 </div>
                             }
@@ -170,9 +173,7 @@
                                     <div class="d-flex justify-content-between align-items-start mb-1">
                                         <small><span class="badge bg-secondary badge-sm"><i class="bi bi-wrench"></i> Tool Output:</span></small>
                                     </div>
-                                    <pre class="mb-0 small" style="white-space: pre-wrap; word-break: break-word; background: white; padding: 8px; border-radius: 4px; max-height: 400px; overflow-y: auto;">Häufigkeit:
-                                            @msg.Content
-                                            </pre>
+                                    <pre class="mb-0 small" ">@msg.Content</pre>
                                 </div>
                             </div>
                         }
@@ -735,4 +736,12 @@
                 text-decoration: underline;
             }
 
+    pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+        padding: 8px;
+        border-radius: 4px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
 </style>
