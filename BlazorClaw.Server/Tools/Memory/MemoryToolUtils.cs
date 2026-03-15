@@ -15,6 +15,7 @@ namespace BlazorClaw.Server.Tools.Memory
 
         public static string GetMemoryPath(string filename, MessageContext context)
         {
+            filename = filename.Trim('/', '\\');
             var path = GetMemoryBasePath(context);
             if (!filename.EndsWith(".md")) filename += ".md";
             var fpath = Path.GetFullPath(Path.Combine(path, filename));
@@ -23,4 +24,3 @@ namespace BlazorClaw.Server.Tools.Memory
         }
     }
 }
-    
