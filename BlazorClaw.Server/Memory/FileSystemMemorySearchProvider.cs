@@ -13,6 +13,7 @@ public class FileSystemMemorySearchProvider() : IMemorySearchProvider
         var _path = MemoryToolUtils.GetMemoryBasePath(context);
         if (Directory.Exists(_path))
         {
+            var pl = _path.Length;
             var files = Directory.GetFiles(_path, "*.md", SearchOption.AllDirectories);
 
             foreach (var file in files)
@@ -32,7 +33,7 @@ public class FileSystemMemorySearchProvider() : IMemorySearchProvider
 
                         if (queries.Any(q => sectionText.Contains(q, StringComparison.OrdinalIgnoreCase)))
                         {
-                            yield return $"[PARTIAL SECTION FROM File: {Path.GetFileName(file)}]\n{sectionText}";
+                            yield return $"[PARTIAL SECTION FROM memory: {file[pl..]}]\n{sectionText}";
                         }
                         i = sectionEnd - 1;
                     }
