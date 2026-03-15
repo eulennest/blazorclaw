@@ -81,7 +81,7 @@ namespace BlazorClaw.Server.Services
                 if (store != null)
                 {
                     var scope = scopeFactory.CreateScope();
-                    var model = store.Session?.CurrentModel;
+                    var model = store.Session.CurrentModel;
                     state = new ChatSessionState
                     {
                         Scope = scope,

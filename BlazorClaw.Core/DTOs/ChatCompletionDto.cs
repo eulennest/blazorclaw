@@ -141,7 +141,7 @@ public class Images() : ContentEntry("image_url")
 public class ImageUrl
 {
     [JsonPropertyName("url")]
-    public string Url { get; set; }
+    public string Url { get; set; } = string.Empty;
 
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }

@@ -85,7 +85,7 @@ namespace BlazorClaw.Channels.Services
                 if (update.Message.Voice != null)
                 {
                     var ret = await DownloadVoiceMessage(botClient, update.Message.Voice.FileId);
-                    await inst.OnMessageReceivedAsync(new ChannelSession(inst, telegramId), ret);
+                    if (ret != null) await inst.OnMessageReceivedAsync(new ChannelSession(inst, telegramId), ret);
                 }
                 else if (update.Message.Text != null)
                     await inst.OnMessageReceivedAsync(new ChannelSession(inst, telegramId), update.Message.Text);

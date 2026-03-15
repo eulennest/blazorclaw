@@ -6,7 +6,7 @@ namespace BlazorClaw.Server.Memory
 {
     public class VaultMemoryProvider(IVaultProvider vaultProvider) : IMemorySearchProvider
     {
-        public async IAsyncEnumerable<string> SearchAsync(string[] queries, int maxResults, MessageContext context)
+        public async IAsyncEnumerable<string> SearchAsync(string[] queries, int maxResults, MessageContext? context)
         {
             var results = new List<string>();
 

@@ -130,19 +130,19 @@ namespace BlazorClaw.Core.Utils
     }
 
     public class TempStream() : FileStream(Path.GetTempFileName(), new FileStreamOptions()
-        {
-            Mode = FileMode.Create,
-            Access = FileAccess.ReadWrite,
-            Options = FileOptions.DeleteOnClose
+    {
+        Mode = FileMode.Create,
+        Access = FileAccess.ReadWrite,
+        Options = FileOptions.DeleteOnClose
     })
-    { 
+    {
     }
 
     public class IgnoreCaseEqualityComparer : IEqualityComparer<string>
     {
-        public bool Equals(string x, string y)
+        public bool Equals(string? x, string? y)
         {
-            return x.Equals(y, StringComparison.OrdinalIgnoreCase);
+            return (x == null && y == null) || (x?.Equals(y, StringComparison.OrdinalIgnoreCase) ?? false);
         }
 
         public int GetHashCode(string obj)

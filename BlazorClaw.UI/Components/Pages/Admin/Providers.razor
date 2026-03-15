@@ -185,7 +185,7 @@
         }
     }
 
-    private string GetMaskedToken(string token)
+    private string GetMaskedToken(string? token)
     {
         if ((token?.Length ?? 0) < 15) return "••••••••";
         return $"{token!.Substring(0, 6)}••••••{token.Substring(token.Length - 4)}";

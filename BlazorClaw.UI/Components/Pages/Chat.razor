@@ -111,7 +111,7 @@
                             {
                                 case "image":
                                     <div class="media-container">
-                                        <img src="@UriToImageSrc(msg.MediaContent.Url)"/>
+                                        <img src="@UriToImageSrc(msg.MediaContent.Url)" />
                                     </div>
                                     break;
                                 case "voice":
@@ -220,7 +220,8 @@
             if (sessionId == SessionId)
             {
                 logger.LogInformation("Message details - Role: {Role}, IsUser: {IsUser}", msg.Role, msg.IsUser);
-                selectedModel = currentSession.Session.CurrentModel;
+                if (!string.IsNullOrWhiteSpace(currentSession?.Session.CurrentModel))
+                    selectedModel = currentSession.Session.CurrentModel;
                 if (msg.HasContent || msg.HasMedia)
                 {
                     messages.Add(msg);
@@ -671,30 +672,32 @@
         margin-top: 10px;
     }
 
-    .media-container audio {
-        height: 35px; /* Etwas kompakter */
-        width: 100%;
-        min-width: 300px;
-        border-radius: 20px;
-        background-color: #f1f3f4;
-    }
+        .media-container audio {
+            height: 35px; /* Etwas kompakter */
+            width: 100%;
+            min-width: 300px;
+            border-radius: 20px;
+            background-color: #f1f3f4;
+        }
 
-    .media-container video {
-        width: 100%;
-        min-width: 300px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        max-width: 100%;
-        height: auto;
-        border-radius: 8px;
-    }
+        .media-container video {
+            width: 100%;
+            min-width: 300px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+        }
 
-    .media-container a {
-        text-decoration: none;
-        color: #0066cc; font-weight: bold;
-    }
-    .media-container a:hover {
-        color: #0052a3;
-        text-decoration: underline;
-    }
+        .media-container a {
+            text-decoration: none;
+            color: #0066cc;
+            font-weight: bold;
+        }
+
+            .media-container a:hover {
+                color: #0052a3;
+                text-decoration: underline;
+            }
 
 </style>
