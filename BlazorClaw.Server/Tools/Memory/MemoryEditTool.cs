@@ -7,8 +7,6 @@ namespace BlazorClaw.Server.Tools.Memory;
 
 public class MemoryEditTool : BaseTool<MemoryEditTool.Params>
 {
-    private readonly string _memoryPath = "./memory";
-
     public override string Name => "memory_edit";
     public override string Description => "Editiert eine Memory-Datei (Markdown-Format, relative zum /memory Ordner).";
 
@@ -29,9 +27,8 @@ public class MemoryEditTool : BaseTool<MemoryEditTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
-        var safeFileName = Path.GetFileName(parameters.FileName);
-        if (!safeFileName.EndsWith(".md")) safeFileName += ".md";
-        var fullPath = Path.Combine(_memoryPath, safeFileName);
+        var fullPath = MemoryToolUtils.GetMemoryPath(parameters.FileName, context);
+        var safeFileName = Path.GetFileName(fullPath);
 
         if (!File.Exists(fullPath))
             throw new FileNotFoundException($"Memory-Datei nicht gefunden: {safeFileName}");

@@ -7,8 +7,6 @@ namespace BlazorClaw.Server.Tools.Memory;
 
 public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
 {
-    private readonly string _memoryPath = "./memory";
-
     public override string Name => "memory_write";
     public override string Description => "Schreibt Markdown-Inhalt in eine Memory-Datei (relative zum /memory Ordner).";
 
@@ -28,11 +26,10 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
-        var safeFileName = Path.GetFileName(parameters.FileName);
-        if (!safeFileName.EndsWith(".md")) safeFileName += ".md";
-        var fullPath = Path.Combine(_memoryPath, safeFileName);
-
-        if (!Directory.Exists(_memoryPath))
+        var fullPath = MemoryToolUtils.GetMemoryPath(parameters.FileName, context);
+        var safeFileName = Path.GetFileName(fullPath);
+        var _memoryPath = Path.GetDirectoryName(fullPath);
+        if (_memoryPath != null && !Directory.Exists(_memoryPath))
             Directory.CreateDirectory(_memoryPath);
 
         var mode = parameters.Mode ?? WriteMode.Create;
