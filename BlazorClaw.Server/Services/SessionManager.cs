@@ -9,7 +9,6 @@ using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Speech;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
-using BlazorClaw.Server.Tools.Memory;
 using BlazorClaw.UI.Components.Account;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
@@ -214,10 +213,10 @@ namespace BlazorClaw.Server.Services
                 }
                 sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(sessionState));
 
-                List<string> files = ["AGENTS.md", "IDENTITY.md", "SOUL.md", "USER.md"];
+                List<string> files = ["AGENTS.md", "IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"];
                 foreach (var item in files)
                 {
-                    var agentsPath = MemoryToolUtils.GetMemoryPath(item, context);
+                    var agentsPath = context.GetMemoryPath(item);
                     if (File.Exists(agentsPath))
                     {
                         var agentPromptContent = await File.ReadAllTextAsync(agentsPath).ConfigureAwait(false);
