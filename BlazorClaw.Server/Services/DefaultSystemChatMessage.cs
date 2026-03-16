@@ -1,13 +1,10 @@
-﻿using BlazorClaw.Core.Commands;
-using BlazorClaw.Core.Data;
-using BlazorClaw.Core.DTOs;
-using Microsoft.AspNetCore.Identity;
-using System.Runtime.InteropServices;
+﻿using BlazorClaw.Core.DTOs;
 using System.Text;
 
 namespace BlazorClaw.Server.Services
 {
-    internal class DefaultSystemChatMessage : ChatMessage    {
+    internal class DefaultSystemChatMessage : ChatMessage
+    {
         override public string Role => "system";
         override public object Content
         {
@@ -27,6 +24,14 @@ namespace BlazorClaw.Server.Services
                 sb.AppendLine("- Rule: Only ONE media tag permitted per response.");
                 sb.AppendLine("- Rule: If your content (e.g. TTS text/filename) contains ']', YOU MUST ESCAPE IT as '&#93;'.");
                 sb.AppendLine("- Rule: Optional Text message must follow the media tag.");
+                sb.AppendLine();
+                sb.AppendLine("### MEMORY vs. FS ###");
+                sb.AppendLine(" - If a File Marked with [memory: FILENAME.md] OR [XXX memory: FILENAME.md] then use memory_* Tools for actions.");
+                sb.AppendLine(" - Memory has only *.md Files, if you read/edit a *.md File you should use memory_* Tools");
+                sb.AppendLine(" - All other files MUST use fs_* Tools");
+                sb.AppendLine(" - Memory_* Tools are working in a virtual Fs and use relative Paths.");
+                sb.AppendLine(" - fs_* Tools working with pyhsical Files and can be Sandboxed.");
+
                 return sb.ToString();
             }
         }

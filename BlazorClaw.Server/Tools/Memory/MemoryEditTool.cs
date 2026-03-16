@@ -12,7 +12,7 @@ public class MemoryEditTool : BaseTool<MemoryEditTool.Params>
 
     public class Params
     {
-        [Required, Description("Dateiname (ohne Pfad, nur Name + .md)")]
+        [Required, Description("Dateiname (immer relativ,  Name + .md)")]
         public string FileName { get; set; } = string.Empty;
 
         [Required, Description("Text, der ersetzt werden soll")]
