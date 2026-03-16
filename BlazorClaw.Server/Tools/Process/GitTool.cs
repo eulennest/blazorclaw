@@ -37,7 +37,7 @@ public class GitTool(IOptions<GitOptions> options) : BaseTool<GitTool.Params>
     protected override async Task<string> ExecuteInternalAsync(Params p, MessageContext context)
     {
         var path = Path.Combine(context.GetWorkspacePath(), p.WorkingDirectory ?? "./repos");
-
+        Directory.CreateDirectory(path);
         var startInfo = new System.Diagnostics.ProcessStartInfo
         {
             FileName = _options.GitPath,
