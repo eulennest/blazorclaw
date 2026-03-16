@@ -25,7 +25,7 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
             return Task.FromResult("Keine Memory-Dateien gefunden.");
 
         var fileInfoList = files.Select(f =>
-            $"- {f.Name} (Größe: {f.Length} Bytes, Letzte Änderung: {f.LastWriteTime:yyyy-MM-dd HH:mm:ss}, Attribute: {f.Attributes})");
+            $"- {f.Name} (Größe: {f.Length} Bytes, Letzte Änderung: {f.LastWriteTime.ToUniversalTime():u}, Attribute: {f.Attributes})");
 
         return Task.FromResult("Memory-Dateien:\n" + string.Join("\n", fileInfoList));
     }
