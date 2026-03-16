@@ -2,6 +2,8 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using BlazorClaw.Core.Utils;
+
 
 namespace BlazorClaw.Server.Tools.Memory;
 
@@ -18,7 +20,7 @@ public class MemoryRmTool : BaseTool<MemoryRmTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params p, MessageContext context)
     {
-        var fullPath = MemoryToolUtils.GetMemoryPath(p.FileName, context);
+        var fullPath = context.GetMemoryPath(p.FileName);
 
         if (!File.Exists(fullPath))
             throw new FileNotFoundException($"Memory-Datei nicht gefunden: {p.FileName}");

@@ -1,6 +1,7 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Utils;
 using Microsoft.Extensions.Options;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -25,25 +26,27 @@ public class GitTool(IOptions<GitOptions> options) : BaseTool<GitTool.Params>
         [Required, Description("Git-Befehl und Argumente (z.B. 'status' oder 'log -n 5')")]
         public string Args { get; set; } = string.Empty;
 
-        [Required, Description("Arbeitsverzeichnis für den Git-Befehl")]
-        public string WorkingDirectory { get; set; } = string.Empty;
+        [Description("Arbeitsverzeichnis für den Git-Befehl (optional default: ./repos)")]
+        public string? WorkingDirectory { get; set; } = "./repos";
         public IEnumerable<string> GetPaths()
         {
-            yield return WorkingDirectory;
+            yield return WorkingDirectory ?? "./repos";
         }
     }
 
-    protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
+    protected override async Task<string> ExecuteInternalAsync(Params p, MessageContext context)
     {
+        var path = Path.Combine(context.GetWorkspacePath(), p.WorkingDirectory ?? "./repos");
+
         var startInfo = new System.Diagnostics.ProcessStartInfo
         {
             FileName = _options.GitPath,
-            Arguments = parameters.Args,
+            Arguments = p.Args,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true,
-            WorkingDirectory = parameters.WorkingDirectory ?? Environment.CurrentDirectory
+            WorkingDirectory = path
         };
 
         using var process = System.Diagnostics.Process.Start(startInfo) ?? throw new NullReferenceException("Prozess konnte nicht gestartet werden.");

@@ -1,5 +1,6 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Utils;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
@@ -18,6 +19,9 @@ public class ExecParams
     [Description("Timeout in Sekunden (default: 60)")]
     public int? Timeout { get; set; } = 60;
 
+    [Description("Arbeitsverzeichnis für den Befehl (optional default: ./)")]
+    public string? WorkingDirectory { get; set; } = "./";
+
 }
 
 public class ExecTool : BaseTool<ExecParams>
@@ -27,12 +31,15 @@ public class ExecTool : BaseTool<ExecParams>
 
     protected override async Task<string> ExecuteInternalAsync(ExecParams p, MessageContext context)
     {
+        var path = Path.Combine(context.GetWorkspacePath(), p.WorkingDirectory ?? "./repos");
+
         var startInfo = new ProcessStartInfo
         {
             FileName = p.Binary,
             RedirectStandardOutput = true,
             RedirectStandardError = true,
-            UseShellExecute = false
+            UseShellExecute = false,
+            WorkingDirectory = path
         };
 
         foreach (var arg in p.Args) startInfo.ArgumentList.Add(arg);

@@ -2,6 +2,7 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using BlazorClaw.Core.Utils;
 
 namespace BlazorClaw.Server.Tools.Memory;
 
@@ -26,7 +27,7 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
-        var fullPath = MemoryToolUtils.GetMemoryPath(parameters.FileName, context);
+        var fullPath = context.GetMemoryPath(parameters.FileName);
         var safeFileName = Path.GetFileName(fullPath);
         var _memoryPath = Path.GetDirectoryName(fullPath);
         if (_memoryPath != null && !Directory.Exists(_memoryPath))

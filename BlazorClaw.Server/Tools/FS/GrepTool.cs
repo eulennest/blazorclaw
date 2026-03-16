@@ -4,6 +4,8 @@ using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using BlazorClaw.Core.Utils;
+
 
 namespace BlazorClaw.Server.Tools.FS;
 
@@ -43,6 +45,8 @@ public class GrepTool : BaseTool<GrepParams>
 
     protected override async Task<string> ExecuteInternalAsync(GrepParams p, MessageContext context)
     {
+        var path = Path.Combine(context.GetWorkspacePath(), p.Path);
+
         var results = new List<object>();
         var searchOption = (p.Recursive ?? true) ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
         var pattern = p.Pattern ?? "*";
@@ -50,7 +54,7 @@ public class GrepTool : BaseTool<GrepParams>
         var before = p.BeforeLines ?? 5;
         var after = p.AfterLines ?? 5;
 
-        foreach (var file in Directory.GetFiles(p.Path, pattern, searchOption))
+        foreach (var file in Directory.GetFiles(path, pattern, searchOption))
         {
             var info = new FileInfo(file);
             if (info.Length > maxFileSize) continue;

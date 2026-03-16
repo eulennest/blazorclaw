@@ -1,6 +1,7 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Utils;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -29,31 +30,33 @@ public class WriteTool : BaseTool<WriteTool.Params>
         }
     }
 
-    protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
+    protected override async Task<string> ExecuteInternalAsync(Params p, MessageContext context)
     {
-        var directory = Path.GetDirectoryName(parameters.Path);
+        var path = Path.Combine(context.GetWorkspacePath(), p.Path);
+
+        var directory = Path.GetDirectoryName(path);
         if (!string.IsNullOrEmpty(directory))
             Directory.CreateDirectory(directory);
 
-        var mode = parameters.Mode ?? WriteMode.Create;
+        var mode = p.Mode ?? WriteMode.Create;
 
         if (mode == WriteMode.Create)
         {
-            if (File.Exists(parameters.Path))
-                throw new InvalidOperationException($"Datei existiert bereits: {parameters.Path}");
+            if (File.Exists(path))
+                throw new InvalidOperationException($"Datei existiert bereits: {p.Path}");
 
-            await File.WriteAllTextAsync(parameters.Path, parameters.Content);
-            return $"Datei neu erstellt unter: {parameters.Path}";
+            await File.WriteAllTextAsync(path, p.Content);
+            return $"Datei neu erstellt unter: {p.Path}";
         }
         else if (mode == WriteMode.Append)
         {
-            await File.AppendAllTextAsync(parameters.Path, parameters.Content);
-            return $"Inhalt erfolgreich an {parameters.Path} angehängt.";
+            await File.AppendAllTextAsync(path, p.Content);
+            return $"Inhalt erfolgreich an {p.Path} angehängt.";
         }
         else // Override
         {
-            await File.WriteAllTextAsync(parameters.Path, parameters.Content);
-            return $"Datei erfolgreich überschrieben unter: {parameters.Path}";
+            await File.WriteAllTextAsync(path, p.Content);
+            return $"Datei erfolgreich überschrieben unter: {p.Path}";
         }
     }
 }

@@ -1,6 +1,6 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Memory;
-using BlazorClaw.Server.Tools.Memory;
+using BlazorClaw.Core.Utils;
 
 namespace BlazorClaw.Server.Memory;
 
@@ -10,7 +10,7 @@ public class FileSystemMemorySearchProvider() : IMemorySearchProvider
     public async IAsyncEnumerable<string> SearchAsync(string[] queries, int maxResults, MessageContext? context)
     {
         if (context == null) yield break;
-        var _path = MemoryToolUtils.GetMemoryBasePath(context);
+        var _path = context.GetMemoryBasePath();
         if (Directory.Exists(_path))
         {
             var pl = _path.Length;

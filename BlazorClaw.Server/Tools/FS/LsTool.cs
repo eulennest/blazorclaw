@@ -1,6 +1,7 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Utils;
 using System.ComponentModel;
 
 namespace BlazorClaw.Server.Tools.FS;
@@ -31,9 +32,11 @@ public class LsTool : BaseTool<LsParams>
 
     protected override Task<string> ExecuteInternalAsync(LsParams p, MessageContext context)
     {
-        if (!Directory.Exists(p.Path)) return Task.FromResult("Pfad nicht gefunden");
+        var path = Path.Combine(context.GetWorkspacePath(), p.Path);
+
+        if (!Directory.Exists(path)) return Task.FromResult("Pfad nicht gefunden");
         var searchOption = (p.Recursive ?? false) ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var entries = Directory.GetFileSystemEntries(p.Path, p.Pattern ?? "*", searchOption);
+        var entries = Directory.GetFileSystemEntries(path, p.Pattern ?? "*", searchOption);
 
         if (p.Details != true)
             return Task.FromResult(entries.Length > 0 ? string.Join("\n", entries.Select(

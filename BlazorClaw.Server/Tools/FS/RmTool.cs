@@ -1,6 +1,7 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Utils;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -26,8 +27,10 @@ public class RmTool : BaseTool<RmParams>
 
     protected override Task<string> ExecuteInternalAsync(RmParams p, MessageContext context)
     {
-        if (File.Exists(p.Path)) File.Delete(p.Path);
-        else if (Directory.Exists(p.Path)) Directory.Delete(p.Path, p.Recursive);
+        var path = Path.Combine(context.GetWorkspacePath(), p.Path);
+
+        if (File.Exists(path)) File.Delete(path);
+        else if (Directory.Exists(path)) Directory.Delete(path, p.Recursive);
         else return Task.FromResult("Pfad existiert nicht.");
 
         return Task.FromResult("Gelöscht.");

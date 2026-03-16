@@ -3,6 +3,7 @@ using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using BlazorClaw.Core.Utils;
 
 namespace BlazorClaw.Server.Tools.FS;
 
@@ -33,10 +34,11 @@ public class EditTool : BaseTool<EditTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
-        if (!File.Exists(parameters.Path))
+        var path = Path.Combine(context.GetWorkspacePath(), parameters.Path);
+        if (!File.Exists(path))
             throw new FileNotFoundException($"Datei nicht gefunden: {parameters.Path}");
 
-        var content = await File.ReadAllTextAsync(parameters.Path);
+        var content = await File.ReadAllTextAsync(path);
         if (!content.Contains(parameters.OldText))
             return "Fehler: Alter Text nicht gefunden.";
 
@@ -51,7 +53,7 @@ public class EditTool : BaseTool<EditTool.Params>
             newContent = content.Remove(index, parameters.OldText.Length).Insert(index, parameters.NewText);
         }
 
-        await File.WriteAllTextAsync(parameters.Path, newContent);
+        await File.WriteAllTextAsync(path, newContent);
 
         return "Datei erfolgreich editiert.";
     }
