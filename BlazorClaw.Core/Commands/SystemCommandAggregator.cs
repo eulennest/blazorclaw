@@ -62,12 +62,12 @@ public class HelpCommand(Dictionary<ISystemCommand, ICommandProvider> commandMap
     public async Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
     {
         var sb = new StringBuilder();
+        sb.AppendLine("```");
         foreach (var item in commandMap)
         {
             var cmd = item.Key.GetCommand();
             var arglist = string.Join(' ', cmd.Arguments.Select(o => $"[{o.Name}]"));
             sb.AppendLine($"/{cmd.Name} {arglist}");
-            sb.AppendLine();
             sb.AppendLine($"{cmd.Description}");
             sb.AppendLine();
             foreach (var arg in cmd.Arguments)
@@ -76,6 +76,7 @@ public class HelpCommand(Dictionary<ISystemCommand, ICommandProvider> commandMap
             }
             sb.AppendLine();
         }
+        sb.AppendLine("```");
 
         return sb.ToString().Trim();
     }
