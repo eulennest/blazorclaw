@@ -30,6 +30,7 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
         {
             c++;
             var title = await File.ReadLinesAsync(f.FullName).Where(o => !string.IsNullOrWhiteSpace(o)).FirstOrDefaultAsync();
+            title = title?.Trim() ?? string.Empty;
 
             sb.AppendLine($"{f.LastWriteTime.ToUniversalTime():u}\t{f.Length}\t{f.FullName[ml..]}\t{title}");
         }
