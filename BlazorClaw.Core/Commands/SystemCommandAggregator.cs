@@ -65,7 +65,7 @@ public class HelpCommand(Dictionary<ISystemCommand, ICommandProvider> commandMap
         foreach (var item in commandMap)
         {
             var cmd = item.Key.GetCommand();
-            var arglist = string.Join(' ', cmd.Arguments.Select(o => $"{{{o.Name}}}"));
+            var arglist = string.Join(' ', cmd.Arguments.Select(o =>o.Name));
             sb.AppendLine($"/{cmd.Name} {arglist}");
             sb.AppendLine($"{cmd.Description}");
             sb.AppendLine();
