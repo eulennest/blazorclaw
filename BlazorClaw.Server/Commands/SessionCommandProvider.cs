@@ -10,8 +10,37 @@ public class SessionCommandProvider : ExecutorCommandProvider
     public override IEnumerable<ISystemCommand> GetCommands()
     {
         yield return new SessionRenameCommand();
+        yield return new SessionResetCommand();
     }
 }
+
+
+public class SessionResetCommand : ISystemCommand, ISystemCommandExecutor
+{
+    public Command GetCommand()
+    {
+        var cmd = new Command("reset", "Löscht gesamte Session History")
+        {
+//            new Argument<bool?>("disableLlmMessage") { Description = "True = Deaktiviert automatische Message ans LLm für neue Begrüßung" }
+        };
+        return cmd;
+    }
+
+    public async Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
+    {
+        bool disableMsg = false;
+        if (result.CommandResult.Command.Arguments.Count > 0)
+        {
+            disableMsg = result.GetValue((Argument<bool?>)result.CommandResult.Command.Arguments[0])??false;
+        }
+
+        var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
+        var session = await sessionManager.GetSessionAsync(context.Session!.Id);
+        session?.MessageHistory.Clear();
+        return $"Session cleared.";
+    }
+}
+
 
 public class SessionRenameCommand : ISystemCommand, ISystemCommandExecutor
 {
@@ -34,7 +63,7 @@ public class SessionRenameCommand : ISystemCommand, ISystemCommandExecutor
 
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
         var session = await sessionManager.GetSessionAsync(context.Session!.Id);
-        
+
         if (session == null)
         {
             return "Session nicht gefunden.";
