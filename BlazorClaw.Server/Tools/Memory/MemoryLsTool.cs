@@ -24,14 +24,20 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
         var files = directory.EnumerateFiles("*.md", SearchOption.AllDirectories);
         var c = 0;
 
+        var badChars =
+   (from codepoint in Enumerable.Range(0, 255)
+    let ch = (char)codepoint
+    where char.IsWhiteSpace(ch)
+          || ch == '!' || ch == '?' || ch == '#'
+    select ch).ToArray();
+
         var sb = new StringBuilder();
         sb.AppendLine("edittime\tsize\tpath\ttitle");
         foreach (var f in files)
         {
             c++;
             var title = await File.ReadLinesAsync(f.FullName).Where(o => !string.IsNullOrWhiteSpace(o)).FirstOrDefaultAsync();
-            title = title?.Trim() ?? string.Empty;
-
+            title = title?.Replace(f.Name, "", StringComparison.InvariantCultureIgnoreCase).Replace("  ", " ").Trim(badChars) ?? string.Empty;
             sb.AppendLine($"{f.LastWriteTime.ToUniversalTime():u}\t{f.Length}\t{f.FullName[ml..]}\t{title}");
         }
 
