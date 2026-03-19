@@ -1,4 +1,5 @@
 using System.CommandLine;
+using System.Text;
 
 namespace BlazorClaw.Core.Commands;
 
@@ -11,6 +12,7 @@ public class SystemCommandAggregator(IEnumerable<ICommandProvider> providers) : 
         if (_commandMap == null)
         {
             _commandMap = [];
+            _commandMap[new HelpCommand(_commandMap)] = this;
 
             foreach (var provider in providers)
             {
@@ -27,8 +29,55 @@ public class SystemCommandAggregator(IEnumerable<ICommandProvider> providers) : 
     {
         if (_commandMap?.TryGetValue(command, out var provider) ?? false)
         {
+            if (provider == this)
+            {
+                return SelfExecuteAsync(command, result, context);
+            }
             return provider.ExecuteAsync(command, result, context);
         }
         throw new InvalidOperationException($"No provider found for command {result.CommandResult.Command.Name}");
     }
+
+    public Task<object?> SelfExecuteAsync(ISystemCommand cmd, ParseResult result, MessageContext context)
+    {
+        if (cmd is ISystemCommandExecutor executor)
+        {
+            return executor.ExecuteAsync(result, context);
+        }
+        throw new InvalidOperationException($"Command {cmd.GetCommand().Name} does not implement ISystemCommandExecutor");
+    }
+}
+
+public class HelpCommand(Dictionary<ISystemCommand, ICommandProvider> commandMap) : ISystemCommand, ISystemCommandExecutor
+{
+
+    public Command GetCommand()
+    {
+        var cmd = new Command("help", "Zeigt alle möglichen Commands")
+        {
+        };
+        return cmd;
+    }
+
+    public async Task<object?> ExecuteAsync(ParseResult result, MessageContext context)
+    {
+        var sb = new StringBuilder();
+        foreach (var item in commandMap)
+        {
+            var cmd = item.Key.GetCommand();
+            var arglist = string.Join(' ', cmd.Arguments.Select(o => $"{{{o.Name}}}"));
+            sb.AppendLine($"/{cmd.Name} {arglist}");
+            sb.AppendLine($"{cmd.Description}");
+            sb.AppendLine();
+            foreach (var arg in cmd.Arguments)
+            {
+                sb.AppendLine($" - {arg.Name} - {arg.Description}");
+            }
+            sb.AppendLine();
+        }
+
+        return sb.ToString().Trim();
+    }
+
+
 }
