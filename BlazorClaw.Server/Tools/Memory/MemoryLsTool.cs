@@ -28,7 +28,7 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
    (from codepoint in Enumerable.Range(0, 255)
     let ch = (char)codepoint
     where char.IsWhiteSpace(ch)
-          || ch == '!' || ch == '?' || ch == '#'
+          || ch == '!' || ch == '?' || ch == '#' || ch == '-'
     select ch).ToArray();
 
         var sb = new StringBuilder();
@@ -38,7 +38,7 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
             c++;
             var title = await File.ReadLinesAsync(f.FullName).Where(o => !string.IsNullOrWhiteSpace(o)).FirstOrDefaultAsync();
             title = title?.Replace(f.Name, "", StringComparison.InvariantCultureIgnoreCase).Replace("  ", " ").Trim(badChars) ?? string.Empty;
-            sb.AppendLine($"{f.LastWriteTime.ToUniversalTime():u}\t{f.Length}\t{f.FullName[ml..]}\t{title}");
+            sb.AppendLine($"{f.LastWriteTimeUtc.ToUnix()}\t{f.Length}\t{f.FullName[ml..]}\t{title}");
         }
 
         if (c == 0) return "Keine Memory-Dateien gefunden.";
