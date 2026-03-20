@@ -3,6 +3,7 @@ using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
 using System.ComponentModel;
+using System.Text;
 
 namespace BlazorClaw.Server.Tools.FS;
 
@@ -14,7 +15,7 @@ public class LsParams : IWorkingPaths
     [Description("Glob-Muster für die Dateisuche (z.B. *.txt)")]
     public string Pattern { get; set; } = "*";
 
-    [Description("Detaillierte Informationen wie Größe und Rechte zurückgeben")]
+    [Description("Detaillierte Informationen wie Größe und Zeit zurückgeben")]
     public bool? Details { get; set; } = false;
 
     [Description("Rekursiv durch Unterverzeichnisse suchen")]
@@ -32,24 +33,31 @@ public class LsTool : BaseTool<LsParams>
 
     protected override Task<string> ExecuteInternalAsync(LsParams p, MessageContext context)
     {
-        var path = Path.Combine(context.GetWorkspacePath(), p.Path);
-
+        var path = Path.Combine(context.GetWorkspacePath(), p.Path).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         if (!Directory.Exists(path)) return Task.FromResult("Pfad nicht gefunden");
         var searchOption = (p.Recursive ?? false) ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var entries = Directory.GetFileSystemEntries(path, p.Pattern ?? "*", searchOption);
+        var ml = path.Length;
+        var mdi = new DirectoryInfo(path);
+        var entries = mdi.EnumerateFileSystemInfos(p.Pattern ?? "*", searchOption);
+        var details = p.Details ?? false;
 
-        if (p.Details != true)
-            return Task.FromResult(entries.Length > 0 ? string.Join("\n", entries.Select(
-                o => Directory.Exists(o) ? $"{Path.GetFileName(o)}/" : Path.GetFileName(o)
-                )) : "Keine Dateien gefunden");
-
-        var details = entries.Select(f =>
+        var sb = new StringBuilder();
+        sb.AppendLine(details ? "path\tedittime\tsize" : "path");
+        var c = 0;
+        foreach (var f in entries)
         {
-            var info = new FileInfo(f);
-            var isDir = (File.GetAttributes(f) & FileAttributes.Directory) == FileAttributes.Directory;
-            return $"{Path.GetFileName(f)} | {(isDir ? "DIR" : info.Length + " bytes")} | {(isDir ? "N/A" : info.Attributes.ToString())}";
-        });
+            c++;
+            if (f is FileInfo fi)
+            {
+                sb.AppendLine(details ? $"{f.FullName[ml..]}\t{f.LastWriteTimeUtc.ToUnix()}\t{fi.Length}" : f.FullName[ml..]);
+            }
+            else if (f is DirectoryInfo di)
+            {
+                sb.AppendLine(details ? $"{f.FullName[ml..]}{Path.DirectorySeparatorChar}\t{f.LastWriteTimeUtc.ToUnix()}" : f.FullName[ml..] + Path.DirectorySeparatorChar);
+            }
+        }
 
-        return Task.FromResult(string.Join("\n", details));
+        if (c == 0) return Task.FromResult("Keine Dateien gefunden.");
+        return Task.FromResult(sb.ToString());
     }
 }
