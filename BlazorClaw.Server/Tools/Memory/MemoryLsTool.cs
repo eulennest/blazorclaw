@@ -32,13 +32,13 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
     select ch).ToArray();
 
         var sb = new StringBuilder();
-        sb.AppendLine("edittime\tsize\tpath\ttitle");
+        sb.AppendLine("path\tedittime\tsize\ttitle");
         foreach (var f in files)
         {
             c++;
             var title = await File.ReadLinesAsync(f.FullName).Where(o => !string.IsNullOrWhiteSpace(o)).FirstOrDefaultAsync();
             title = title?.Replace(f.Name, "", StringComparison.InvariantCultureIgnoreCase).Replace("  ", " ").Trim(badChars) ?? string.Empty;
-            sb.AppendLine($"{f.LastWriteTimeUtc.ToUnix()}\t{f.Length}\t{f.FullName[ml..]}\t{title}");
+            sb.AppendLine($"{f.FullName[ml..]}\t{f.LastWriteTimeUtc.ToUnix()}\t{f.Length}\t{title}");
         }
 
         if (c == 0) return "Keine Memory-Dateien gefunden.";

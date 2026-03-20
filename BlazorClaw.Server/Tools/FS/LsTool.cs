@@ -42,7 +42,7 @@ public class LsTool : BaseTool<LsParams>
         var details = p.Details ?? false;
 
         var sb = new StringBuilder();
-        sb.AppendLine(details ? "path\tedittime\tsize" : "path");
+        if(details) sb.AppendLine("path\tedittime\tsize");
         var c = 0;
         foreach (var f in entries)
         {
