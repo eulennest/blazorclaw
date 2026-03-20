@@ -201,6 +201,8 @@ namespace BlazorClaw.Server.Services
                     }
                 }
             }
+
+            sessionState.SystemPrompts = [];
             if ((sessionState.SystemPrompts?.Count ?? 0) == 0)
             {
                 sessionState.SystemPrompts ??= [];
