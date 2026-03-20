@@ -22,6 +22,8 @@ public class ExecParams
     [Description("Arbeitsverzeichnis für den Befehl (optional default: ./)")]
     public string? WorkingDirectory { get; set; } = "./";
 
+    [Description("Max Output in Bytes (default: 65536 = 64KB)")]
+    public int? OutputLimit { get; set; } = 65536;
 }
 
 public class ExecTool : BaseTool<ExecParams>
@@ -49,14 +51,37 @@ public class ExecTool : BaseTool<ExecParams>
         await process.WaitForExitAsync(cs.Token).ConfigureAwait(false);
         var exited = process.HasExited;
         if (!exited) process.Kill(true);
+
+        var outputLimit = p.OutputLimit ?? 65536;
+
         var sb = new System.Text.StringBuilder();
         if (!exited)
             sb.AppendLine("WARNING: Prozess hat das Zeitlimit überschritten und wurde beendet.");
         sb.AppendLine("ExitCode: " + process.ExitCode);
         sb.AppendLine("Output:");
-        sb.AppendLine(process.StandardOutput.ReadToEnd());
+
+        var output = process.StandardOutput.ReadToEnd();
+        if (output.Length > outputLimit)
+        {
+            sb.AppendLine(output.Substring(0, outputLimit));
+            sb.AppendLine($"\n[OUTPUT TRUNCATED — {output.Length - outputLimit} bytes gekürzt. Nutze OutputLimit parameter für mehr.]");
+        }
+        else
+        {
+            sb.AppendLine(output);
+        }
+
         sb.AppendLine("Error:");
-        sb.AppendLine(process.StandardError.ReadToEnd());
+        var error = process.StandardError.ReadToEnd();
+        if (error.Length > outputLimit)
+        {
+            sb.AppendLine(error.Substring(0, outputLimit));
+            sb.AppendLine($"\n[ERROR OUTPUT TRUNCATED — {error.Length - outputLimit} bytes gekürzt.]");
+        }
+        else
+        {
+            sb.AppendLine(error);
+        }
 
         return sb.ToString();
     }

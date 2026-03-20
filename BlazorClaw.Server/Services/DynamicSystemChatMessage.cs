@@ -22,61 +22,52 @@ namespace BlazorClaw.Server.Services
                     User = state.Services.GetRequiredService<UserManager<ApplicationUser>>().FindByIdAsync(context.UserId).GetAwaiter().GetResult();
                 }
                 var uinfo = User;
-                var maxtoken = 100000;
+                const int maxtoken = 100000;
+                const int warningThreshold = 80;
 
                 var tokenProz = (state.LastUsage?.PromptTokens ?? 1) / maxtoken * 100.0;
                 var sb = new StringBuilder();
-                sb.AppendLine($"Current Time: {DateTime.UtcNow:R}");
-                sb.AppendLine($"Current Model: {context.Session?.CurrentModel}");
-                sb.AppendLine($"Current OS: {RuntimeInformation.OSDescription}");
-                sb.AppendLine($"Session Title: {context.Session?.Title}");
-                sb.AppendLine($"Session ID: {context.Session?.Id}");
-                sb.AppendLine($"Channel Provider: {context.Channel?.ChannelProvider}");
-                sb.AppendLine($"Channel ID: {context.Channel?.ChannelId}");
-                sb.AppendLine($"Channel Sender ID: {context.Channel?.SenderId}");
-                sb.AppendLine($"User ID: {context.UserId}");
+
+                // Kompakte Metadaten (Tab-Format statt AppendLine)
+                sb.AppendLine($"Time: {DateTime.UtcNow:u}");
+                sb.AppendLine($"Model: {context.Session?.CurrentModel} | OS: {RuntimeInformation.OSDescription}");
+                sb.AppendLine($"Session: {context.Session?.Title} ({context.Session?.Id})");
+                sb.AppendLine($"Channel: {context.Channel?.ChannelProvider} | User: {context.UserId}");
+
                 if (uinfo != null)
+                    sb.AppendLine($"Account: {uinfo.FirstName} {uinfo.LastName} <{uinfo.Email}>");
+
+                sb.AppendLine($"Tokens: {state.LastUsage?.PromptTokens}/{maxtoken / 1000}k ({tokenProz:F1}%)");
+
+                if (tokenProz > warningThreshold)
                 {
-                    sb.AppendLine("User-Account:");
-                    sb.AppendLine($" - Name: {uinfo.FirstName} {uinfo.LastName}");
-                    sb.AppendLine($" - Email: {uinfo.Email}");
+                    sb.AppendLine();
+                    sb.AppendLine("⚠️ TOKEN LIMIT CRITICAL (>80%)");
+                    sb.AppendLine("Use session_compress IMMEDIATELY. Keep answers SHORT.");
                 }
-                sb.AppendLine();
-                sb.AppendLine($"Token usage: {state.LastUsage?.PromptTokens} / {maxtoken / 1000}k ({tokenProz} %)");
-                if (tokenProz > 80)
-                {
-                    sb.AppendLine("!!! WARNUNG: TOKEN LIMIT FAST ERREICHT !!!");
-                    sb.AppendLine("Warning: Token usage is above 80% of the limit. Use the session_compress Tool for compression!");
-                    sb.AppendLine("Du MUSST deine Antworten extrem kurz halten. KEINE ausführlichen Erklärungen mehr. Fasse dich auf das Wesentliche!");
-                }
+
                 sb.AppendLine();
 
-                // --- Kanal-spezifischer Kontext ---
-                // Annahme: context.ChannelProvider liefert dir "WebChat", "Telegram", "Matrix" etc.
+                // Channel-spezifische Instruktionen (gekürzt)
                 string channel = context.Channel?.ChannelProvider.ToLower() ?? "generic";
                 sb.AppendLine($"Channel: {channel}");
 
-                // --- Dynamische Instruktion für die KI ---
-                sb.AppendLine("--- Formatierungs-Instruktionen ---");
-                if (channel == "webchat")
+                switch (channel)
                 {
-                    sb.AppendLine("Du befindest dich im WebChat. Du darfst Tabellen, Markdown-Blöcke und ausführliche Formatierungen nutzen.");
-                    sb.AppendLine("Du kannst Bilder via Markdown-Image-Tag rendern.");
-                }
-                else if (channel == "telegram")
-                {
-                    sb.AppendLine("Du befindest dich in Telegram. Halte Antworten kurz, nutze einfaches Markdown (fett/kursiv) und keine komplexen Tabellen.");
-                }
-                else if (channel == "matrix")
-                {
-                    sb.AppendLine("Du befindest dich in Matrix. Nutze leichtes Markdown, vermeide aber breite Tabellen.");
-                }
-                else
-                {
-                    sb.AppendLine("Nutze leichtes Markdown, vermeide aber breite Tabellen.");
+                    case "webchat":
+                        sb.AppendLine("Format: Tabellen, Markdown, Bilder erlaubt.");
+                        break;
+                    case "telegram":
+                        sb.AppendLine("Format: Kurz halten, einfaches Markdown (fett/kursiv), keine Tabellen.");
+                        break;
+                    case "matrix":
+                        sb.AppendLine("Format: Leichtes Markdown, keine breiten Tabellen.");
+                        break;
+                    default:
+                        sb.AppendLine("Format: Leichtes Markdown, keine breiten Tabellen.");
+                        break;
                 }
 
-                sb.AppendLine("Hinweis: Passe deine Antwort immer an die Möglichkeiten und Beschränkungen des jeweiligen Kanals an.");
                 return sb.ToString();
             }
         }

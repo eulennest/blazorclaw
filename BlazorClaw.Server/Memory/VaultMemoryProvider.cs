@@ -16,10 +16,7 @@ namespace BlazorClaw.Server.Memory
                 {
                     if (key.Title.Contains(query, StringComparison.OrdinalIgnoreCase) || key.Key.Contains(query, StringComparison.OrdinalIgnoreCase))
                     {
-                        yield return $"(Vault-Eintrag gefunden) Schlüssel: '{key.Key}'. " +
-                                     $"Du kannst diesen Eintrag mit dem 'vault_get' Tool abrufen, " +
-                                     $"indem du '{key.Key}' als 'Key'-Parameter verwendest.";
-                        break;
+                        yield return $"[Vault: {key.Key}]\nuse vault_get('{key.Key}')"; break;
                     }
                 }
                 if (results.Count >= maxResults) break;

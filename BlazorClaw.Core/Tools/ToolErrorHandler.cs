@@ -11,17 +11,20 @@ public static class ToolErrorHandler
 {
     public static string ToProblemDetailsJson(Exception ex, string toolName, int? status = null)
     {
-        var typeName = ex.GetType().Name;
+        var typeName = ex.GetType().Name.Replace("Exception", "");
         status ??= typeName.Contains("NotFound") ? 404 : 500;
+
         var problemDetails = new Dictionary<string, object>
-        {
-            { "type", $"https://tools.blazorclaw.dev/tool-error#{typeName}" },
-            { "title", "Tool error" },
-            { "status", status },
-            { "detail", ex.Message },
-            { "stacktrace", ex.StackTrace ?? string.Empty },
-            { "tool", toolName }
-        };
+    {
+        { "type", typeName },
+        { "status", status },
+        { "detail", ex.Message },
+   //         { "stacktrace", ex.StackTrace ?? string.Empty },
+        { "tool", toolName }
+    };
+
+        if (ex.InnerException != null)
+            problemDetails["inner"] = ex.InnerException.Message;
 
         return JsonSerializer.Serialize(problemDetails);
     }

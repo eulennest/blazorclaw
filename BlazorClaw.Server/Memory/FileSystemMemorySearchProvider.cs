@@ -32,7 +32,7 @@ public class FileSystemMemorySearchProvider() : IMemorySearchProvider
 
                         if (queries.Any(q => sectionText.Contains(q, StringComparison.OrdinalIgnoreCase)))
                         {
-                            yield return $"[PARTIAL SECTION FROM memory: {file[pl..]}  LastChange: {File.GetLastWriteTimeUtc(file):u}]\n{sectionText}";
+                            yield return $"[memory: {file[pl..]} | Line {sectionStart}-{sectionEnd} | {File.GetLastWriteTimeUtc(file):yyyyMMdd}]\n{sectionText}";
                         }
                         i = sectionEnd - 1;
                     }
