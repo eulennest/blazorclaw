@@ -21,7 +21,7 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
         [Required, Description("Markdown-Inhalt der geschrieben werden soll")]
         public string Content { get; set; } = string.Empty;
 
-        [Description("Modus: Create (Standard), Append oder Override")]
+        [Description("Modus: Create (Standard, gibt Fehler wenn schon existiert), Append oder Override")]
         public WriteMode? Mode { get; set; } = WriteMode.Create;
     }
 

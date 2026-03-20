@@ -225,7 +225,7 @@ namespace BlazorClaw.Server.Services
 
                 sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(sessionState));
 
-                List<string> files = ["AGENTS.md", "IDENTITY.md", "SOUL.md", "USER.md", "MEMORY.md"];
+                List<string> files = ["AGENTS.md", "IDENTITY.md", "SOUL.md", "USER.md", "RULES.md", "MEMORY.md"];
                 foreach (var item in files)
                 {
                     var agentsPath = context.GetMemoryPath(item);
