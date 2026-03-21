@@ -1,12 +1,13 @@
 ﻿using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Models;
+using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Utils;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
 {
-    public class CronJobService(IServiceScopeFactory scopeFactory) : BackgroundService
+    public class CronJobService(IServiceScopeFactory scopeFactory) : BackgroundService, ICronJobService
     {
         CancellationTokenSource cancellationTokenSource = new();
         public void ForceExecute()
