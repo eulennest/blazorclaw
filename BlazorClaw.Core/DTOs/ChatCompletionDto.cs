@@ -97,9 +97,9 @@ public class ChatMessage
         {
             var match = JsonHelper.MediaTagRegex().Match(str);
             if (match.Success)
-                str = match.Groups[3].Value.Trim(); // Der Rest der Nachricht
+                str = match.Groups[3].Value; // Der Rest der Nachricht
         }
-        return str;
+        return str?.Trim();
     }
 
     public void SetContents(IEnumerable<ContentEntry> entrys)

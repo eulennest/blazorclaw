@@ -1,5 +1,5 @@
-﻿using BlazorClaw.Core.Data;
-using BlazorClaw.Core.DTOs;
+﻿using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
@@ -9,7 +9,7 @@ using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
 {
-    public class CronJobService(IServiceScopeFactory scopeFactory, ISessionManager sessionManager) : BackgroundService, ICronJobService
+    public class CronJobService(IServiceScopeFactory scopeFactory, ILogger<CronJobService> logger) : BackgroundService, ICronJobService
     {
         CancellationTokenSource cancellationTokenSource = new();
         public void ForceExecute()
@@ -103,58 +103,76 @@ namespace BlazorClaw.Server.Services
 
         private async Task ExecuteMessageAction(Crontab job)
         {
-            try
+            using var scope = scopeFactory.CreateScope();
+
+            // Parse message from Data (JSON)
+            string messageText = job.Data ?? string.Empty;
+            bool onlyIfNewUserMsg = false;
+            if (!string.IsNullOrEmpty(job.Data))
             {
-                // Parse message from Data (JSON)
-                string messageText = job.Data ?? string.Empty;
-                if (!string.IsNullOrEmpty(job.Data))
+                try
                 {
-                    try
+                    var data = JsonSerializer.Deserialize<Dictionary<string, object>>(job.Data);
+                    if (data?.TryGetValue("message", out var msgValue) == true)
                     {
-                        var data = JsonSerializer.Deserialize<Dictionary<string, object>>(job.Data);
-                        if (data?.TryGetValue("message", out var msgValue) == true)
-                        {
-                            messageText = msgValue?.ToString() ?? job.Data;
-                        }
+                        messageText = msgValue?.ToString() ?? job.Data;
                     }
-                    catch
+                    if (data?.TryGetValue("onlyHasNewMessages", out var onlyHasNewMessages) == true)
                     {
-                        messageText = job.Data;
+                        onlyIfNewUserMsg = Convert.ToBoolean(onlyHasNewMessages);
                     }
                 }
+                catch { }
+            }
 
-                // Add cron tag to message
-                string fullMessage = $"[CRON: {job.Description}] {messageText}".Trim();
+            // Add cron tag to message
+            string fullMessage = $"[CRON: {job.Description} |  Next-Run: {job.NextExecution:u}]\n{messageText}".Trim();
 
-                // Get target sessions
-                List<Guid> sessionIds = new();
-                if (job.SessionId.HasValue && job.SessionId != Guid.Empty)
-                {
-                    sessionIds.Add(job.SessionId.Value);
-                }
-                else
-                {
-                    // All sessions
-                    using var scope = scopeFactory.CreateScope();
-                    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    sessionIds = await db.ChatSessions.Select(s => s.Id).ToListAsync();
-                }
+            // Get target sessions
+            List<Guid> sessionIds;
+            if (job.SessionId.HasValue && job.SessionId != Guid.Empty)
+            {
+                sessionIds = [job.SessionId.Value];
+            }
+            else
+            {
+                // All sessions
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                sessionIds = await db.ChatSessions.Select(s => s.Id).ToListAsync();
+            }
 
-                // Send message to each session
-                foreach (var sessionId in sessionIds)
+            var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
+            // Send message to each session
+            foreach (var sessionId in sessionIds)
+            {
+                var sess = await sm.GetSessionAsync(sessionId);
+                if (sess != null)
                 {
-                    var message = new ChatMessage
+                    if (onlyIfNewUserMsg)
                     {
-                        Role = "user",
-                        Content = fullMessage
-                    };
-                    await sessionManager.AppendMessageAsync(sessionId, message);
+                        var last = sess.MessageHistory.LastOrDefault(o => o.IsUser);
+                        if (last?.GetTextContent()?.StartsWith("[CRON: ") ?? false)
+                            continue;
+                    }
+
+                    var cmdContext = sess.Services.GetRequiredService<MessageContextAccessor>().Context;
+                    if (cmdContext == null) return;
+                    sess.MessageHistory.Add(new() { Role = "user", Content = fullMessage });
+                    await foreach (var msg in sm.DispatchToLLMAsync(sess, cmdContext))
+                    {
+                        if (!msg.IsAssistant) continue;
+                        var ret = msg.GetTextContent();
+                        if (string.IsNullOrWhiteSpace(ret)) continue;
+                        if ("NO_REPLY".Equals(ret)) continue;
+                        if ("HEARTBEAT_OK".Equals(ret)) continue;
+
+
+                        logger.LogInformation("Sending reply to {ChannelProvider}:{ChannelId} : {content}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, msg.Content);
+                        await cmdContext.Channel.SendChannelAsync(msg);
+                    }
                 }
             }
-            catch (Exception ex)
-            {
-                throw new InvalidOperationException($"Failed to execute message action for cron job {job.Id}", ex);
-            }
+
         }
 
         private async Task ExecuteAutoUpdateAction(Crontab job)
