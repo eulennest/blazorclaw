@@ -77,7 +77,6 @@ namespace BlazorClaw.Server.Services
                 var cron = Cronos.CronExpression.Parse(job.Cron);
                 job.LastExecution = DateTime.UtcNow;
                 job.NextExecution = cron.GetNextOccurrence(DateTime.UtcNow);
-                db.Crontabs.Update(job);
                 
                 await ExecuteJobAsync(job);
                 await db.SaveChangesAsync();
