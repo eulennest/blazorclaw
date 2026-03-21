@@ -1,5 +1,6 @@
 ﻿using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Models;
+using BlazorClaw.Core.Utils;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
@@ -7,13 +8,21 @@ namespace BlazorClaw.Server.Services
 {
     public class CronJobService(IServiceScopeFactory scopeFactory) : BackgroundService
     {
+        CancellationTokenSource cancellationTokenSource = new();
+        public void ForceExecute()
+        {
+            cancellationTokenSource.Cancel();
+        }
+
         TimeSpan MaxDelay = TimeSpan.FromHours(1);
         protected override async Task ExecuteAsync(CancellationToken ct)
         {
             var aktDelay = TimeSpan.FromMinutes(1);
             while (!ct.IsCancellationRequested)
             {
-                await Task.Delay(aktDelay, ct);
+                if (cancellationTokenSource.IsCancellationRequested) cancellationTokenSource = new();
+                await Task.Delay(aktDelay, cancellationTokenSource.Token).NoThrow();
+                if (ct.IsCancellationRequested) break;
 
                 using var scope = scopeFactory.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();

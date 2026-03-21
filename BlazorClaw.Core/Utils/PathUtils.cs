@@ -48,5 +48,18 @@ namespace BlazorClaw.Core.Utils
         {
             return (long)time.ToUniversalTime().Subtract(new DateTime(1970, 1, 1)).TotalSeconds;
         }
+
+        public static Task<T?> NoThrow<T>(this Task<T> t)
+        {
+            return t?.ContinueWith(delegate (Task<T> o)
+            {
+                return o.IsFaulted || o.IsCanceled ? default : o.Result;
+            }) ?? Task.FromResult<T?>(default);
+        }
+
+        public static Task NoThrow(this Task t)
+        {
+            return t?.ContinueWith(delegate (Task o) { }) ?? Task.CompletedTask;
+        }
     }
 }
