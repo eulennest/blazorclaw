@@ -1,13 +1,15 @@
 ﻿using BlazorClaw.Core.Data;
+using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Services;
+using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Utils;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
 {
-    public class CronJobService(IServiceScopeFactory scopeFactory) : BackgroundService, ICronJobService
+    public class CronJobService(IServiceScopeFactory scopeFactory, ISessionManager sessionManager) : BackgroundService, ICronJobService
     {
         CancellationTokenSource cancellationTokenSource = new();
         public void ForceExecute()
@@ -101,7 +103,58 @@ namespace BlazorClaw.Server.Services
 
         private async Task ExecuteMessageAction(Crontab job)
         {
-            throw new NotImplementedException();
+            try
+            {
+                // Parse message from Data (JSON)
+                string messageText = job.Data ?? string.Empty;
+                if (!string.IsNullOrEmpty(job.Data))
+                {
+                    try
+                    {
+                        var data = JsonSerializer.Deserialize<Dictionary<string, object>>(job.Data);
+                        if (data?.TryGetValue("message", out var msgValue) == true)
+                        {
+                            messageText = msgValue?.ToString() ?? job.Data;
+                        }
+                    }
+                    catch
+                    {
+                        messageText = job.Data;
+                    }
+                }
+
+                // Add cron tag to message
+                string fullMessage = $"[CRON: {job.Description}] {messageText}".Trim();
+
+                // Get target sessions
+                List<Guid> sessionIds = new();
+                if (job.SessionId.HasValue && job.SessionId != Guid.Empty)
+                {
+                    sessionIds.Add(job.SessionId.Value);
+                }
+                else
+                {
+                    // All sessions
+                    using var scope = scopeFactory.CreateScope();
+                    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    sessionIds = await db.ChatSessions.Select(s => s.Id).ToListAsync();
+                }
+
+                // Send message to each session
+                foreach (var sessionId in sessionIds)
+                {
+                    var message = new ChatMessage
+                    {
+                        Role = "user",
+                        Content = fullMessage
+                    };
+                    await sessionManager.AppendMessageAsync(sessionId, message);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to execute message action for cron job {job.Id}", ex);
+            }
         }
 
         private async Task ExecuteAutoUpdateAction(Crontab job)
