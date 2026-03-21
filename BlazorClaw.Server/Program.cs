@@ -12,8 +12,6 @@ using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.Web;
 using BlazorClaw.Server;
-using BlazorClaw.Server.Memory;
-using BlazorClaw.Server.Security;
 using BlazorClaw.Server.Security.Vault;
 using BlazorClaw.Server.Services;
 using BlazorClaw.Server.Web;
@@ -114,10 +112,8 @@ builder.Services.AddSingleton<ISessionManager, BlazorClaw.Server.Services.Sessio
 builder.Services.AddSingleton<IMessageDispatcher, MessageDispatcher>();
 builder.Services.AddScoped<ISessionQueryService, BlazorClaw.Core.Services.SessionQueryService>();
 
-builder.Services.AddSingleton<CronJobService>();
-builder.Services.AddSingleton<ICronJobService>(sp => sp.GetRequiredService<CronJobService>());
+builder.Services.AddSingleton<ICronJobService, CronJobService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<CronJobService>());
-
 builder.Services.AddHostedService<BlazorClaw.Channels.Services.TelegramBotHostedService>();
 builder.Services.AddHostedService<BlazorClaw.Channels.Services.MatrixBotHostedService>();
 
