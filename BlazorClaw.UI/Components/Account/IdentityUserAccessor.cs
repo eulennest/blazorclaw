@@ -18,8 +18,9 @@ namespace BlazorClaw.UI.Components.Account
 
             return user;
         }
-        public async Task<ApplicationUser?> GetUserAsync(HttpContext context)
+        public async Task<ApplicationUser?> GetUserAsync(HttpContext? context)
         {
+            if (context == null) return null;
             return await userManager.GetUserAsync(context.User);
         }
     }

@@ -13,6 +13,7 @@ public class ChatSession
 
     public required string CurrentModel { get; set; }
 
+    public string UserId { get; set; } = string.Empty;
     public string? ChannelId { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
@@ -62,5 +63,5 @@ public class AuditLog
     public string Details { get; set; } = string.Empty;
     public string? Result { get; set; }
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-    public Guid SessionId { get; set; }
+    public Guid? SessionId { get; set; }
 }

@@ -46,13 +46,23 @@ namespace BlazorClaw.Server.Services
                     };
                     if (httpContext.HttpContext != null)
                     {
-                        var userId = (await userAccessor.GetUserAsync(httpContext.HttpContext))?.Id;
-                        if (!string.IsNullOrWhiteSpace(userId))
-                            sess.Participants.Add(new ChatSessionParticipant() { UserId = userId });
+                        var userId = (await userAccessor.GetUserAsync(httpContext?.HttpContext))?.Id;
+                        if (!string.IsNullOrWhiteSpace(userId)) sess.UserId = userId;
                     }
                     db.ChatSessions.Add(sess);
                     await db.SaveChangesAsync().ConfigureAwait(false);
                 }
+                if (string.IsNullOrWhiteSpace(sess.UserId))
+                {
+                    var userId = (await userAccessor.GetUserAsync(httpContext?.HttpContext))?.Id;
+                    if (!string.IsNullOrWhiteSpace(userId))
+                    {
+                        sess.UserId = userId;
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
+                }
+
+
 
                 state = new ChatSessionState
                 {
