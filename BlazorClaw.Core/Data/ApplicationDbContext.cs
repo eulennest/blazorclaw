@@ -12,6 +12,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
     public DbSet<RateLimitTracking> RateLimitTrackings { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
+    public DbSet<Crontab> Crontabs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
