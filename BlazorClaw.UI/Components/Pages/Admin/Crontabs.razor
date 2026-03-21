@@ -1,0 +1,290 @@
+@page "/admin/crontabs"
+@using BlazorClaw.Core.Data
+@using BlazorClaw.Core.Models
+@using BlazorClaw.Core.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext Db
+@inject ICronJobService CronJobService
+
+<PageTitle>Admin - Crontabs</PageTitle>
+
+<h2>Cron-Jobs</h2>
+<p class="text-muted">Verwalte automatisierte Aufgaben mit Cron-Ausdrücken.</p>
+
+<div class="row mt-4">
+    <!-- Crontab Form -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">@(editingCrontab == null ? "Neuer Cron-Job" : "Job bearbeiten")</h5>
+            </div>
+            <div class="card-body">
+                <EditForm Model="formModel" OnValidSubmit="SaveCrontab">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Beschreibung</label>
+                        <InputText @bind-Value="formModel.Description" class="form-control" 
+                            placeholder="z.B. Tägliche Sicherung" />
+                        <ValidationMessage For="() => formModel.Description" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Cron-Ausdruck</label>
+                        <InputText @bind-Value="formModel.Cron" class="form-control" 
+                            placeholder="0 0 * * * (täglich um 00:00)" />
+                        <small class="form-text text-muted d-block mt-1">
+                            Cronos Format: Minute Hour DayOfMonth Month DayOfWeek
+                        </small>
+                        <ValidationMessage For="() => formModel.Cron" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Action</label>
+                        <select @bind="formModel.Action" class="form-select">
+                            <option value="">-- Auswählen --</option>
+                            <option value="message">Message</option>
+                            <option value="autoupdate">Auto-Update</option>
+                            <option value="backup">Backup</option>
+                        </select>
+                        <ValidationMessage For="() => formModel.Action" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Daten (JSON)</label>
+                        <InputTextArea @bind-Value="formModel.Data" class="form-control" 
+                            placeholder='{"text":"Überprüfe den Status"}' rows="2" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Session</label>
+                        <select @bind="formModel.SessionId" class="form-select">
+                            <option value="">@Guid.Empty -- Alle Sessions</option>
+                            @if (sessions != null)
+                            {
+                                @foreach (var session in sessions)
+                                {
+                                    <option value="@session.Id">@session.Title (@session.Id)</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <InputCheckbox @bind-Value="formModel.System" class="form-check-input" id="systemCheck" />
+                        <label class="form-check-label" for="systemCheck">
+                            System-Job (unveränderbar)
+                        </label>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg"></i> Speichern
+                        </button>
+                        @if (editingCrontab != null)
+                        {
+                            <button type="button" class="btn btn-secondary" @onclick="CancelEdit">
+                                Abbrechen
+                            </button>
+                        }
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crontabs List -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Konfigurierte Jobs</h5>
+                <button class="btn btn-sm btn-outline-success" @onclick="ForceExecuteAll">
+                    <i class="bi bi-play-circle"></i> Jetzt ausführen
+                </button>
+            </div>
+            <div class="card-body">
+                @if (crontabs == null)
+                {
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Laden...</span>
+                        </div>
+                    </div>
+                }
+                else if (!crontabs.Any())
+                {
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i> Keine Cron-Jobs konfiguriert.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover table-sm">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Beschreibung</th>
+                                    <th>Cron</th>
+                                    <th>Action</th>
+                                    <th>Session</th>
+                                    <th>Status</th>
+                                    <th>Aktionen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var cron in crontabs)
+                                {
+                                    <tr>
+                                        <td>
+                                            @cron.Description
+                                            @if (cron.System)
+                                            {
+                                                <span class="badge bg-warning text-dark ms-2">System</span>
+                                            }
+                                        </td>
+                                        <td><code>@cron.Cron</code></td>
+                                        <td><span class="badge bg-info">@cron.Action</span></td>
+                                        <td>
+                                            @if (cron.SessionId == null)
+                                            {
+                                                <span class="text-muted small">Alle</span>
+                                            }
+                                            else
+                                            {
+                                                <code class="small">@cron.SessionId.ToString().Substring(0, 8)...</code>
+                                            }
+                                        </td>
+                                        <td>
+                                            <small>
+                                                @if (cron.LastExecution.HasValue)
+                                                {
+                                                    <div>Zuletzt: @cron.LastExecution.Value.ToString("dd.MM.yyyy HH:mm:ss")</div>
+                                                }
+                                                @if (cron.NextExecution.HasValue)
+                                                {
+                                                    <div>Nächst: @cron.NextExecution.Value.ToString("dd.MM.yyyy HH:mm:ss")</div>
+                                                }
+                                            </small>
+                                        </td>
+                                        <td>
+                                            @if (!cron.System)
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCrontab(cron)">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCrontab(cron.Id)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted small">—</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Crontab>? crontabs;
+    private List<ChatSession>? sessions;
+    private Crontab? editingCrontab;
+    private Crontab formModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCrontabs();
+        await LoadSessions();
+    }
+
+    private async Task LoadCrontabs()
+    {
+        crontabs = await Db.Crontabs.OrderBy(c => c.Description).ToListAsync();
+    }
+
+    private async Task LoadSessions()
+    {
+        sessions = await Db.ChatSessions.OrderByDescending(s => s.LastUsedAt).ToListAsync();
+    }
+
+    private void EditCrontab(Crontab crontab)
+    {
+        editingCrontab = crontab;
+        formModel = new()
+        {
+            Id = crontab.Id,
+            Description = crontab.Description,
+            Cron = crontab.Cron,
+            Action = crontab.Action,
+            Data = crontab.Data,
+            SessionId = crontab.SessionId,
+            System = crontab.System
+        };
+    }
+
+    private async Task SaveCrontab()
+    {
+        if (editingCrontab == null)
+        {
+            // New
+            var newCron = new Crontab
+            {
+                Description = formModel.Description,
+                Cron = formModel.Cron,
+                Action = formModel.Action,
+                Data = formModel.Data,
+                SessionId = formModel.SessionId == Guid.Empty ? null : formModel.SessionId,
+                System = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            Db.Crontabs.Add(newCron);
+        }
+        else
+        {
+            // Edit
+            editingCrontab.Description = formModel.Description;
+            editingCrontab.Cron = formModel.Cron;
+            editingCrontab.Action = formModel.Action;
+            editingCrontab.Data = formModel.Data;
+            editingCrontab.SessionId = formModel.SessionId == Guid.Empty ? null : formModel.SessionId;
+            Db.Crontabs.Update(editingCrontab);
+        }
+
+        await Db.SaveChangesAsync();
+        CronJobService.ForceExecute();
+        
+        await LoadCrontabs();
+        CancelEdit();
+    }
+
+    private async Task DeleteCrontab(Guid id)
+    {
+        var cron = await Db.Crontabs.FindAsync(id);
+        if (cron != null && !cron.System)
+        {
+            Db.Crontabs.Remove(cron);
+            await Db.SaveChangesAsync();
+            CronJobService.ForceExecute();
+            await LoadCrontabs();
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingCrontab = null;
+        formModel = new();
+    }
+
+    private void ForceExecuteAll()
+    {
+        CronJobService.ForceExecute();
+    }
+}
