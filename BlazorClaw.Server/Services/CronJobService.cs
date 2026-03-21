@@ -33,27 +33,8 @@ namespace BlazorClaw.Server.Services
                 foreach (var job in list)
                 {
                     db.ChangeTracker.Clear();
-                    try
-                    {
-                        var cron = Cronos.CronExpression.Parse(job.Cron);
-                        job.NextExecution = cron.GetNextOccurrence(DateTime.UtcNow);
-                        job.LastExecution = DateTime.UtcNow;
-                        db.Crontabs.Update(job);
-                        await ExecuteJobAsync(job);
-                    }
-                    catch (Exception ex)
-                    {
-                        var al = new AuditLog()
-                        {
-                            Action = "cron",
-                            Details = JsonSerializer.Serialize(job),
-                            Result = ex.ToString(),
-                            Timestamp = DateTime.UtcNow,
-                            SessionId = job.SessionId
-                        };
-                        db.AuditLogs.Add(al);
-                    }
-                    await db.SaveChangesAsync(ct);
+                    db.Crontabs.Update(job);
+                    await InternalHandleJobAsync(job, db);
                 }
 
                 var nexteexc = await db.Crontabs.AnyAsync(cancellationToken: ct)
@@ -64,22 +45,15 @@ namespace BlazorClaw.Server.Services
             }
         }
 
-        public async Task ExecuteNow(Guid cronJobId)
+        private async Task InternalHandleJobAsync(Crontab job, ApplicationDbContext db)
         {
-            using var scope = scopeFactory.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            
-            var job = await db.Crontabs.FindAsync(cronJobId);
-            if (job == null) return;
-
             try
             {
                 var cron = Cronos.CronExpression.Parse(job.Cron);
                 job.LastExecution = DateTime.UtcNow;
                 job.NextExecution = cron.GetNextOccurrence(DateTime.UtcNow);
-                
+
                 await ExecuteJobAsync(job);
-                await db.SaveChangesAsync();
             }
             catch (Exception ex)
             {
@@ -92,8 +66,19 @@ namespace BlazorClaw.Server.Services
                     SessionId = job.SessionId
                 };
                 db.AuditLogs.Add(al);
-                await db.SaveChangesAsync();
             }
+            await db.SaveChangesAsync();
+        }
+
+
+        public async Task ExecuteNow(Guid cronJobId)
+        {
+            using var scope = scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            var job = await db.Crontabs.FindAsync(cronJobId);
+            if (job == null) return;
+            await InternalHandleJobAsync(job, db);
         }
 
         private async Task ExecuteJobAsync(Crontab job)
