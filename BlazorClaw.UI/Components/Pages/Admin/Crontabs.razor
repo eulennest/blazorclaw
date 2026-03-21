@@ -97,11 +97,8 @@
     <!-- Crontabs List -->
     <div class="col-md-8">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header">
                 <h5 class="mb-0">Konfigurierte Jobs</h5>
-                <button class="btn btn-sm btn-outline-success" @onclick="ForceExecuteAll">
-                    <i class="bi bi-play-circle"></i> Jetzt ausführen
-                </button>
             </div>
             <div class="card-body">
                 @if (crontabs == null)
@@ -168,6 +165,9 @@
                                             </small>
                                         </td>
                                         <td>
+                                            <button class="btn btn-sm btn-outline-success" @onclick="() => ExecuteJobNow(cron.Id)" title="Sofort ausführen">
+                                                <i class="bi bi-play-circle"></i>
+                                            </button>
                                             @if (!cron.System)
                                             {
                                                 <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCrontab(cron)">
@@ -176,10 +176,6 @@
                                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCrontab(cron.Id)">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
-                                            }
-                                            else
-                                            {
-                                                <span class="text-muted small">—</span>
                                             }
                                         </td>
                                     </tr>
@@ -293,8 +289,8 @@
         };
     }
 
-    private void ForceExecuteAll()
+    private async Task ExecuteJobNow(Guid cronJobId)
     {
-        CronJobService.ForceExecute();
+        await CronJobService.ExecuteNow(cronJobId);
     }
 }

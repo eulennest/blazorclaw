@@ -64,6 +64,33 @@ namespace BlazorClaw.Server.Services
             }
         }
 
+        public async Task ExecuteNow(Guid cronJobId)
+        {
+            using var scope = scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            
+            var job = await db.Crontabs.FindAsync(cronJobId);
+            if (job == null) return;
+
+            try
+            {
+                await ExecuteJobAsync(job);
+            }
+            catch (Exception ex)
+            {
+                var al = new AuditLog()
+                {
+                    Action = "cron",
+                    Details = System.Text.Json.JsonSerializer.Serialize(job),
+                    Result = ex.ToString(),
+                    Timestamp = DateTime.UtcNow,
+                    SessionId = job.SessionId
+                };
+                db.AuditLogs.Add(al);
+                await db.SaveChangesAsync();
+            }
+        }
+
         private async Task ExecuteJobAsync(Crontab job)
         {
             throw new NotImplementedException();
