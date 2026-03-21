@@ -234,10 +234,18 @@ namespace BlazorClaw.Server.Services
                             continue;
                         }
 
-                        responseCount++;
-                        logger.LogInformation("Sending cron response to {ChannelProvider}:{ChannelId} (SessionId: {SessionId})",
-                            cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, sessionId);
-                        await cmdContext.Channel.SendChannelAsync(msg);
+                        try
+                        {
+                            logger.LogInformation("Sending cron response to {ChannelProvider}:{ChannelId} (SessionId: {SessionId})",
+                                cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, sessionId);
+                            await cmdContext.Channel.SendChannelAsync(msg);
+                            responseCount++;
+
+                        }
+                        catch (Exception sex)
+                        {
+                            logger.LogWarning(sex, "Error sending message to user channel");
+                        }
                     }
 
                     if (responseCount > 0)
