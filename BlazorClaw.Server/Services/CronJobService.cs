@@ -5,7 +5,7 @@ using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
 {
-    public class CronJobService(ApplicationDbContext dbContext) : BackgroundService
+    public class CronJobService(IServiceScopeFactory scopeFactory) : BackgroundService
     {
         TimeSpan MaxDelay = TimeSpan.FromHours(1);
         protected override async Task ExecuteAsync(CancellationToken ct)
@@ -14,16 +14,22 @@ namespace BlazorClaw.Server.Services
             while (!ct.IsCancellationRequested)
             {
                 await Task.Delay(aktDelay, ct);
+
+                using var scope = scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
                 var start = DateTime.UtcNow;
-                var list = await dbContext.Crontabs.Where(o => o.NextExecution == null || o.NextExecution <= DateTime.UtcNow).ToListAsync();
+                var list = await db.Crontabs.AsNoTracking().Where(o => o.NextExecution == null || o.NextExecution <= DateTime.UtcNow).ToListAsync(cancellationToken: ct);
                 foreach (var job in list)
                 {
+                    db.ChangeTracker.Clear();
                     try
                     {
                         var cron = Cronos.CronExpression.Parse(job.Cron);
-                        await ExecuteJobAsync(job);
                         job.NextExecution = cron.GetNextOccurrence(DateTime.UtcNow);
                         job.LastExecution = DateTime.UtcNow;
+                        db.Crontabs.Update(job);
+                        await ExecuteJobAsync(job);
                     }
                     catch (Exception ex)
                     {
@@ -35,12 +41,14 @@ namespace BlazorClaw.Server.Services
                             Timestamp = DateTime.UtcNow,
                             SessionId = job.SessionId
                         };
-                        dbContext.AuditLogs.Add(al);
+                        db.AuditLogs.Add(al);
                     }
-                    await dbContext.SaveChangesAsync(ct);
+                    await db.SaveChangesAsync(ct);
                 }
 
-                var nexteexc = (await dbContext.Crontabs.MinAsync(o => o.NextExecution)) ?? DateTime.MaxValue;
+                var nexteexc = await db.Crontabs.AnyAsync(cancellationToken: ct)
+                    ? (await db.Crontabs.MinAsync(o => o.NextExecution, cancellationToken: ct)) ?? DateTime.MaxValue
+                    : DateTime.MaxValue;
 
                 aktDelay = TimeSpan.FromSeconds(Math.Min(MaxDelay.TotalSeconds, ((nexteexc - start) + TimeSpan.FromSeconds(10)).TotalSeconds));
             }
