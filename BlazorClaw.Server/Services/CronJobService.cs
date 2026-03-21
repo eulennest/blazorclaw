@@ -35,7 +35,7 @@ namespace BlazorClaw.Server.Services
 
                     var start = DateTime.UtcNow;
                     var list = await db.Crontabs.AsNoTracking().Where(o => o.NextExecution == null || o.NextExecution <= DateTime.UtcNow).ToListAsync(cancellationToken: ct);
-                    
+
                     if (list.Count > 0)
                     {
                         logger.LogInformation("Found {CronJobCount} cron job(s) to execute", list.Count);
@@ -44,7 +44,7 @@ namespace BlazorClaw.Server.Services
                     {
                         logger.LogDebug("No cron jobs due for execution");
                     }
-                    
+
                     foreach (var job in list)
                     {
                         db.ChangeTracker.Clear();
@@ -79,7 +79,7 @@ namespace BlazorClaw.Server.Services
                 job.LastExecution = DateTime.UtcNow;
                 job.NextExecution = cron.GetNextOccurrence(DateTime.UtcNow);
 
-                logger.LogDebug("Executing cron job {CronJobId} ({Description}), next execution: {NextExecution}", 
+                logger.LogDebug("Executing cron job {CronJobId} ({Description}), next execution: {NextExecution}",
                     job.Id, job.Description, job.NextExecution);
                 await ExecuteJobAsync(job);
                 logger.LogInformation("Cron job {CronJobId} executed successfully", job.Id);
@@ -137,13 +137,13 @@ namespace BlazorClaw.Server.Services
         private async Task ExecuteMessageAction(Crontab job)
         {
             logger.LogInformation("Executing message action for cron job {CronJobId}: {Description}", job.Id, job.Description);
-            
+
             using var scope = scopeFactory.CreateScope();
 
             // Parse message from Data (JSON)
             string messageText = job.Data ?? string.Empty;
             bool onlyIfNewUserMsg = false;
-            if (!string.IsNullOrEmpty(job.Data))
+            if (job.Data?.StartsWith('{') ?? false)
             {
                 try
                 {
@@ -184,7 +184,7 @@ namespace BlazorClaw.Server.Services
 
             var sm = scope.ServiceProvider.GetRequiredService<ISessionManager>();
             int processedCount = 0;
-            
+
             // Send message to each session
             foreach (var sessionId in sessionIds)
             {
@@ -211,12 +211,12 @@ namespace BlazorClaw.Server.Services
                     if (cmdContext == null)
                     {
                         logger.LogWarning("No message context available for session {SessionId}", sessionId);
-                        return;
+                        continue;
                     }
-                    
+
                     logger.LogDebug("Adding cron message to session {SessionId}", sessionId);
                     sess.MessageHistory.Add(new() { Role = "user", Content = fullMessage });
-                    
+
                     int responseCount = 0;
                     await foreach (var msg in sm.DispatchToLLMAsync(sess, cmdContext))
                     {
@@ -235,11 +235,11 @@ namespace BlazorClaw.Server.Services
                         }
 
                         responseCount++;
-                        logger.LogInformation("Sending cron response to {ChannelProvider}:{ChannelId} (SessionId: {SessionId})", 
+                        logger.LogInformation("Sending cron response to {ChannelProvider}:{ChannelId} (SessionId: {SessionId})",
                             cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, sessionId);
                         await cmdContext.Channel.SendChannelAsync(msg);
                     }
-                    
+
                     if (responseCount > 0)
                     {
                         processedCount++;
@@ -252,7 +252,7 @@ namespace BlazorClaw.Server.Services
                 }
             }
 
-            logger.LogInformation("Cron job {CronJobId} completed: {ProcessedCount}/{TotalCount} sessions processed", 
+            logger.LogInformation("Cron job {CronJobId} completed: {ProcessedCount}/{TotalCount} sessions processed",
                 job.Id, processedCount, sessionIds.Count);
         }
 
