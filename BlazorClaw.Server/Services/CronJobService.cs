@@ -83,6 +83,34 @@ namespace BlazorClaw.Server.Services
 
         private async Task ExecuteJobAsync(Crontab job)
         {
+            switch (job.Action)
+            {
+                case "message":
+                    await ExecuteMessageAction(job);
+                    break;
+                case "autoupdate":
+                    await ExecuteAutoUpdateAction(job);
+                    break;
+                case "backup":
+                    await ExecuteBackupAction(job);
+                    break;
+                default:
+                    throw new NotImplementedException($"Unknown action: {job.Action}");
+            }
+        }
+
+        private async Task ExecuteMessageAction(Crontab job)
+        {
+            throw new NotImplementedException();
+        }
+
+        private async Task ExecuteAutoUpdateAction(Crontab job)
+        {
+            throw new NotImplementedException();
+        }
+
+        private async Task ExecuteBackupAction(Crontab job)
+        {
             throw new NotImplementedException();
         }
     }
