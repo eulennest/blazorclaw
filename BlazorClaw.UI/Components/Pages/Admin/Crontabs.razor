@@ -197,7 +197,12 @@
     private List<Crontab>? crontabs;
     private List<ChatSession>? sessions;
     private Crontab? editingCrontab;
-    private Crontab formModel = new();
+    private Crontab formModel = new()
+    {
+        Description = "",
+        Cron = "0 0 * * *",
+        Action = "message"
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -280,7 +285,12 @@
     private void CancelEdit()
     {
         editingCrontab = null;
-        formModel = new();
+        formModel = new()
+        {
+            Description = "",
+            Cron = "0 0 * * *",
+            Action = "message"
+        };
     }
 
     private void ForceExecuteAll()
