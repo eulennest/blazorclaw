@@ -114,6 +114,10 @@ builder.Services.AddSingleton<ISessionManager, BlazorClaw.Server.Services.Sessio
 builder.Services.AddSingleton<IMessageDispatcher, MessageDispatcher>();
 builder.Services.AddScoped<ISessionQueryService, BlazorClaw.Core.Services.SessionQueryService>();
 
+builder.Services.AddSingleton<CronJobService>();
+builder.Services.AddSingleton<ICronJobService>(sp => sp.GetRequiredService<CronJobService>());
+builder.Services.AddHostedService(sp => sp.GetRequiredService<CronJobService>());
+
 builder.Services.AddHostedService<BlazorClaw.Channels.Services.TelegramBotHostedService>();
 builder.Services.AddHostedService<BlazorClaw.Channels.Services.MatrixBotHostedService>();
 
