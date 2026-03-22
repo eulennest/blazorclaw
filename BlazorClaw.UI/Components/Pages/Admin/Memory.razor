@@ -2,6 +2,7 @@
 @using System.Text.Json
 @inject HttpClient Http
 @inject ILogger<Memory> Logger
+@inject NavigationManager Nav
 
 <PageTitle>Admin - Memory Verwaltung</PageTitle>
 
@@ -205,12 +206,17 @@
     {
         try
         {
-            var response = await Http.GetAsync("/api/memory/users");
+            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
+            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
+            
+            var response = await client.GetAsync("/api/memory/users");
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
+                var json = JsonSerializer.Deserialize<JsonElement>(content);
+                var usersArray = json.GetProperty("users").GetRawText();
                 users = JsonSerializer.Deserialize<List<UserInfo>>(
-                    content,
+                    usersArray,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
                 );
             }
@@ -236,12 +242,15 @@
 
         try
         {
-            var response = await Http.GetAsync($"/api/memory/user/{selectedUserId}/files");
+            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
+            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
+            
+            var response = await client.GetAsync($"/api/memory/user/{selectedUserId}/files");
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
                 var json = JsonSerializer.Deserialize<JsonElement>(content);
-                var filesArray = json.GetProperty("files").GetString();
+                var filesArray = json.GetProperty("files").GetRawText();
                 memoryFiles = JsonSerializer.Deserialize<List<FileInfo>>(
                     filesArray ?? "[]",
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
@@ -268,7 +277,10 @@
 
         try
         {
-            var response = await Http.GetAsync($"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(selectedFilePath)}");
+            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
+            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
+            
+            var response = await client.GetAsync($"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(selectedFilePath)}");
             if (response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync();
@@ -289,8 +301,11 @@
         isSaving = true;
         try
         {
+            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
+            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
+            
             var request = new { content = fileContent };
-            var response = await Http.PostAsJsonAsync(
+            var response = await client.PostAsJsonAsync(
                 $"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(selectedFilePath)}",
                 request
             );
@@ -328,7 +343,10 @@
 
         try
         {
-            var response = await Http.DeleteAsync($"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(fileToDelete)}");
+            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
+            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
+            
+            var response = await client.DeleteAsync($"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(fileToDelete)}");
             if (response.IsSuccessStatusCode)
             {
                 selectedFilePath = null;
@@ -355,8 +373,11 @@
 
         try
         {
+            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
+            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
+            
             var request = new { content = string.Empty };
-            var response = await Http.PostAsJsonAsync(
+            var response = await client.PostAsJsonAsync(
                 $"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(newFileName)}",
                 request
             );

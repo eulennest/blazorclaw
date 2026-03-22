@@ -25,12 +25,30 @@ namespace BlazorClaw.Server.Controllers
         [HttpGet("users")]
         public async Task<IActionResult> GetAllUsers()
         {
-            var users = await _db.Users
+            string basePath = _config.GetValue<string>("Folders:UserData") ?? "userdata";
+            var fullBasePath = Path.GetFullPath(Path.Combine(_env.ContentRootPath, basePath));
+
+            if (!Directory.Exists(fullBasePath))
+                return Ok(new { users = Array.Empty<object>() });
+
+            // Scan folders in basePath
+            var userFolders = Directory.GetDirectories(fullBasePath)
+                .Where(d => Guid.TryParse(Path.GetFileName(d), out _))
+                .Select(d => Path.GetFileName(d))
+                .ToList();
+
+            if (!userFolders.Any())
+                return Ok(new { users = Array.Empty<object>() });
+
+            // Match folder GUIDs to users in DB
+            var guids = userFolders.Select(f => Guid.Parse(f)).ToList();
+            var dbUsers = await _db.Users
+                .Where(u => guids.Contains(Guid.Parse(u.Id)))
                 .Select(u => new { u.Id, u.UserName, u.FirstName, u.LastName })
                 .OrderBy(u => u.UserName)
                 .ToListAsync();
 
-            return Ok(users);
+            return Ok(new { users = dbUsers });
         }
 
         [HttpGet("user/{userId}/files")]
