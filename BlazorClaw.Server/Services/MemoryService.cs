@@ -1,35 +1,29 @@
 using BlazorClaw.Core.Data;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
+using BlazorClaw.Core.Services;
 using Microsoft.EntityFrameworkCore;
-using System.IO;
 
-namespace BlazorClaw.Server.Controllers
+namespace BlazorClaw.Server.Services
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
-    public class MemoryController : ControllerBase
+    public class MemoryService : IMemoryService
     {
         private readonly IConfiguration _config;
         private readonly IWebHostEnvironment _env;
         private readonly ApplicationDbContext _db;
 
-        public MemoryController(IConfiguration config, IWebHostEnvironment env, ApplicationDbContext db)
+        public MemoryService(IConfiguration config, IWebHostEnvironment env, ApplicationDbContext db)
         {
             _config = config;
             _env = env;
             _db = db;
         }
 
-        [HttpGet("users")]
-        public async Task<IActionResult> GetAllUsers()
+        public async Task<List<UserInfo>> GetActiveUsersAsync()
         {
             string basePath = _config.GetValue<string>("Folders:UserData") ?? "userdata";
             var fullBasePath = Path.GetFullPath(Path.Combine(_env.ContentRootPath, basePath));
 
             if (!Directory.Exists(fullBasePath))
-                return Ok(new { users = Array.Empty<object>() });
+                return new();
 
             // Scan folders in basePath
             var userFolders = Directory.GetDirectories(fullBasePath)
@@ -38,83 +32,73 @@ namespace BlazorClaw.Server.Controllers
                 .ToList();
 
             if (!userFolders.Any())
-                return Ok(new { users = Array.Empty<object>() });
+                return new();
 
             // Match folder GUIDs to users in DB
             var guids = userFolders.Select(f => Guid.Parse(f)).ToList();
             var dbUsers = await _db.Users
                 .Where(u => guids.Contains(Guid.Parse(u.Id)))
-                .Select(u => new { u.Id, u.UserName, u.FirstName, u.LastName })
+                .Select(u => new UserInfo { Id = u.Id, UserName = u.UserName, FirstName = u.FirstName, LastName = u.LastName })
                 .OrderBy(u => u.UserName)
                 .ToListAsync();
 
-            return Ok(new { users = dbUsers });
+            return dbUsers;
         }
 
-        [HttpGet("user/{userId}/files")]
-        public IActionResult GetUserMemoryFiles(string userId)
+        public Task<List<Core.Services.FileInfo>> GetUserMemoryFilesAsync(string userId)
         {
             var basePath = GetMemoryPath(userId);
             if (!Directory.Exists(basePath))
-                return Ok(new { files = Array.Empty<object>() });
+                return Task.FromResult(new List<Core.Services.FileInfo>());
 
             var directory = new DirectoryInfo(basePath);
             var files = directory.EnumerateFiles("*.md", SearchOption.AllDirectories)
                 .OrderByDescending(f => f.LastWriteTimeUtc)
-                .Select(f => new
+                .Select(f => new Core.Services.FileInfo
                 {
-                    path = f.FullName[basePath.Length..],
-                    name = f.Name,
-                    size = f.Length,
-                    modified = f.LastWriteTimeUtc,
-                    modifiedUnix = ((long)(f.LastWriteTimeUtc - new DateTime(1970, 1, 1)).TotalSeconds)
+                    Path = f.FullName[basePath.Length..],
+                    Name = f.Name,
+                    Size = f.Length,
+                    Modified = f.LastWriteTimeUtc,
+                    ModifiedUnix = ((long)(f.LastWriteTimeUtc - new DateTime(1970, 1, 1)).TotalSeconds)
                 })
                 .ToList();
 
-            return Ok(new { files });
+            return Task.FromResult(files);
         }
 
-        [HttpGet("user/{userId}/file")]
-        public IActionResult GetUserMemoryFile(string userId, [FromQuery] string path)
+        public Task<string> GetUserMemoryFileContentAsync(string userId, string path)
+        {
+            var filePath = ValidateAndGetPath(userId, path);
+            if (filePath == null || !File.Exists(filePath))
+                return Task.FromResult(string.Empty);
+
+            var content = File.ReadAllText(filePath);
+            return Task.FromResult(content);
+        }
+
+        public Task SaveUserMemoryFileAsync(string userId, string path, string content)
         {
             var filePath = ValidateAndGetPath(userId, path);
             if (filePath == null)
-                return BadRequest("Invalid path");
-
-            if (!System.IO.File.Exists(filePath))
-                return NotFound();
-
-            var content = System.IO.File.ReadAllText(filePath);
-            return Ok(new { content });
-        }
-
-        [HttpPost("user/{userId}/file")]
-        public IActionResult SaveUserMemoryFile(string userId, [FromQuery] string path, [FromBody] SaveFileRequest request)
-        {
-            var filePath = ValidateAndGetPath(userId, path);
-            if (filePath == null)
-                return BadRequest("Invalid path");
+                throw new InvalidOperationException("Invalid path");
 
             var directory = Path.GetDirectoryName(filePath);
             if (directory != null && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
 
-            System.IO.File.WriteAllText(filePath, request.Content ?? string.Empty);
-            return Ok(new { message = "File saved" });
+            File.WriteAllText(filePath, content ?? string.Empty);
+            return Task.CompletedTask;
         }
 
-        [HttpDelete("user/{userId}/file")]
-        public IActionResult DeleteUserMemoryFile(string userId, [FromQuery] string path)
+        public Task DeleteUserMemoryFileAsync(string userId, string path)
         {
             var filePath = ValidateAndGetPath(userId, path);
-            if (filePath == null)
-                return BadRequest("Invalid path");
+            if (filePath == null || !File.Exists(filePath))
+                throw new FileNotFoundException("File not found");
 
-            if (!System.IO.File.Exists(filePath))
-                return NotFound();
-
-            System.IO.File.Delete(filePath);
-            return Ok(new { message = "File deleted" });
+            File.Delete(filePath);
+            return Task.CompletedTask;
         }
 
         private string? ValidateAndGetPath(string userId, string path)
@@ -146,8 +130,4 @@ namespace BlazorClaw.Server.Controllers
         }
     }
 
-    public class SaveFileRequest
-    {
-        public string? Content { get; set; }
-    }
 }

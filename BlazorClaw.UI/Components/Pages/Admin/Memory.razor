@@ -1,8 +1,7 @@
 @page "/admin/memory"
-@using System.Text.Json
-@inject HttpClient Http
+@using BlazorClaw.Core.Services
+@inject IMemoryService MemoryService
 @inject ILogger<Memory> Logger
-@inject NavigationManager Nav
 
 <PageTitle>Admin - Memory Verwaltung</PageTitle>
 
@@ -32,10 +31,10 @@
                     <div class="list-group list-group-flush">
                         @foreach (var user in users)
                         {
-                            <button class="list-group-item list-group-item-action @(selectedUserId == user.id ? "active" : "")"
+                            <button class="list-group-item list-group-item-action @(selectedUserId == user.Id ? "active" : "")"
                                     @onclick="() => SelectUser(user)">
-                                <div class="fw-bold">@user.username</div>
-                                <small class="text-muted">@(user.firstName ?? "—") @(user.lastName ?? "—")</small>
+                                <div class="fw-bold">@user.UserName</div>
+                                <small class="text-muted">@(user.FirstName ?? "—") @(user.LastName ?? "—")</small>
                             </button>
                         }
                     </div>
@@ -80,12 +79,12 @@
                                 <div class="list-group list-group-flush">
                                     @foreach (var file in memoryFiles)
                                     {
-                                        <button class="list-group-item list-group-item-action @(selectedFilePath == file.path ? "active" : "")"
+                                        <button class="list-group-item list-group-item-action @(selectedFilePath == file.Path ? "active" : "")"
                                                 @onclick="() => SelectFile(file)">
                                             <div class="d-flex justify-content-between align-items-start">
                                                 <div>
-                                                    <div class="fw-bold small">@file.name</div>
-                                                    <small class="text-muted">@(file.size) bytes</small>
+                                                    <div class="fw-bold small">@file.Name</div>
+                                                    <small class="text-muted">@(file.Size) bytes</small>
                                                 </div>
                                             </div>
                                         </button>
@@ -206,20 +205,7 @@
     {
         try
         {
-            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
-            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
-            
-            var response = await client.GetAsync("/api/memory/users");
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                var json = JsonSerializer.Deserialize<JsonElement>(content);
-                var usersArray = json.GetProperty("users").GetRawText();
-                users = JsonSerializer.Deserialize<List<UserInfo>>(
-                    usersArray,
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                );
-            }
+            users = await MemoryService.GetActiveUsersAsync();
         }
         catch (Exception ex)
         {
@@ -229,7 +215,7 @@
 
     private async Task SelectUser(UserInfo user)
     {
-        selectedUserId = user.id;
+        selectedUserId = user.Id;
         selectedFilePath = null;
         fileContent = null;
         lastSaveMessage = null;
@@ -242,20 +228,7 @@
 
         try
         {
-            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
-            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
-            
-            var response = await client.GetAsync($"/api/memory/user/{selectedUserId}/files");
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                var json = JsonSerializer.Deserialize<JsonElement>(content);
-                var filesArray = json.GetProperty("files").GetRawText();
-                memoryFiles = JsonSerializer.Deserialize<List<FileInfo>>(
-                    filesArray ?? "[]",
-                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-                );
-            }
+            memoryFiles = await MemoryService.GetUserMemoryFilesAsync(selectedUserId);
         }
         catch (Exception ex)
         {
@@ -265,7 +238,7 @@
 
     private async Task SelectFile(FileInfo file)
     {
-        selectedFilePath = file.path;
+        selectedFilePath = file.Path;
         fileContent = null;
         lastSaveMessage = null;
         await LoadFileContent();
@@ -277,16 +250,7 @@
 
         try
         {
-            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
-            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
-            
-            var response = await client.GetAsync($"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(selectedFilePath)}");
-            if (response.IsSuccessStatusCode)
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                var json = JsonSerializer.Deserialize<JsonElement>(content);
-                fileContent = json.GetProperty("content").GetString() ?? string.Empty;
-            }
+            fileContent = await MemoryService.GetUserMemoryFileContentAsync(selectedUserId, selectedFilePath);
         }
         catch (Exception ex)
         {
@@ -301,21 +265,10 @@
         isSaving = true;
         try
         {
-            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
-            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
-            
-            var request = new { content = fileContent };
-            var response = await client.PostAsJsonAsync(
-                $"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(selectedFilePath)}",
-                request
-            );
-
-            if (response.IsSuccessStatusCode)
-            {
-                lastSaveMessage = "Datei gespeichert ✓";
-                await Task.Delay(3000);
-                lastSaveMessage = null;
-            }
+            await MemoryService.SaveUserMemoryFileAsync(selectedUserId, selectedFilePath, fileContent ?? string.Empty);
+            lastSaveMessage = "Datei gespeichert ✓";
+            await Task.Delay(3000);
+            lastSaveMessage = null;
         }
         catch (Exception ex)
         {
@@ -343,16 +296,10 @@
 
         try
         {
-            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
-            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
-            
-            var response = await client.DeleteAsync($"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(fileToDelete)}");
-            if (response.IsSuccessStatusCode)
-            {
-                selectedFilePath = null;
-                fileContent = null;
-                await LoadMemoryFiles();
-            }
+            await MemoryService.DeleteUserMemoryFileAsync(selectedUserId, fileToDelete);
+            selectedFilePath = null;
+            fileContent = null;
+            await LoadMemoryFiles();
         }
         catch (Exception ex)
         {
@@ -373,21 +320,10 @@
 
         try
         {
-            var baseUri = new Uri(Nav.Uri).GetLeftPart(UriPartial.Authority);
-            using var client = new HttpClient { BaseAddress = new Uri(baseUri) };
-            
-            var request = new { content = string.Empty };
-            var response = await client.PostAsJsonAsync(
-                $"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(newFileName)}",
-                request
-            );
-
-            if (response.IsSuccessStatusCode)
-            {
-                showNewFileModal = false;
-                newFileName = null;
-                await LoadMemoryFiles();
-            }
+            await MemoryService.SaveUserMemoryFileAsync(selectedUserId, newFileName, string.Empty);
+            showNewFileModal = false;
+            newFileName = null;
+            await LoadMemoryFiles();
         }
         catch (Exception ex)
         {
@@ -395,20 +331,4 @@
         }
     }
 
-    public class UserInfo
-    {
-        public string id { get; set; } = string.Empty;
-        public string username { get; set; } = string.Empty;
-        public string? firstName { get; set; }
-        public string? lastName { get; set; }
-    }
-
-    public class FileInfo
-    {
-        public string path { get; set; } = string.Empty;
-        public string name { get; set; } = string.Empty;
-        public long size { get; set; }
-        public DateTime modified { get; set; }
-        public long modifiedUnix { get; set; }
-    }
 }
