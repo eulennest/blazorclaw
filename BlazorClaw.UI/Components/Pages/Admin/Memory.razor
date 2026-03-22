@@ -1,0 +1,393 @@
+@page "/admin/memory"
+@using System.Text.Json
+@inject HttpClient Http
+@inject ILogger<Memory> Logger
+
+<PageTitle>Admin - Memory Verwaltung</PageTitle>
+
+<h2>Memory Verwaltung</h2>
+<p class="text-muted">Verwalte Memory-Dateien für alle Benutzer.</p>
+
+<div class="row mt-4">
+    <!-- User List -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Benutzer</h5>
+            </div>
+            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                @if (users == null)
+                {
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Laden...</span>
+                    </div>
+                }
+                else if (!users.Any())
+                {
+                    <div class="alert alert-info mb-0">Keine Benutzer gefunden.</div>
+                }
+                else
+                {
+                    <div class="list-group list-group-flush">
+                        @foreach (var user in users)
+                        {
+                            <button class="list-group-item list-group-item-action @(selectedUserId == user.id ? "active" : "")"
+                                    @onclick="() => SelectUser(user)">
+                                <div class="fw-bold">@user.username</div>
+                                <small class="text-muted">@(user.firstName ?? "—") @(user.lastName ?? "—")</small>
+                            </button>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Files & Editor -->
+    <div class="col-md-9">
+        @if (selectedUserId == null)
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Wähle einen Benutzer, um seine Memory-Dateien anzuschauen.
+            </div>
+        }
+        else
+        {
+            <div class="row">
+                <!-- File List -->
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Dateien</h5>
+                            <button class="btn btn-sm btn-primary" @onclick="() => ShowNewFileModal()">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                        <div class="card-body" style="max-height: 600px; overflow-y: auto;">
+                            @if (memoryFiles == null)
+                            {
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Laden...</span>
+                                </div>
+                            }
+                            else if (!memoryFiles.Any())
+                            {
+                                <div class="alert alert-info mb-0">Keine Dateien vorhanden.</div>
+                            }
+                            else
+                            {
+                                <div class="list-group list-group-flush">
+                                    @foreach (var file in memoryFiles)
+                                    {
+                                        <button class="list-group-item list-group-item-action @(selectedFilePath == file.path ? "active" : "")"
+                                                @onclick="() => SelectFile(file)">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <div class="fw-bold small">@file.name</div>
+                                                    <small class="text-muted">@(file.size) bytes</small>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Editor -->
+                <div class="col-md-8">
+                    @if (selectedFilePath == null)
+                    {
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i> Wähle eine Datei zum Editieren.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">@selectedFilePath</h5>
+                                <div>
+                                    <button class="btn btn-sm btn-success me-2" @onclick="SaveFile" disabled="@isSaving">
+                                        <i class="bi bi-check2"></i> Speichern
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowDeleteConfirmation(selectedFilePath)" disabled="@isSaving">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                @if (fileContent == null)
+                                {
+                                    <div class="spinner-border" role="status">
+                                        <span class="visually-hidden">Laden...</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <textarea @bind="fileContent" class="form-control form-control-sm" style="font-family: monospace; height: 500px; resize: vertical;"></textarea>
+                                    @if (!string.IsNullOrEmpty(lastSaveMessage))
+                                    {
+                                        <div class="alert alert-success mt-2 mb-0">@lastSaveMessage</div>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- New File Modal -->
+<div class="modal @(showNewFileModal ? "show d-block" : "")" tabindex="-1" style="@(showNewFileModal ? "display: block; background: rgba(0,0,0,0.5);" : "display: none;")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Neue Datei erstellen</h5>
+                <button type="button" class="btn-close" @onclick="() => showNewFileModal = false"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Dateiname</label>
+                    <input @bind="newFileName" type="text" class="form-control" placeholder="z.B. notes.md oder folder/notes.md" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="() => showNewFileModal = false">Abbrechen</button>
+                <button type="button" class="btn btn-primary" @onclick="CreateNewFile">Erstellen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal @(showDeleteConfirmation ? "show d-block" : "")" tabindex="-1" style="@(showDeleteConfirmation ? "display: block; background: rgba(0,0,0,0.5);" : "display: none;")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Datei löschen</h5>
+                <button type="button" class="btn-close" @onclick="() => showDeleteConfirmation = false"></button>
+            </div>
+            <div class="modal-body">
+                <p>Möchtest du die Datei <strong>@fileToDelete</strong> wirklich löschen?</p>
+                <p class="text-warning"><small><i class="bi bi-exclamation-triangle"></i> Diese Aktion kann nicht rückgängig gemacht werden.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="() => showDeleteConfirmation = false">Abbrechen</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDelete">Löschen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<UserInfo>? users;
+    private string? selectedUserId;
+    private List<FileInfo>? memoryFiles;
+    private string? selectedFilePath;
+    private string? fileContent;
+    private string? lastSaveMessage;
+    private bool isSaving = false;
+    private bool showNewFileModal = false;
+    private string? newFileName;
+    private bool showDeleteConfirmation = false;
+    private string? fileToDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            var response = await Http.GetAsync("/api/memory/users");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                users = JsonSerializer.Deserialize<List<UserInfo>>(
+                    content,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading users");
+        }
+    }
+
+    private async Task SelectUser(UserInfo user)
+    {
+        selectedUserId = user.id;
+        selectedFilePath = null;
+        fileContent = null;
+        lastSaveMessage = null;
+        await LoadMemoryFiles();
+    }
+
+    private async Task LoadMemoryFiles()
+    {
+        if (selectedUserId == null) return;
+
+        try
+        {
+            var response = await Http.GetAsync($"/api/memory/user/{selectedUserId}/files");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var json = JsonSerializer.Deserialize<JsonElement>(content);
+                var filesArray = json.GetProperty("files").GetString();
+                memoryFiles = JsonSerializer.Deserialize<List<FileInfo>>(
+                    filesArray ?? "[]",
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+                );
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading memory files");
+        }
+    }
+
+    private async Task SelectFile(FileInfo file)
+    {
+        selectedFilePath = file.path;
+        fileContent = null;
+        lastSaveMessage = null;
+        await LoadFileContent();
+    }
+
+    private async Task LoadFileContent()
+    {
+        if (selectedUserId == null || selectedFilePath == null) return;
+
+        try
+        {
+            var response = await Http.GetAsync($"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(selectedFilePath)}");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var json = JsonSerializer.Deserialize<JsonElement>(content);
+                fileContent = json.GetProperty("content").GetString() ?? string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading file content");
+        }
+    }
+
+    private async Task SaveFile()
+    {
+        if (selectedUserId == null || selectedFilePath == null) return;
+
+        isSaving = true;
+        try
+        {
+            var request = new { content = fileContent };
+            var response = await Http.PostAsJsonAsync(
+                $"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(selectedFilePath)}",
+                request
+            );
+
+            if (response.IsSuccessStatusCode)
+            {
+                lastSaveMessage = "Datei gespeichert ✓";
+                await Task.Delay(3000);
+                lastSaveMessage = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving file");
+            lastSaveMessage = "Fehler beim Speichern!";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ShowDeleteConfirmation(string? path)
+    {
+        fileToDelete = path;
+        showDeleteConfirmation = true;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (fileToDelete == null || selectedUserId == null)
+            return;
+
+        showDeleteConfirmation = false;
+
+        try
+        {
+            var response = await Http.DeleteAsync($"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(fileToDelete)}");
+            if (response.IsSuccessStatusCode)
+            {
+                selectedFilePath = null;
+                fileContent = null;
+                await LoadMemoryFiles();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting file");
+        }
+    }
+
+    private void ShowNewFileModal()
+    {
+        newFileName = string.Empty;
+        showNewFileModal = true;
+    }
+
+    private async Task CreateNewFile()
+    {
+        if (string.IsNullOrWhiteSpace(newFileName) || selectedUserId == null)
+            return;
+
+        try
+        {
+            var request = new { content = string.Empty };
+            var response = await Http.PostAsJsonAsync(
+                $"/api/memory/user/{selectedUserId}/file?path={Uri.EscapeDataString(newFileName)}",
+                request
+            );
+
+            if (response.IsSuccessStatusCode)
+            {
+                showNewFileModal = false;
+                newFileName = null;
+                await LoadMemoryFiles();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating file");
+        }
+    }
+
+    public class UserInfo
+    {
+        public string id { get; set; } = string.Empty;
+        public string username { get; set; } = string.Empty;
+        public string? firstName { get; set; }
+        public string? lastName { get; set; }
+    }
+
+    public class FileInfo
+    {
+        public string path { get; set; } = string.Empty;
+        public string name { get; set; } = string.Empty;
+        public long size { get; set; }
+        public DateTime modified { get; set; }
+        public long modifiedUnix { get; set; }
+    }
+}
