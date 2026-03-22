@@ -23,6 +23,8 @@ namespace BlazorClaw.Core.VFS.Systems
         {
             if (!physicalPath.StartsWith(PhysicalRoot, StringComparison.InvariantCultureIgnoreCase))
                 throw new ArgumentException("The specified path is not member of the PhysicalRoot.", nameof(physicalPath));
+            if (physicalPath[^1] != Path.DirectorySeparatorChar && Directory.Exists(physicalPath))
+                physicalPath += Path.DirectorySeparatorChar;
             string virtualPath = VfsPath.DirectorySeparator + physicalPath[PhysicalRoot.Length..].Replace(Path.DirectorySeparatorChar, VfsPath.DirectorySeparator);
             return VfsPath.Parse(virtualPath);
         }
