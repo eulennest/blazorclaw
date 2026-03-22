@@ -1,16 +1,17 @@
+using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security.Vault;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 namespace BlazorClaw.Server.Security.Vault;
 
-public class JsonVaultProvider(IOptions<JsonVaultOptions> options) : IVaultProvider
+public class JsonVaultProvider(IOptions<JsonVaultOptions> options, MessageContextAccessor mca) : IVaultProvider
 {
     private Dictionary<string, VaultEntry>? _secrets;
 
     private string GetFilePath()
     {
-        return options.Value.FilePath;
+        return Path.Combine(Core.Utils.PathUtils.GetAllBasePath(mca.Context), "secure", options.Value.FilePath);
     }
     public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
     {
@@ -50,6 +51,10 @@ public class JsonVaultProvider(IOptions<JsonVaultOptions> options) : IVaultProvi
         {
             var json = await File.ReadAllTextAsync(filePath);
             _secrets = JsonSerializer.Deserialize<Dictionary<string, VaultEntry>>(json) ?? [];
+        }
+        else
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
         }
         _secrets ??= [];
         if (string.IsNullOrWhiteSpace(key))
