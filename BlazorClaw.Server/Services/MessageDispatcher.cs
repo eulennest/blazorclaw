@@ -99,7 +99,6 @@ namespace BlazorClaw.Server.Services
 
                     await foreach (var msg in sm.DispatchToLLMAsync(session, cmdContext))
                     {
-                        if (!msg.IsAssistant) continue;
                         logger.LogInformation("Sending reply to {ChannelProvider}:{ChannelId} : {content}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, msg.Content);
                         await cmdContext.Channel.SendChannelAsync(msg);
                     }
@@ -137,7 +136,6 @@ namespace BlazorClaw.Server.Services
 
                     await foreach (var msg in sm.DispatchToLLMAsync(session, cmdContext))
                     {
-                        if (!msg.IsAssistant) continue;
                         logger.LogInformation("Sending reply to {ChannelProvider}:{ChannelId} : {content}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, msg.Content);
                         await cmdContext.Channel.SendChannelAsync(msg);
                     }
