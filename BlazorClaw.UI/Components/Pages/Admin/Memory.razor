@@ -1,7 +1,12 @@
 @page "/admin/memory"
+@using BlazorClaw.Core.Data
 @using BlazorClaw.Core.Services
-@inject IMemoryService MemoryService
+@using BlazorClaw.Core.Utils
+@using Microsoft.EntityFrameworkCore
 @inject ILogger<Memory> Logger
+@inject ApplicationDbContext db
+@inject IServiceProvider provider
+
 
 <PageTitle>Admin - Memory Verwaltung</PageTitle>
 
@@ -31,10 +36,9 @@
                     <div class="list-group list-group-flush">
                         @foreach (var user in users)
                         {
-                            <button class="list-group-item list-group-item-action @(selectedUserId == user.Id ? "active" : "")"
-                                    @onclick="() => SelectUser(user)">
-                                <div class="fw-bold">@user.UserName</div>
-                                <small class="text-muted">@(user.FirstName ?? "—") @(user.LastName ?? "—")</small>
+                            <button class="list-group-item list-group-item-action @(selectedUserId == user.Key ? "active" : "")"
+                                    @onclick="() => SelectUser(user.Key)">
+                                <div class="fw-bold">@user.Value</div>
                             </button>
                         }
                     </div>
@@ -184,39 +188,52 @@
 </div>
 
 @code {
-    private List<UserInfo>? users;
-    private string? selectedUserId;
+    private Dictionary<Guid, string>? users;
+    private Guid? selectedUserId;
     private List<FileInfo>? memoryFiles;
-    private string? selectedFilePath;
+    private FileInfo? selectedFile;
+
     private string? fileContent;
     private string? lastSaveMessage;
     private bool isSaving = false;
     private bool showNewFileModal = false;
     private string? newFileName;
     private bool showDeleteConfirmation = false;
-    private string? fileToDelete;
+    private FileInfo? fileToDelete;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadUsers();
+        users ??= await LoadUsers();
     }
 
-    private async Task LoadUsers()
+    private async Task<Dictionary<Guid, string>> LoadUsers()
     {
+        var ret = new Dictionary<Guid, string>();
         try
         {
-            users = await MemoryService.GetActiveUsersAsync();
+            var basePath = PathUtils.GetAllBasePath(provider);
+            var di = new DirectoryInfo(basePath);
+            var uList = await db.Users.ToListAsync();
+
+            foreach (var item in di.EnumerateDirectories())
+            {
+                if (!Guid.TryParse(item.Name, out var uid)) continue;
+                var name = uList.FirstOrDefault(u => u.Id.Equals(uid.ToString()))?.UserName ?? item.Name;
+                ret.Add(uid, name);
+            }
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Error loading users");
         }
+        return ret;
     }
 
-    private async Task SelectUser(UserInfo user)
+    private async Task SelectUser(Guid userId)
     {
-        selectedUserId = user.Id;
-        selectedFilePath = null;
+        selectedUserId = userId;
+        selectedFile = null;
+        fileToDelete = null;
         fileContent = null;
         lastSaveMessage = null;
         await LoadMemoryFiles();
@@ -225,10 +242,11 @@
     private async Task LoadMemoryFiles()
     {
         if (selectedUserId == null) return;
-
+        var memoryBase = Path.Combine(PathUtils.GetUserBasePath(provider, selectedUserId.Value), "memory");
         try
         {
-            memoryFiles = await MemoryService.GetUserMemoryFilesAsync(selectedUserId);
+            var di = new DirectoryInfo(memoryBase);
+            memoryFiles = di.EnumerateFiles("*.md", SearchOption.AllDirectories).ToList();
         }
         catch (Exception ex)
         {
@@ -238,7 +256,7 @@
 
     private async Task SelectFile(FileInfo file)
     {
-        selectedFilePath = file.Path;
+        selectedFile = file;
         fileContent = null;
         lastSaveMessage = null;
         await LoadFileContent();
@@ -246,11 +264,11 @@
 
     private async Task LoadFileContent()
     {
-        if (selectedUserId == null || selectedFilePath == null) return;
+        if (selectedUserId == null || selectedFile == null) return;
 
         try
         {
-            fileContent = await MemoryService.GetUserMemoryFileContentAsync(selectedUserId, selectedFilePath);
+            fileContent = await File.ReadAllTextAsync(selectedFile.FullName);
         }
         catch (Exception ex)
         {
@@ -260,12 +278,12 @@
 
     private async Task SaveFile()
     {
-        if (selectedUserId == null || selectedFilePath == null) return;
+        if (selectedUserId == null || fileContent == null || selectedFile == null) return;
 
         isSaving = true;
         try
         {
-            await MemoryService.SaveUserMemoryFileAsync(selectedUserId, selectedFilePath, fileContent ?? string.Empty);
+            await File.WriteAllTextAsync(selectedFile.FullName, fileContent);
             lastSaveMessage = "Datei gespeichert ✓";
             await Task.Delay(3000);
             lastSaveMessage = null;
@@ -283,8 +301,8 @@
 
     private void ShowDeleteConfirmation(string? path)
     {
-        fileToDelete = path;
-        showDeleteConfirmation = true;
+        fileToDelete = memoryFiles?.FirstOrDefault(o => o.FullName == path);
+        showDeleteConfirmation = fileToDelete != null;
     }
 
     private async Task ConfirmDelete()

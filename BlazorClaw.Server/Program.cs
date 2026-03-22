@@ -59,8 +59,6 @@ builder.Services.TryAddSingleton<ISessionManager, SessionManager>();
 builder.Services.Configure<JsonVaultOptions>(builder.Configuration.GetSection(JsonVaultOptions.Section));
 builder.Services.TryAddScoped<IVaultProvider, JsonVaultProvider>();
 
-// Memory Management Service
-builder.Services.AddScoped<IMemoryService, MemoryService>();
 builder.Services.TryAddScoped<SessionStateAccessor>();
 builder.Services.TryAddScoped<MessageContextAccessor>();
 // Tool registry

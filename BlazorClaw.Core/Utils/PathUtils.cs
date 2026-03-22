@@ -9,20 +9,28 @@ namespace BlazorClaw.Core.Utils
     {
         public static string GetAllBasePath(MessageContext context)
         {
-            var conf = context.Provider.GetRequiredService<IConfiguration>();
-            var ienv = context.Provider.GetRequiredService<IWebHostEnvironment>();
+            return GetAllBasePath(context.Provider);
+        }
+
+        public static string GetAllBasePath(IServiceProvider provider)
+        {
+            var conf = provider.GetRequiredService<IConfiguration>();
+            var ienv = provider.GetRequiredService<IWebHostEnvironment>();
             string basePath = conf.GetValue<string>("Folders:UserData") ?? "userdata";
             return Path.GetFullPath(Path.Combine(ienv.ContentRootPath, basePath)).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         }
-
         public static string GetUserBasePath(MessageContext context)
         {
-            var basePath = GetAllBasePath(context);
             var userId = context.UserId?.ToLowerInvariant();
             if (!Guid.TryParse(userId, out var uuid)) uuid = context.Session?.Id ?? Guid.NewGuid();
-            return Path.GetFullPath(Path.Combine(basePath, uuid.ToString()));
+            return GetUserBasePath(context.Provider, uuid);
         }
 
+        public static string GetUserBasePath(IServiceProvider provider, Guid userId)
+        {
+            var basePath = GetAllBasePath(provider);
+            return Path.GetFullPath(Path.Combine(basePath, userId.ToString()));
+        }
 
         public static string GetWorkspacePath(this MessageContext context)
         {
