@@ -4,6 +4,7 @@
 @using BlazorClaw.Core.Utils
 @using BlazorClaw.Core.VFS
 @using Microsoft.EntityFrameworkCore
+@using System.Text
 @inject ILogger<Memory> Logger
 @inject ApplicationDbContext db
 @inject IServiceProvider provider
@@ -345,11 +346,15 @@
 
     private async Task CreateNewFile()
     {
-        if (string.IsNullOrWhiteSpace(newFileName) || selectedUserId == null)
+        newFileName = newFileName?.Trim().Trim(VfsPath.DirectorySeparator);
+        if (string.IsNullOrWhiteSpace(newFileName) || vfs == null || selectedUserId == null || fileContent == null)
             return;
 
         try
         {
+            using var strm = new MemoryStream(Encoding.UTF8.GetBytes(fileContent));
+            await vfs.CreateFileAsync(VfsPath.Parse(VfsPath.DirectorySeparator + newFileName), strm);
+
             // await MemoryService.SaveUserMemoryFileAsync(selectedUserId, newFileName, string.Empty);
             showNewFileModal = false;
             newFileName = null;
