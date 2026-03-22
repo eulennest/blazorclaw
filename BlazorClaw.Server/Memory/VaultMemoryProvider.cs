@@ -16,7 +16,7 @@ namespace BlazorClaw.Server.Memory
                 {
                     if (key.Title.Contains(query, StringComparison.OrdinalIgnoreCase) || key.Key.Contains(query, StringComparison.OrdinalIgnoreCase))
                     {
-                        yield return $"[Vault: {key.Key}]\nuse vault_get('{key.Key}')"; break;
+                        yield return $"[Vault: {key.Key}]\nTitle:{key.Title}\nuse vault_get('{key.Key}')"; break;
                     }
                 }
                 if (results.Count >= maxResults) break;
