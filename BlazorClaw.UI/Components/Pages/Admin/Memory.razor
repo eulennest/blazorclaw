@@ -252,6 +252,7 @@
             memoryFiles = await vfs.GetSubPathsRecursiveAsync(VfsPath.Root).Where(p => p.IsFile && p.GetExtension().Equals(".md"))
            .Select(async (o, c) => await vfs.GetMetaInfoAsync(o, c))
            .ToListAsync();
+            memoryFiles.Sort();
         }
         catch (Exception ex)
         {

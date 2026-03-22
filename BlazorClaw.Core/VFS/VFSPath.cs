@@ -197,9 +197,17 @@ namespace BlazorClaw.Core.VFS
 
         public int CompareTo(VfsPath other)
         {
-            return Path.CompareTo(other.Path);
+            var dire = GetDirectory().Path.CompareTo(other.GetDirectory().Path);
+            if (dire == 0)
+            {
+                if (IsFile && other.IsFile) return (EntityName ?? string.Empty).CompareTo(other.EntityName);
+                if (IsDirectory && other.IsFile) return -1;
+                if (IsFile && other.IsDirectory) return 1;
+            }
+            return dire;
         }
 
+        public VfsPath GetDirectory() => IsFile ? ParentPath : this;
 
         public override string ToString()
         {
