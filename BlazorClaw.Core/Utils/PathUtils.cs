@@ -15,20 +15,25 @@ namespace BlazorClaw.Core.Utils
             return Path.GetFullPath(Path.Combine(ienv.ContentRootPath, basePath)).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         }
 
-        public static string GetWorkspacePath(this MessageContext context)
+        public static string GetUserBasePath(MessageContext context)
         {
             var basePath = GetAllBasePath(context);
             var userId = context.UserId?.ToLowerInvariant();
             if (!Guid.TryParse(userId, out var uuid)) uuid = context.Session?.Id ?? Guid.NewGuid();
-            return Path.GetFullPath(Path.Combine(basePath, uuid.ToString(), "workspace")).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return Path.GetFullPath(Path.Combine(basePath, uuid.ToString()));
+        }
+
+
+        public static string GetWorkspacePath(this MessageContext context)
+        {
+            var basePath = GetUserBasePath(context);
+            return Path.GetFullPath(Path.Combine(basePath, "workspace")).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         }
 
         public static string GetMemoryBasePath(this MessageContext context)
         {
-            var basePath = GetAllBasePath(context);
-            var userId = context.UserId?.ToLowerInvariant();
-            if (!Guid.TryParse(userId, out var uuid)) uuid = context.Session?.Id ?? Guid.NewGuid();
-            return Path.GetFullPath(Path.Combine(basePath, uuid.ToString(), "memory")).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            var basePath = GetUserBasePath(context);
+            return Path.GetFullPath(Path.Combine(basePath, "memory")).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         }
 
         public static string GetMemoryPath(this MessageContext context, string filename)

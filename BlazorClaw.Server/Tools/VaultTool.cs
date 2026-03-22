@@ -10,7 +10,7 @@ namespace BlazorClaw.Server.Tools;
 
 public class VaultGetParams
 {
-    [Description("Der Schlüssel des Geheimnisses")]
+    [Description("Der Schlüssel des Geheimnisses oder der genaue Title")]
     [Required]
     public string Key { get; set; } = string.Empty;
 }
@@ -41,7 +41,15 @@ public class VaultGetTool : BaseTool<VaultGetParams>
     {
         var vp = context.Provider.GetRequiredService<IVaultProvider>();
 
-        var secret = await vp.GetSecretAsync(p.Key) ?? throw new KeyNotFoundException($"Kein Geheimnis mit Schlüssel '{p.Key}' gefunden.");
+        var secret = await vp.GetSecretAsync(p.Key);
+        if (secret == null)
+        {
+            var sk = await vp.GetKeysAsync().FirstOrDefaultAsync(o => p.Key.Equals(o.Title, StringComparison.InvariantCultureIgnoreCase));
+            if (sk != null)
+                secret = await vp.GetSecretAsync(sk.Key);
+        }
+        if (secret == null) throw new KeyNotFoundException($"Kein Geheimnis mit Schlüssel '{p.Key}' gefunden.");
+
         var sb = new StringBuilder();
         sb.AppendLine($"Key: {secret.Key}");
         sb.AppendLine($"Title: {secret.Title}");
