@@ -6,68 +6,97 @@ using System.Text.Json;
 
 namespace BlazorClaw.Server.Security.Vault;
 
-public class JsonVaultProvider(IOptions<JsonVaultOptions> options, MessageContextAccessor mca) : IVaultProvider
+public class JsonVaultProvider : IVaultProvider
 {
-    private Dictionary<string, VaultEntry>? _secrets;
+    private readonly string _masterKey;
+    private readonly JsonVaultOptions options;
+    private readonly MessageContextAccessor mca;
+    private readonly ILogger<JsonVaultProvider> logger;
+
+    public JsonVaultProvider(
+        IOptions<JsonVaultOptions> options,
+        MessageContextAccessor mca,
+        ILogger<JsonVaultProvider> logger)
+    {
+        this.options = options.Value;
+        this.mca = mca;
+        this.logger = logger;
+        _masterKey = options.Value.MasterPassword
+            ?? throw new InvalidOperationException("Vault:MasterPassword not configured!");
+    }
 
     private string GetFilePath()
     {
-        return Path.Combine(Core.Utils.PathUtils.GetUserBasePath(mca.Context), "secure", options.Value.FilePath);
+        return Path.Combine(Core.Utils.PathUtils.GetUserBasePath(mca.Context), "secure", options.FilePath);
     }
+
     public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
     {
-        if (_secrets == null)
-        {
-            var filePath = GetFilePath();
-            if (!File.Exists(filePath)) yield break;
-            var json = await File.ReadAllTextAsync(filePath);
-            _secrets = JsonSerializer.Deserialize<Dictionary<string, VaultEntry>>(json);
-        }
-        if (_secrets != null)
-            foreach (var item in _secrets)
+        var data = await ReadAsync();
+
+        if (data != null)
+            foreach (var item in data)
             {
                 yield return new VaultKey() { Key = item.Key, Title = item.Value.Title };
             }
     }
 
-
     public async Task<IVaultEntry?> GetSecretAsync(string key)
     {
-        if (_secrets == null)
-        {
-            var filePath = GetFilePath();
-            if (!File.Exists(filePath)) throw new KeyNotFoundException();
-            var json = await File.ReadAllTextAsync(filePath);
-            _secrets = JsonSerializer.Deserialize<Dictionary<string, VaultEntry>>(json);
-        }
-        if (_secrets != null && _secrets.TryGetValue(key, out var val))
-            return val;
-        throw new KeyNotFoundException();
+        var data = (await ReadAsync()) ?? [];
+        return (data != null && data.TryGetValue(key, out var val)) ? val : null;
     }
 
     public async Task<string> SetSecretAsync(string title, string secret, string? note = null, string? key = null)
     {
-        var filePath = GetFilePath();
-        if (File.Exists(filePath))
-        {
-            var json = await File.ReadAllTextAsync(filePath);
-            _secrets = JsonSerializer.Deserialize<Dictionary<string, VaultEntry>>(json) ?? [];
-        }
-        else
-        {
-            Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-        }
-        _secrets ??= [];
+        var data = (await ReadAsync()) ?? [];
         if (string.IsNullOrWhiteSpace(key))
             key = Guid.NewGuid().ToString();
-        _secrets.TryGetValue(key, out var existing);
+        data.TryGetValue(key, out var existing);
         existing ??= new VaultEntry() { Key = key };
         existing.Title = title;
         existing.Secret = secret;
         existing.Notes = note ?? existing.Notes;
-        _secrets[key] = existing;
-        var updatedJson = JsonSerializer.Serialize(_secrets, JsonHelper.DefaultOptions);
-        await File.WriteAllTextAsync(filePath, updatedJson);
+        data[key] = existing;
+        await SaveAsync(data);
         return key;
+    }
+
+    private async Task<Dictionary<string, VaultEntry>?> ReadAsync()
+    {
+        try
+        {
+            var filePath = GetFilePath();
+            if (!File.Exists(filePath)) return null;
+            using var sourceStream = File.OpenRead(filePath);
+            using var destStream = new MemoryStream();
+            await sourceStream.DecryptAsync(destStream, _masterKey, mca.Context?.UserId ?? string.Empty);
+            destStream.Position = 0;
+            return await JsonSerializer.DeserializeAsync<Dictionary<string, VaultEntry>>(destStream);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to decrypt vault for user {UserId}", mca.Context?.UserId);
+            return null; // oder throw, je nach Anforderung
+        }
+    }
+
+    private async Task SaveAsync(Dictionary<string, VaultEntry> data)
+    {
+        var filePath = GetFilePath();
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        var tempPath = filePath + ".tmp";
+
+        var userId = mca.Context?.UserId ?? string.Empty;
+        using var tempStream = new MemoryStream();
+        await JsonSerializer.SerializeAsync(tempStream, data);
+        tempStream.Position = 0;
+
+        using (var destStream = File.Create(tempPath))
+        {
+            await tempStream.EncryptAsync(destStream, _masterKey, userId);
+        }
+        File.Move(tempPath, filePath, overwrite: true);
+        logger.LogInformation("Vault saved for user {UserId}, {Count} entries", userId, data.Count);
     }
 }

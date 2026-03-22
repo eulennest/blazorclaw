@@ -2,6 +2,8 @@
 {
     public class JsonVaultOptions
     {
-        public string FilePath { get; set; } = "./vault.json";
+        public const string Section = "Vault";
+        public string FilePath { get; set; } = "./vault.enc.json";
+        public string? MasterPassword { get; set; } 
     }
 }

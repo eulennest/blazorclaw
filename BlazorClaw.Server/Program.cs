@@ -56,6 +56,7 @@ foreach (var plugin in plugins)
 }
 builder.Services.TryAddSingleton<ISessionManager, SessionManager>();
 
+builder.Services.Configure<JsonVaultOptions>(builder.Configuration.GetSection(JsonVaultOptions.Section));
 builder.Services.TryAddScoped<IVaultProvider, JsonVaultProvider>();
 builder.Services.TryAddScoped<SessionStateAccessor>();
 builder.Services.TryAddScoped<MessageContextAccessor>();
@@ -136,6 +137,7 @@ builder.Services.AddResponseCompression(opts =>
 var app = builder.Build();
 
 // Initialize database
+DbInitializer.EnsureMasterKey(app.Configuration);
 await DbInitializer.InitializeAsync(app.Services, app.Configuration);
 
 // Configure the HTTP request pipeline.

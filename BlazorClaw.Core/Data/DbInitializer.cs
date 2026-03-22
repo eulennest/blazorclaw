@@ -3,11 +3,30 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Security.Cryptography;
 
 namespace BlazorClaw.Core.Data;
 
 public class DbInitializer
 {
+    public static void EnsureMasterKey(IConfiguration config)
+    {
+        var masterKey = config["Vault:MasterPassword"];
+
+        if (string.IsNullOrEmpty(masterKey))
+        {
+            // Neuen generieren
+            byte[] keyBytes = RandomNumberGenerator.GetBytes(32);
+            string newKey = Convert.ToBase64String(keyBytes);
+
+            config["Vault:MasterPassword"] = newKey;
+
+            Console.WriteLine("⚠️  NEW VAULT MASTER PASSWORD GENERATED!");
+            Console.WriteLine($"   Password: {newKey}");
+            Console.WriteLine("   BACKUP appsettings.*.json NOW!");
+        }
+    }
+
     public static async Task InitializeAsync(IServiceProvider serviceProvider, IConfiguration configuration)
     {
         using var scope = serviceProvider.CreateScope();
