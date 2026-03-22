@@ -78,7 +78,7 @@ namespace BlazorClaw.Server.Services
                 cmdContext.Session = session?.Session;
                 var mca = cmdContext.Provider.GetRequiredService<MessageContextAccessor>();
                 mca.SetContext(cmdContext);
-                if(message is Tuple<Stream, string> strm)
+                if (message is Tuple<Stream, string> strm)
                 {
                     var file = await pathHelper.SaveMediaFileAsync(strm) ?? throw new Exception("Can't save media data");
                     var uri = pathHelper.GetMediaUrl(file);

@@ -4,11 +4,9 @@ using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileSystemGlobbing;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
-using Telegram.Bot.Types;
 
 namespace BlazorClaw.Server.Security;
 

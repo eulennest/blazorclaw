@@ -15,7 +15,7 @@ public class SessionRenameTool : BaseTool<SessionRenameParams>
     {
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
         var session = await sessionManager.GetSessionAsync(context.Session!.Id);
-        
+
         if (session == null)
         {
             return "Session nicht gefunden.";

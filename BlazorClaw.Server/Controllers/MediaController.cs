@@ -12,7 +12,7 @@ public class MediaController(PathHelper pathHelper) : ControllerBase
     public async Task<ActionResult> GetMediaFile(string fileName)
     {
         var t = await pathHelper.GetMediaFileAsync(fileName);
-        if (t==null) return NotFound();
-        return File(t.Item1,t.Item2);
+        if (t == null) return NotFound();
+        return File(t.Item1, t.Item2);
     }
 }

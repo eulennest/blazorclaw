@@ -2,14 +2,6 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.IO;
-using BlazorClaw.Core.Services;
-using BlazorClaw.Core.Providers;
-using BlazorClaw.Core.Utils;
-using BlazorClaw.Core.DTOs;
 
 namespace BlazorClaw.Server.Tools;
 
@@ -27,7 +19,7 @@ public class WaitingTool(ILogger<ImageGenerationTool> logger) : BaseTool<WaitToo
 
     protected override async Task<string> ExecuteInternalAsync(WaitToolParams p, MessageContext context)
     {
-        await Task.Delay(TimeSpan.FromSeconds(p.Duration??1));
+        await Task.Delay(TimeSpan.FromSeconds(p.Duration ?? 1));
         return "OK";
     }
 }

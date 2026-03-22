@@ -30,7 +30,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
         // Komprimiere den Verlauf: Historie leeren und Zusammenfassung als System-Message
         var last = sess.MessageHistory.TakeLast(20).ToList();
         sess.MessageHistory.Clear();
-        sess.MessageHistory.Add(new() { Role = "system", Content =sb.ToString()});
+        sess.MessageHistory.Add(new() { Role = "system", Content = sb.ToString() });
 
         var hasasist = false;
         foreach (var msg in last)
@@ -56,7 +56,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
             sess.MessageHistory.Add(msg);
         }
         await sessionManager.SaveSessionAsync(sess, true);
-        var count = sess.MessageHistory.Count( o=> !o.IsSystem);
+        var count = sess.MessageHistory.Count(o => !o.IsSystem);
         return $"OK: Zusammenfassung wurde im System-Prompt gespeichert. Aktuelle Nachrichten: {count} (exkl. System-Events).";
     }
 }

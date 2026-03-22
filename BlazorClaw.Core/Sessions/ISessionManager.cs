@@ -1,6 +1,5 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.DTOs;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.CommandLine;
 
 namespace BlazorClaw.Core.Sessions;

@@ -2,6 +2,7 @@
 @using BlazorClaw.Core.Data
 @using BlazorClaw.Core.Services
 @using BlazorClaw.Core.Utils
+@using BlazorClaw.Core.VFS
 @using Microsoft.EntityFrameworkCore
 @inject ILogger<Memory> Logger
 @inject ApplicationDbContext db
@@ -87,7 +88,7 @@
                                                 @onclick="() => SelectFile(file)">
                                             <div class="d-flex justify-content-between align-items-start">
                                                 <div>
-                                                    <div class="fw-bold small">@file.Name</div>
+                                                    <div class="fw-bold small">@file.Path</div>
                                                     <small class="text-muted">@(file.Length) bytes</small>
                                                 </div>
                                             </div>
@@ -111,12 +112,12 @@
                     {
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">@selectedFile.Name</h5>
+                                <h5 class="mb-0">@selectedFile.Path</h5>
                                 <div>
                                     <button class="btn btn-sm btn-success me-2" @onclick="SaveFile" disabled="@isSaving">
                                         <i class="bi bi-check2"></i> Speichern
                                     </button>
-                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowDeleteConfirmation(selectedFile.FullName)" disabled="@isSaving">
+                                    <button class="btn btn-sm btn-danger" @onclick="() => ShowDeleteConfirmation(selectedFile.Path)" disabled="@isSaving">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
@@ -190,8 +191,10 @@
 @code {
     private Dictionary<Guid, string>? users;
     private Guid? selectedUserId;
-    private List<FileInfo>? memoryFiles;
-    private FileInfo? selectedFile;
+    private IVfsSystem? vfs;
+
+    private List<VfsPathInfo>? memoryFiles;
+    private VfsPathInfo? selectedFile;
 
     private string? fileContent;
     private string? lastSaveMessage;
@@ -199,7 +202,7 @@
     private bool showNewFileModal = false;
     private string? newFileName;
     private bool showDeleteConfirmation = false;
-    private FileInfo? fileToDelete;
+    private VfsPathInfo? fileToDelete;
 
     protected override async Task OnInitializedAsync()
     {
@@ -232,6 +235,8 @@
     private async Task SelectUser(Guid userId)
     {
         selectedUserId = userId;
+        var memoryBase = Path.Combine(PathUtils.GetUserBasePath(provider, selectedUserId.Value), "memory");
+        vfs = new Core.VFS.Systems.PhysicalFileSystem(memoryBase);
         selectedFile = null;
         fileToDelete = null;
         fileContent = null;
@@ -241,12 +246,12 @@
 
     private async Task LoadMemoryFiles()
     {
-        if (selectedUserId == null) return;
-        var memoryBase = Path.Combine(PathUtils.GetUserBasePath(provider, selectedUserId.Value), "memory");
+        if (vfs == null) return;
         try
         {
-            var di = new DirectoryInfo(memoryBase);
-            memoryFiles = di.EnumerateFiles("*.md", SearchOption.AllDirectories).ToList();
+            memoryFiles = await vfs.GetSubPathsRecursiveAsync(VfsPath.Root).Where(p => p.IsFile && p.GetExtension().Equals(".md"))
+           .Select(async (o, c) => await vfs.GetMetaInfoAsync(o, c))
+           .ToListAsync();
         }
         catch (Exception ex)
         {
@@ -254,7 +259,7 @@
         }
     }
 
-    private async Task SelectFile(FileInfo file)
+    private async Task SelectFile(VfsPathInfo file)
     {
         selectedFile = file;
         fileContent = null;
@@ -268,7 +273,10 @@
 
         try
         {
-            fileContent = await File.ReadAllTextAsync(selectedFile.FullName);
+            using var strm = await selectedFile.OpenReadAsync();
+            using var reader = new StreamReader(strm);
+            // Read the stream as a string.
+            fileContent = await reader.ReadToEndAsync();
         }
         catch (Exception ex)
         {
@@ -283,7 +291,9 @@
         isSaving = true;
         try
         {
-            await File.WriteAllTextAsync(selectedFile.FullName, fileContent);
+            using var strm = await selectedFile.OpenWriteAsync();
+            using var writer = new StreamWriter(strm);
+            await writer.WriteAsync(fileContent);
             lastSaveMessage = "Datei gespeichert ✓";
             await Task.Delay(3000);
             lastSaveMessage = null;
@@ -299,9 +309,9 @@
         }
     }
 
-    private void ShowDeleteConfirmation(string? path)
+    private void ShowDeleteConfirmation(VfsPath? path)
     {
-        fileToDelete = memoryFiles?.FirstOrDefault(o => o.FullName == path);
+        fileToDelete = memoryFiles?.FirstOrDefault(o => o.Path.Equals(path));
         showDeleteConfirmation = fileToDelete != null;
     }
 
@@ -314,7 +324,7 @@
 
         try
         {
-            fileToDelete.Delete();
+            await fileToDelete.Entry.DeleteAsync();
             selectedFile = null;
             fileToDelete = null;
             fileContent = null;

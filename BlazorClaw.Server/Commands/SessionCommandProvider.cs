@@ -1,5 +1,4 @@
 using BlazorClaw.Core.Commands;
-using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Sessions;
 using System.CommandLine;
 
@@ -21,7 +20,7 @@ public class SessionResetCommand : ISystemCommand, ISystemCommandExecutor
     {
         var cmd = new Command("reset", "Löscht gesamte Session History")
         {
-//            new Argument<bool?>("disableLlmMessage") { Description = "True = Deaktiviert automatische Message ans LLm für neue Begrüßung" }
+            //            new Argument<bool?>("disableLlmMessage") { Description = "True = Deaktiviert automatische Message ans LLm für neue Begrüßung" }
         };
         return cmd;
     }
@@ -31,7 +30,7 @@ public class SessionResetCommand : ISystemCommand, ISystemCommandExecutor
         bool disableMsg = false;
         if (result.CommandResult.Command.Arguments.Count > 0)
         {
-            disableMsg = result.GetValue((Argument<bool?>)result.CommandResult.Command.Arguments[0])??false;
+            disableMsg = result.GetValue((Argument<bool?>)result.CommandResult.Command.Arguments[0]) ?? false;
         }
 
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();

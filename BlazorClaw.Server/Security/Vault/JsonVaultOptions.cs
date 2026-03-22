@@ -4,6 +4,6 @@
     {
         public const string Section = "Vault";
         public string FilePath { get; set; } = "./vault.enc.json";
-        public string? MasterPassword { get; set; } 
+        public string? MasterPassword { get; set; }
     }
 }

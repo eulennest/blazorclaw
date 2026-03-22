@@ -3,7 +3,6 @@ using BlazorClaw.Core.Providers;
 using BlazorClaw.Core.Tools;
 using Microsoft.Extensions.Options;
 using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
 
 namespace BlazorClaw.Server.Tools.Model;
 
@@ -40,7 +39,7 @@ public class ModelGetTool : BaseTool<ModelGetParams>
     protected override Task<string> ExecuteInternalAsync(ModelGetParams p, MessageContext context)
     {
         var prop = p.Property?.ToLowerInvariant();
-        
+
         // Get session model or fallback to global
         var sessionModel = context.Session?.CurrentModel ?? _optionsMonitor.CurrentValue.Model;
         var sessionTemp = _optionsMonitor.CurrentValue.Temperature;
@@ -81,13 +80,13 @@ public class ModelSetTool : BaseTool<ModelSetParams>
             var parts = p.Model.Split('/');
             if (parts.Length < 2)
                 return Task.FromResult("Fehler: Modell muss Format 'provider/model' haben (z.B. openrouter/mistralai/mistral-large)");
-            
+
             var providerName = parts[0];
             var availableProviders = _providerManager.GetProviders().ToList();
-            
+
             if (!availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
                 return Task.FromResult($"Fehler: Provider '{providerName}' nicht konfiguriert. Verfügbare Provider: {string.Join(", ", availableProviders)}");
-            
+
             context.Session.CurrentModel = p.Model;
         }
 
