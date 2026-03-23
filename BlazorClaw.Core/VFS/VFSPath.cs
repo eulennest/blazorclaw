@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
 using System.Diagnostics;
 
 namespace BlazorClaw.Core.VFS
@@ -104,7 +105,7 @@ namespace BlazorClaw.Core.VFS
         /// Example: Parse("/home/", "../etc/config") → "/etc/config"
         /// Example: Parse("/home/", "/etc/config") → "/etc/config"
         /// </summary>
-        public static VfsPath Parse(VfsPath cwd, string relativePath)
+        public static VfsPath Parse(VfsPath cwd, string relativePath, VfsPathParseMode mode = VfsPathParseMode.Auto)
         {
             ArgumentNullException.ThrowIfNull(relativePath);
 
@@ -137,7 +138,7 @@ namespace BlazorClaw.Core.VFS
             var result = cwd;
 
             string? filename = null;
-            if (allSeps.Contains(relativePath.Last()))
+            if (mode == VfsPathParseMode.File || (mode == VfsPathParseMode.Auto && allSeps.Contains(relativePath.Last())))
             {
                 filename = segments[^1];
                 segments.RemoveAt(segments.Count - 1);
@@ -362,5 +363,11 @@ namespace BlazorClaw.Core.VFS
         {
             return !(pathA == pathB);
         }
+    }
+    public enum VfsPathParseMode
+    {
+        Auto = 0,
+        File = 1,
+        Directory = 2
     }
 }
