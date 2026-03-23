@@ -1,6 +1,8 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security.Vault;
 using BlazorClaw.Core.Services;
+using Microsoft.AspNetCore.DataProtection;
+using ReverseMarkdown.Converters;
 
 namespace BlazorClaw.Server.Services;
 
@@ -77,9 +79,15 @@ public class VariableResolver : IVariableResolver
     private async Task<string> ResolveFromVaultAsync(string itemName, MessageContext context)
     {
         _logger.LogInformation("Resolving from Vault: {ItemName}", itemName);
-        var iv = context.Provider.GetRequiredService<IVaultProvider>();
-        var item = await iv.GetSecretAsync(itemName).ConfigureAwait(false);
-        return item?.Secret ?? string.Empty;
+        var vp = context.Provider.GetRequiredService<IVaultProvider>();
+        var secret = await vp.GetSecretAsync(itemName).ConfigureAwait(false);
+        if (secret == null)
+        {
+            var sk = await vp.GetKeysAsync().FirstOrDefaultAsync(o => itemName.Equals(o.Title, StringComparison.InvariantCultureIgnoreCase));
+            if (sk != null)
+                secret = await vp.GetSecretAsync(sk.Key);
+        }
+        return secret?.Secret ?? string.Empty;
     }
 
     /// <summary>
