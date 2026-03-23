@@ -1,4 +1,5 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Tools;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -6,7 +7,7 @@ using System.Text.Json;
 
 namespace BlazorClaw.Server.Tools;
 
-public class HttpRequestParams
+public class HttpRequestParams : BaseToolParams
 {
     [Description("HTTP Method (GET, POST, PUT, DELETE, PATCH)")]
     [Required]

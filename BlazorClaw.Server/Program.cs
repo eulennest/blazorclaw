@@ -67,6 +67,10 @@ foreach (var plugin in plugins)
 }
 builder.Services.TryAddSingleton<ISessionManager, SessionManager>();
 
+// Variable Resolution Service
+builder.Services.TryAddScoped<IVariableResolver, VariableResolver>();
+builder.Services.TryAddScoped<VariableResolverHelper>();
+
 builder.Services.Configure<JsonVaultOptions>(builder.Configuration.GetSection(JsonVaultOptions.Section));
 builder.Services.TryAddScoped<IVaultProvider, JsonVaultProvider>();
 
