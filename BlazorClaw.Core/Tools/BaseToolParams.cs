@@ -12,16 +12,15 @@ public abstract class BaseToolParams
     Format: {"VAR_NAME": "source:item_name"}
     
     Quellen (Sources):
-    - "vault:ItemName" → Aus Bitwarden Vault. Nutze vault_get Tool um Items zu finden/testen!
-      Beispiel: "vault:Home_Assistant_Token" (Item Title im Vault)
+    - "vault:ItemName" → Wird automatisch via vault_get aus Bitwarden Vault geholt.
+      ItemName kann Key oder Titel sein (wie in vault_get).
+      Beispiel: "vault:Home_Assistant_Token" oder "vault:HA_TOKEN"
     - "env:VAR_NAME" → Aus Umgebungsvariable
       Beispiel: "env:HA_TOKEN"
     
-    TIPP: Nutze das vault_get Tool um verfügbare Vault-Items zu finden!
-    
     Dann in anderen Feldern nutzen: @VAR_NAME
     
-    Beispiel für Home Assistant (Token aus Vault):
+    Beispiel für Home Assistant (Token wird automatisch aus Vault geholt):
     {
       "bearerToken": "@HA_TOKEN",
       "variableMappings": {

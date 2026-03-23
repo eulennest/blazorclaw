@@ -20,7 +20,7 @@ public class HttpRequestParams : BaseToolParams
     [Description("Request Body (JSON oder Text, optional). Use @VAR_NAME for variable substitution. Beispiel: {\"entity_id\": \"@ENTITY_ID\"}")]
     public string? Body { get; set; }
 
-    [Description("Bearer Token für Authorization Header (optional). IMMER @VAR_NAME mit VariableMappings nutzen! Beispiel: @HA_TOKEN + VariableMappings {\"HA_TOKEN\": \"vault:Home_Assistant_Token\"}. Nutze vault_get um Item-Namen zu finden!")]
+    [Description("Bearer Token für Authorization Header (optional). IMMER @VAR_NAME mit VariableMappings nutzen! Beispiel: @HA_TOKEN + VariableMappings {\"HA_TOKEN\": \"vault:Home_Assistant_Token\"} - wird automatisch aus Vault geholt.")]
     public string? BearerToken { get; set; }
 
     [Description("Custom Headers als JSON Object. Use @VAR_NAME for variable substitution. Beispiel: {\"X-Custom-Header\": \"@CUSTOM_VALUE\"}")]
@@ -47,7 +47,7 @@ public class HttpRequestTool : BaseTool<HttpRequestParams>
         WICHTIG: Nutze @VAR_NAME für Tokens/Secrets + VariableMappings!
         Tokens gehören NIEMALS im Klartext in die Parameter!
         
-        Für Vault-Items: Nutze erst vault_get um verfügbare Items zu finden!
+        Vault-Items werden automatisch via vault_get geholt (vault:ItemName).
         
         Beispiel (Home Assistant Light ausschalten mit Token aus Vault):
         {
