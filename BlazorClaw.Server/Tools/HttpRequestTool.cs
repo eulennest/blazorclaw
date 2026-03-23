@@ -93,12 +93,19 @@ public class HttpRequestTool(IHttpClientFactory httpClientFactory, ILogger<HttpR
                 request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", p.BearerToken);
             }
 
+            var contenttype = "application/json";
             // Add custom headers
             if (p.Headers != null && p.Headers.Count > 0)
             {
                 foreach (var (key, value) in p.Headers)
                 {
-                    if (!string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(value))
+                    if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value)) continue;
+
+                    if (key.StartsWith("Content-Type", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        contenttype = value;
+                    }
+                    else
                     {
                         request.Headers.Add(key, value);
                     }
@@ -108,7 +115,7 @@ public class HttpRequestTool(IHttpClientFactory httpClientFactory, ILogger<HttpR
             // Add body
             if (!string.IsNullOrWhiteSpace(p.Body))
             {
-                request.Content = new StringContent(p.Body, System.Text.Encoding.UTF8, "application/json");
+                request.Content = new StringContent(p.Body, System.Text.Encoding.UTF8, contenttype);
             }
 
             logger.LogInformation("HTTP Request: {Method} {Url}", method, p.Url);
