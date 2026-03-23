@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Linq;
 
 namespace BlazorClaw.Core.VFS
 {
@@ -85,7 +84,6 @@ namespace BlazorClaw.Core.VFS
                 throw new ParseException(s, "Path is not rooted");
             if (s.Contains(string.Concat(DirectorySeparator, DirectorySeparator)))
                 throw new ParseException(s, "Path contains double directory-separators.");
-            
             // Check for segments that contain only dots and are longer than 2 (..., ...., etc.)
             // Single dot (.) and double dots (..) should not appear in absolute paths
             // Use Parse(cwd, path) for relative path resolution with . and ..
@@ -95,7 +93,7 @@ namespace BlazorClaw.Core.VFS
                 if (segment.All(c => c == '.') && segment.Length >= 1)
                     throw new ParseException(s, $"Path contains invalid segment: \"{segment}\" - use Parse(cwd, path) for relative path resolution");
             }
-            
+
             return new VfsPath(s);
         }
 
@@ -109,14 +107,14 @@ namespace BlazorClaw.Core.VFS
         public static VfsPath Parse(VfsPath cwd, string relativePath)
         {
             ArgumentNullException.ThrowIfNull(relativePath);
-            
+
             // If absolute path, reset cwd to root
             if (IsRooted(relativePath))
             {
                 cwd = VfsPath.Root;
                 // Remove leading / for processing
                 relativePath = relativePath[1..];
-                
+
                 // If nothing left, return root
                 if (string.IsNullOrEmpty(relativePath))
                     return cwd;
@@ -125,11 +123,12 @@ namespace BlazorClaw.Core.VFS
             // Start from cwd (must be a directory)
             if (!cwd.IsDirectory)
                 throw new ArgumentException("Current working directory must be a directory", nameof(cwd));
+            char[] allSeps = [DirectorySeparator, '\\', '/'];
 
             // Normalize and split path
             var segments = relativePath
                 .Trim()
-                .Split(new[] { DirectorySeparator }, StringSplitOptions.RemoveEmptyEntries)
+                .Split(allSeps, StringSplitOptions.RemoveEmptyEntries)
                 .ToList();
 
             if (segments.Count == 0)
@@ -137,12 +136,19 @@ namespace BlazorClaw.Core.VFS
 
             var result = cwd;
 
-            // Process all segments except the last (which could be a file)
-            for (int i = 0; i < segments.Count - 1; i++)
+            string? filename = null;
+            if (allSeps.Contains(relativePath.Last()))
             {
-                var segment = segments[i];
-                
-                if (segment == ".")
+                filename = segments[^1];
+                segments.RemoveAt(segments.Count - 1);
+            }
+
+            // Process all segments except the last (which could be a file)
+            for (int i = 0; i < segments.Count; i++)
+            {
+                var segment = segments[i].Trim();
+
+                if (string.IsNullOrWhiteSpace(segment) || segment == ".")
                 {
                     // Current directory - do nothing
                     continue;
@@ -174,38 +180,27 @@ namespace BlazorClaw.Core.VFS
                 }
             }
 
-            // Process last segment (could be file or directory)
-            var lastSegment = segments[^1];
-            if (lastSegment == ".")
+            if (!string.IsNullOrWhiteSpace(filename))
             {
-                // Just cwd, already at result
-            }
-            else if (lastSegment == "..")
-            {
-                // Parent directory
-                if (!result.IsRoot)
-                    result = result.ParentPath;
-            }
-            else if (lastSegment.Contains(DirectorySeparator))
-            {
-                throw new ParseException(relativePath, $"Invalid path segment: {lastSegment}");
-            }
-            else if (lastSegment.All(c => c == '.') && lastSegment.Length > 2)
-            {
-                // Segment with only dots and more than 2 (..., ...., etc.)
-                throw new ParseException(relativePath, $"Invalid path segment: \"{lastSegment}\"");
-            }
-            else
-            {
-                // Could be file or directory - append as-is
-                // Determine if it should be a directory based on whether original path ends with /
-                if (relativePath.TrimEnd().EndsWith(DirectorySeparator))
+                // Process last segment (could be file or directory)
+                if (filename == ".")
                 {
-                    result = result.AppendDirectory(lastSegment);
+                    // Just cwd, already at result
+                }
+                else if (filename == "..")
+                {
+                    // Parent directory
+                    if (!result.IsRoot)
+                        result = result.ParentPath;
+                }
+                else if (filename.All(c => c == '.'))
+                {
+                    // Segment with only dots and more than 2 (..., ...., etc.)
+                    throw new ParseException(relativePath, $"Invalid path segment: \"{filename}\"");
                 }
                 else
                 {
-                    result = result.AppendFile(lastSegment);
+                    result = result.AppendFile(filename);
                 }
             }
 
@@ -217,7 +212,6 @@ namespace BlazorClaw.Core.VFS
             return VfsPath.Parse(VfsPath.DirectorySeparator + s.Trim().Trim(VfsPath.DirectorySeparator) + VfsPath.DirectorySeparator);
         }
 
-
         public VfsPath AppendPath(string relativePath)
         {
             if (IsRooted(relativePath))
@@ -226,7 +220,6 @@ namespace BlazorClaw.Core.VFS
                 throw new InvalidOperationException("This " + nameof(VfsPath) + " is not a directory.");
             return new VfsPath(Path + relativePath);
         }
-
 
         public VfsPath AppendPath(VfsPath path)
         {
@@ -252,7 +245,6 @@ namespace BlazorClaw.Core.VFS
                 throw new InvalidOperationException("The specified FileSystemPath is not a directory.");
             return new VfsPath(Path + fileName);
         }
-
 
         public bool IsParentOf(VfsPath path)
         {
