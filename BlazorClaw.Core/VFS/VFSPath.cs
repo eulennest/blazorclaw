@@ -100,16 +100,24 @@ namespace BlazorClaw.Core.VFS
         /// <summary>
         /// Parse a path relative to a current working directory.
         /// Supports absolute paths (starting with /), relative paths, ./ and ..
+        /// Absolute paths: cwd is set to root internally
         /// Example: Parse("/home/", "../etc/config") → "/etc/config"
+        /// Example: Parse("/home/", "/etc/config") → "/etc/config"
         /// </summary>
         public static VfsPath Parse(VfsPath cwd, string relativePath)
         {
             ArgumentNullException.ThrowIfNull(relativePath);
             
-            // If absolute path, use normal Parse
+            // If absolute path, reset cwd to root
             if (IsRooted(relativePath))
             {
-                return Parse(relativePath);
+                cwd = VfsPath.Root;
+                // Remove leading / for processing
+                relativePath = relativePath[1..];
+                
+                // If nothing left, return root
+                if (string.IsNullOrEmpty(relativePath))
+                    return cwd;
             }
 
             // Start from cwd (must be a directory)
@@ -152,6 +160,11 @@ namespace BlazorClaw.Core.VFS
                     // Invalid: segment contains separator
                     throw new ParseException(relativePath, $"Invalid path segment: {segment}");
                 }
+                else if (segment.All(c => c == '.'))
+                {
+                    // Segment with only dots
+                    throw new ParseException(relativePath, $"Invalid path segment: \"{segment}\"");
+                }
                 else
                 {
                     // Regular directory name
@@ -175,10 +188,15 @@ namespace BlazorClaw.Core.VFS
             {
                 throw new ParseException(relativePath, $"Invalid path segment: {lastSegment}");
             }
+            else if (lastSegment.All(c => c == '.'))
+            {
+                // Segment with only dots
+                throw new ParseException(relativePath, $"Invalid path segment: \"{lastSegment}\"");
+            }
             else
             {
                 // Could be file or directory - append as-is
-                // Determine if it should be a directory based on whether relativePath ends with /
+                // Determine if it should be a directory based on whether original path ends with /
                 if (relativePath.TrimEnd().EndsWith(DirectorySeparator))
                 {
                     result = result.AppendDirectory(lastSegment);
