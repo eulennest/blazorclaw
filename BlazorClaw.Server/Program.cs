@@ -44,6 +44,17 @@ builder.Services.AddControllers();
 // Add HttpClient for WebSearchProvider
 builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
 builder.Services.AddHttpClient<BlazorClaw.Server.Tools.ImageGenerationTool>();
+
+// Add HttpClients for HttpRequestTool (normal + insecure for self-signed certs)
+builder.Services.AddHttpClient("HttpClient");
+builder.Services.AddHttpClient("InsecureHttpClient")
+    .ConfigureHttpClient(client => { })
+    .ConfigurePrimaryHttpMessageHandler(() =>
+    {
+        var handler = new HttpClientHandler();
+        handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true;
+        return handler;
+    });
 builder.Services.Configure<WebSearchOptions>(builder.Configuration.GetSection(WebSearchOptions.Section));
 builder.Services.Configure<SecurityOptions>(builder.Configuration.GetSection(SecurityOptions.Section));
 builder.Services.AddSingleton<PathHelper>();
