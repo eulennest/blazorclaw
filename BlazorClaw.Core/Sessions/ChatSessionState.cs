@@ -1,6 +1,7 @@
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Providers;
+using BlazorClaw.Core.VFS;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BlazorClaw.Core.Sessions;
@@ -17,6 +18,8 @@ public class ChatSessionState
     public TokenUsage? LastUsage { get; set; }
     public double Costs { get; set; }
     public double Tokens { get; set; }
+
+    public IVfsSystem? VFS { get; set; }
 }
 
 public class SessionStateAccessor

@@ -9,6 +9,8 @@ using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Speech;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
+using BlazorClaw.Core.VFS.Systems;
 using BlazorClaw.UI.Components.Account;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
@@ -63,13 +65,13 @@ namespace BlazorClaw.Server.Services
                 }
 
 
-
                 state = new ChatSessionState
                 {
                     Scope = scope,
                     Session = sess,
                     Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model?.Split('/')[0] ?? "openrouter") ?? throw new Exception($"No provider found for model {model}")
                 };
+                SetVFS(state);
                 scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
 
 
@@ -98,6 +100,8 @@ namespace BlazorClaw.Server.Services
                         Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model?.Split('/')[0] ?? "openrouter") ?? throw new Exception($"No provider found for model {model}"),
                         MessageHistory = store.MessageHistory
                     };
+                    SetVFS(state);
+                    scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
                     _sessions.TryAdd(sessionId, state);
                     return state;
                 }
@@ -443,6 +447,32 @@ namespace BlazorClaw.Server.Services
             var file = await pathHelper.SaveMediaFileAsync(data);
             if (file != null) return pathHelper.GetMediaUrl(file).ToString();
             return null;
+        }
+
+        private void SetVFS(ChatSessionState sessionState)
+        {
+            var vfs = new MountpointVfsSystem();
+            var userId = sessionState.Session.UserId?.ToLowerInvariant();
+            if (!Guid.TryParse(userId, out var uuid)) uuid = sessionState.Session.Id;
+
+            var path = PathUtils.GetUserBasePath(sessionState.Services, uuid);
+            vfs.AddMountpoint(VfsPath.Parse("/~/"), new PhysicalFileSystem(Path.Combine(path, "workspace")));
+            vfs.AddMountpoint(VfsPath.Parse("/~memory/"), new PhysicalFileSystem(Path.Combine(path, "memory")));
+            vfs.AddMountpoint(VfsPath.Parse("/~secure/"), new PhysicalFileSystem(Path.Combine(path, "secure")), true);
+
+            if (OperatingSystem.IsWindows())
+            {
+                foreach (var item in DriveInfo.GetDrives())
+                {
+                    vfs.AddMountpoint(VfsPath.Parse($"/{item.Name.Trim(':', '/')}/"), new PhysicalFileSystem(item.RootDirectory.FullName));
+                }
+            }
+            else
+            {
+                vfs.AddMountpoint(VfsPath.Root, new PhysicalFileSystem("/"), true);
+            }
+
+            sessionState.VFS = vfs;
         }
 
     }
