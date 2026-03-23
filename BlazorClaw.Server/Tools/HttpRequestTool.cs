@@ -23,8 +23,8 @@ public class HttpRequestParams : BaseToolParams
     [Description("Bearer Token für Authorization Header (optional). IMMER @VAR_NAME mit VariableMappings nutzen! Beispiel: @HA_TOKEN + VariableMappings {\"HA_TOKEN\": \"vault:Home_Assistant_Token\"} - wird automatisch aus Vault geholt.")]
     public string? BearerToken { get; set; }
 
-    [Description("Custom Headers als JSON Object. Use @VAR_NAME for variable substitution. Beispiel: {\"X-Custom-Header\": \"@CUSTOM_VALUE\"}")]
-    public string? Headers { get; set; }
+    [Description("Custom Headers. Use @VAR_NAME for variable substitution. Beispiel: {\"X-Custom-Header\": \"@CUSTOM_VALUE\", \"Authorization\": \"Bearer @TOKEN\"}")]
+    public Dictionary<string, string>? Headers { get; set; }
 
     [Description("SSL-Zertifikat ignorieren (nur für self-signed Certs, z.B. qdha.duckdns.org)")]
     public bool IgnoreSslErrors { get; set; } = false;
@@ -55,6 +55,9 @@ public class HttpRequestTool : BaseTool<HttpRequestParams>
           "url": "https://qdha.duckdns.org:8123/api/services/light/turn_off",
           "bearerToken": "@HA_TOKEN",
           "body": "{"entity_id": "@ENTITY_ID"}",
+          "headers": {
+            "X-Custom-Header": "value"
+          },
           "variableMappings": {
             "HA_TOKEN": "vault:Home_Assistant_Token",
             "ENTITY_ID": "env:LIGHT_ENTITY_ID"
@@ -98,23 +101,14 @@ public class HttpRequestTool : BaseTool<HttpRequestParams>
             }
 
             // Add custom headers
-            if (!string.IsNullOrWhiteSpace(p.Headers))
+            if (p.Headers != null && p.Headers.Count > 0)
             {
-                try
+                foreach (var (key, value) in p.Headers)
                 {
-                    var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(p.Headers);
-                    if (headers != null)
+                    if (!string.IsNullOrWhiteSpace(key) && !string.IsNullOrWhiteSpace(value))
                     {
-                        foreach (var (key, value) in headers)
-                        {
-                            request.Headers.Add(key, value);
-                        }
+                        request.Headers.Add(key, value);
                     }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "Failed to parse custom headers");
-                    return $"ERROR: Ungültige Headers JSON: {ex.Message}";
                 }
             }
 
