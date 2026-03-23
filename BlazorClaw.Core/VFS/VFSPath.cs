@@ -86,13 +86,14 @@ namespace BlazorClaw.Core.VFS
             if (s.Contains(string.Concat(DirectorySeparator, DirectorySeparator)))
                 throw new ParseException(s, "Path contains double directory-separators.");
             
-            // Check for segments that contain only dots and are longer than 1 (.., ..., etc.)
-            // Single dot (.) is allowed but should not appear in absolute paths
+            // Check for segments that contain only dots and are longer than 2 (..., ...., etc.)
+            // Single dot (.) and double dots (..) should not appear in absolute paths
+            // Use Parse(cwd, path) for relative path resolution with . and ..
             var segments = s.Split(new[] { DirectorySeparator }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var segment in segments)
             {
-                if (segment.All(c => c == '.') && segment.Length > 1)
-                    throw new ParseException(s, $"Path contains invalid segment: \"{segment}\" - use relative path resolution instead");
+                if (segment.All(c => c == '.') && segment.Length >= 1)
+                    throw new ParseException(s, $"Path contains invalid segment: \"{segment}\" - use Parse(cwd, path) for relative path resolution");
             }
             
             return new VfsPath(s);
@@ -161,9 +162,9 @@ namespace BlazorClaw.Core.VFS
                     // Invalid: segment contains separator
                     throw new ParseException(relativePath, $"Invalid path segment: {segment}");
                 }
-                else if (segment.All(c => c == '.') && segment.Length > 1)
+                else if (segment.All(c => c == '.') && segment.Length > 2)
                 {
-                    // Segment with multiple dots (.. or more)
+                    // Segment with 3+ dots (..., ...., etc.)
                     throw new ParseException(relativePath, $"Invalid path segment: \"{segment}\"");
                 }
                 else
@@ -189,9 +190,9 @@ namespace BlazorClaw.Core.VFS
             {
                 throw new ParseException(relativePath, $"Invalid path segment: {lastSegment}");
             }
-            else if (lastSegment.All(c => c == '.') && lastSegment.Length > 1)
+            else if (lastSegment.All(c => c == '.') && lastSegment.Length > 2)
             {
-                // Segment with multiple dots (.. or more)
+                // Segment with only dots and more than 2 (..., ...., etc.)
                 throw new ParseException(relativePath, $"Invalid path segment: \"{lastSegment}\"");
             }
             else
