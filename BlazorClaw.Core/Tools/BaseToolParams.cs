@@ -47,7 +47,7 @@ public abstract class BaseToolParams
         if (VariableMappings == null) return;
         var vh = context.Provider.GetService<VariableResolverHelper>();
         if (vh == null) return;
-        await vh.ResolveMappingsAsync(VariableMappings, context).ConfigureAwait(false);
+        VariableMappings = await vh.ResolveMappingsAsync(VariableMappings, context).ConfigureAwait(false);
 
         foreach (var prop in GetType().GetProperties())
         {
@@ -86,6 +86,4 @@ public abstract class BaseToolParams
         }
         return value;
     }
-
-
 }
