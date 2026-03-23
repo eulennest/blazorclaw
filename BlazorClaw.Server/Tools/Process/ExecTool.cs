@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace BlazorClaw.Server.Tools.Process;
 
-public class ExecParams
+public class ExecParams : BaseToolParams
 {
     [Description("Pfad zur ausführbaren Datei")]
     [Required]
@@ -33,6 +33,7 @@ public class ExecTool : BaseTool<ExecParams>
 
     protected override async Task<string> ExecuteInternalAsync(ExecParams p, MessageContext context)
     {
+        await p.ResolveVarsAsync(context);
         var path = Path.Combine(context.GetWorkspacePath(), p.WorkingDirectory ?? "./repos");
 
         var startInfo = new ProcessStartInfo

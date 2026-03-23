@@ -1,3 +1,6 @@
+using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Services;
+using Microsoft.Extensions.DependencyInjection;
 using System.ComponentModel;
 
 namespace BlazorClaw.Core.Tools;
@@ -38,4 +41,51 @@ public abstract class BaseToolParams
     }
     """)]
     public Dictionary<string, string>? VariableMappings { get; set; }
+
+    public async Task ResolveVarsAsync(MessageContext context)
+    {
+        if (VariableMappings == null) return;
+        var vh = context.Provider.GetService<VariableResolverHelper>();
+        if (vh == null) return;
+        await vh.ResolveMappingsAsync(VariableMappings, context).ConfigureAwait(false);
+
+        foreach (var prop in GetType().GetProperties())
+        {
+            if (prop.CanWrite && prop.CanRead && (prop.PropertyType == typeof(string)))
+            {
+                prop.SetValue(this, ReplaceVars(prop.GetValue(this) as string));
+            }
+            else if (prop.CanWrite && prop.CanRead && (prop.PropertyType == typeof(Dictionary<string, string>)))
+            {
+                if (prop.GetValue(this) is not Dictionary<string, string> dict) continue;
+                foreach (var item in dict.ToList())
+                {
+                    dict[item.Key] = ReplaceVars(item.Value) ?? string.Empty;
+                }
+            }
+            else if (prop.CanWrite && prop.CanRead && (prop.PropertyType == typeof(string[])))
+            {
+                if (prop.GetValue(this) is not string[] list) continue;
+                var li = new List<string>();
+                foreach (var item in list)
+                {
+
+                    li.Add(ReplaceVars(item) ?? string.Empty);
+                }
+                prop.SetValue(this, li.ToArray());
+            }
+        }
+    }
+
+    public string? ReplaceVars(string? value)
+    {
+        if (value == null || VariableMappings == null || !value.Contains('@')) return value;
+        foreach (var item in VariableMappings.OrderByDescending(o => o.Key.Length))
+        {
+            value = value.Replace("@" + item.Key, item.Value);
+        }
+        return value;
+    }
+
+
 }

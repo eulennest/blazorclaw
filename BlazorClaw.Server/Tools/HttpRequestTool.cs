@@ -76,6 +76,8 @@ public class HttpRequestTool : BaseTool<HttpRequestParams>
     {
         try
         {
+            await p.ResolveVarsAsync(context);
+
             // Validate URL
             if (!Uri.TryCreate(p.Url, UriKind.Absolute, out var uri))
                 return $"ERROR: Ungültige URL: {p.Url}";
