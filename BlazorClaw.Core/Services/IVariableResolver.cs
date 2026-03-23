@@ -13,7 +13,7 @@ namespace BlazorClaw.Core.Services
         /// <param name="source">Source specification (e.g., "vault:ItemName" or "env:VAR_NAME")</param>
         /// <param name="context">Message context for vault/environment access</param>
         /// <returns>Resolved value or empty string if not found</returns>
-        Task<string> ResolveAsync(string source, MessageContext? context = null);
+        Task<string> ResolveAsync(string source, MessageContext context);
 
         /// <summary>
         /// Resolve all mappings and return as dictionary for substitution

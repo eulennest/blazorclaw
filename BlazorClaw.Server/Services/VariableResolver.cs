@@ -1,4 +1,5 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Security.Vault;
 using BlazorClaw.Core.Services;
 
 namespace BlazorClaw.Server.Services;
@@ -19,7 +20,7 @@ public class VariableResolver : IVariableResolver
     /// Resolve a variable from Vault or Environment
     /// Format: "vault:ItemName" or "env:VAR_NAME"
     /// </summary>
-    public async Task<string> ResolveAsync(string source, MessageContext? context = null)
+    public async Task<string> ResolveAsync(string source, MessageContext context)
     {
         if (string.IsNullOrWhiteSpace(source))
             return string.Empty;
@@ -73,13 +74,12 @@ public class VariableResolver : IVariableResolver
     /// Resolve from Vault (Bitwarden)
     /// Implementation TBD - will use bw CLI or Vault API
     /// </summary>
-    private Task<string> ResolveFromVaultAsync(string itemName, MessageContext? context)
+    private async Task<string> ResolveFromVaultAsync(string itemName, MessageContext context)
     {
-        // TODO: Implement vault resolution
-        // - Use bw CLI to fetch item
-        // - Parse username/password/custom fields
         _logger.LogInformation("Resolving from Vault: {ItemName}", itemName);
-        return Task.FromResult(string.Empty);
+        var iv = context.Provider.GetRequiredService<IVaultProvider>();
+        var item = await iv.GetSecretAsync(itemName).ConfigureAwait(false);
+        return item?.Secret ?? string.Empty;
     }
 
     /// <summary>

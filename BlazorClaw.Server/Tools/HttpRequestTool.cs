@@ -33,11 +33,8 @@ public class HttpRequestParams : BaseToolParams
     public int TimeoutSeconds { get; set; } = 30;
 }
 
-public class HttpRequestTool : BaseTool<HttpRequestParams>
+public class HttpRequestTool(IHttpClientFactory httpClientFactory, ILogger<HttpRequestTool> logger) : BaseTool<HttpRequestParams>
 {
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly ILogger<HttpRequestTool> _logger;
-
     public override string Name => "http_request";
     public override string Description => """
         Führt HTTP Requests durch (GET, POST, PUT, DELETE, PATCH).
@@ -65,12 +62,7 @@ public class HttpRequestTool : BaseTool<HttpRequestParams>
         }
         """;
 
-
-    public HttpRequestTool(IHttpClientFactory httpClientFactory, ILogger<HttpRequestTool> logger)
-    {
-        _httpClientFactory = httpClientFactory;
-        _logger = logger;
-    }
+    private static readonly string[] sourceArray = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"];
 
     protected override async Task<string> ExecuteInternalAsync(HttpRequestParams p, MessageContext context)
     {
@@ -84,12 +76,12 @@ public class HttpRequestTool : BaseTool<HttpRequestParams>
 
             // Validate HTTP Method
             var method = p.Method.ToUpperInvariant();
-            if (!new[] { "GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS" }.Contains(method))
+            if (!sourceArray.Contains(method))
                 return $"ERROR: Ungültige HTTP Method: {p.Method}";
 
             // Create HTTP client
             var clientName = p.IgnoreSslErrors ? "InsecureHttpClient" : "HttpClient";
-            var client = _httpClientFactory.CreateClient(clientName);
+            var client = httpClientFactory.CreateClient(clientName);
             client.Timeout = TimeSpan.FromSeconds(p.TimeoutSeconds);
 
             // Create request
@@ -119,7 +111,7 @@ public class HttpRequestTool : BaseTool<HttpRequestParams>
                 request.Content = new StringContent(p.Body, System.Text.Encoding.UTF8, "application/json");
             }
 
-            _logger.LogInformation("HTTP Request: {Method} {Url}", method, p.Url);
+            logger.LogInformation("HTTP Request: {Method} {Url}", method, p.Url);
 
             // Send request
             var response = await client.SendAsync(request);
@@ -148,24 +140,19 @@ public class HttpRequestTool : BaseTool<HttpRequestParams>
                 result += responseBody;
             }
 
-            _logger.LogInformation("HTTP Response: {Status}", response.StatusCode);
+            logger.LogInformation("HTTP Response: {Status}", response.StatusCode);
 
             return result;
         }
         catch (HttpRequestException ex)
         {
-            _logger.LogError(ex, "HTTP Request failed");
+            logger.LogError(ex, "HTTP Request failed");
             return $"ERROR: HTTP Request fehlgeschlagen: {ex.Message}";
         }
         catch (TaskCanceledException ex)
         {
-            _logger.LogError(ex, "HTTP Request timeout");
+            logger.LogError(ex, "HTTP Request timeout");
             return $"ERROR: HTTP Request Timeout nach {p.TimeoutSeconds}s";
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Unexpected error in HTTP request");
-            return $"ERROR: {ex.Message}";
         }
     }
 }
