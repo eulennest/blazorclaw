@@ -27,7 +27,7 @@ public class VariableResolverHelper
             return text;
 
         var result = text;
-        
+
         // Replace @VAR_NAME with corresponding values
         foreach (var (varName, varValue) in variables)
         {

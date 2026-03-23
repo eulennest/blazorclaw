@@ -36,7 +36,7 @@ public static class SchemaGenerator
             else if (underlyingType.IsArray || IsListType(underlyingType))
             {
                 propInfo["type"] = "array";
-                Type elementType = underlyingType.IsArray 
+                Type elementType = underlyingType.IsArray
                     ? underlyingType.GetElementType()!
                     : underlyingType.GetGenericArguments().FirstOrDefault() ?? typeof(string);
                 propInfo["items"] = new
@@ -95,7 +95,7 @@ public static class SchemaGenerator
 
     private static bool IsDictionaryType(Type type)
     {
-        return type.IsGenericType && 
+        return type.IsGenericType &&
                (type.GetGenericTypeDefinition() == typeof(Dictionary<,>) ||
                 type.GetGenericTypeDefinition() == typeof(IDictionary<,>));
     }

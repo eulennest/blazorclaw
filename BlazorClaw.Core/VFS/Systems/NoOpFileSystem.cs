@@ -24,7 +24,7 @@ namespace BlazorClaw.Core.VFS.Systems
 
         public async Task<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
-             return new VfsPathInfo(VfsEntity.Create(this, path));
+            return new VfsPathInfo(VfsEntity.Create(this, path));
         }
 
         public Task<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)

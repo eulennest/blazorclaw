@@ -88,7 +88,7 @@ public class VariableResolver : IVariableResolver
     private string ResolveFromEnvironment(string varName)
     {
         var value = Environment.GetEnvironmentVariable(varName);
-        
+
         if (string.IsNullOrEmpty(value))
         {
             _logger.LogWarning("Environment variable not found: {VarName}", varName);
