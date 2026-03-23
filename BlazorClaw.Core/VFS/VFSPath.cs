@@ -87,6 +87,101 @@ namespace BlazorClaw.Core.VFS
             return new VfsPath(s);
         }
 
+        /// <summary>
+        /// Parse a path relative to a current working directory.
+        /// Supports absolute paths (starting with /), relative paths, ./ and ..
+        /// Example: Parse("/home/", "../etc/config") → "/etc/config"
+        /// </summary>
+        public static VfsPath Parse(VfsPath cwd, string relativePath)
+        {
+            ArgumentNullException.ThrowIfNull(relativePath);
+            
+            // If absolute path, use normal Parse
+            if (IsRooted(relativePath))
+            {
+                return Parse(relativePath);
+            }
+
+            // Start from cwd (must be a directory)
+            if (!cwd.IsDirectory)
+                throw new ArgumentException("Current working directory must be a directory", nameof(cwd));
+
+            // Normalize and split path
+            var segments = relativePath
+                .Trim()
+                .Split(new[] { DirectorySeparator }, StringSplitOptions.RemoveEmptyEntries)
+                .ToList();
+
+            if (segments.Count == 0)
+                return cwd;
+
+            var result = cwd;
+
+            // Process all segments except the last (which could be a file)
+            for (int i = 0; i < segments.Count - 1; i++)
+            {
+                var segment = segments[i];
+                
+                if (segment == ".")
+                {
+                    // Current directory - do nothing
+                    continue;
+                }
+                else if (segment == "..")
+                {
+                    // Parent directory
+                    if (result.IsRoot)
+                    {
+                        // Already at root, can't go up further
+                        continue;
+                    }
+                    result = result.ParentPath;
+                }
+                else if (segment.Contains(DirectorySeparator))
+                {
+                    // Invalid: segment contains separator
+                    throw new ParseException(relativePath, $"Invalid path segment: {segment}");
+                }
+                else
+                {
+                    // Regular directory name
+                    result = result.AppendDirectory(segment);
+                }
+            }
+
+            // Process last segment (could be file or directory)
+            var lastSegment = segments[^1];
+            if (lastSegment == ".")
+            {
+                // Just cwd, already at result
+            }
+            else if (lastSegment == "..")
+            {
+                // Parent directory
+                if (!result.IsRoot)
+                    result = result.ParentPath;
+            }
+            else if (lastSegment.Contains(DirectorySeparator))
+            {
+                throw new ParseException(relativePath, $"Invalid path segment: {lastSegment}");
+            }
+            else
+            {
+                // Could be file or directory - append as-is
+                // Determine if it should be a directory based on whether relativePath ends with /
+                if (relativePath.TrimEnd().EndsWith(DirectorySeparator))
+                {
+                    result = result.AppendDirectory(lastSegment);
+                }
+                else
+                {
+                    result = result.AppendFile(lastSegment);
+                }
+            }
+
+            return result;
+        }
+
         public static VfsPath ParseDirectory(string s)
         {
             return VfsPath.Parse(VfsPath.DirectorySeparator + s.Trim().Trim(VfsPath.DirectorySeparator) + VfsPath.DirectorySeparator);
