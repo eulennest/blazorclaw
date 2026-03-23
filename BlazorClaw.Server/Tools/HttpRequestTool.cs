@@ -13,17 +13,17 @@ public class HttpRequestParams : BaseToolParams
     [Required]
     public string Method { get; set; } = "GET";
 
-    [Description("URL (z.B. https://example.com/api/endpoint)")]
+    [Description("URL (z.B. https://example.com/api/endpoint). Use @VAR_NAME for variable substitution")]
     [Required]
     public string Url { get; set; } = string.Empty;
 
-    [Description("Request Body (JSON oder Text, optional)")]
+    [Description("Request Body (JSON oder Text, optional). Use @VAR_NAME for variable substitution. Beispiel: {\"entity_id\": \"@ENTITY_ID\"}")]
     public string? Body { get; set; }
 
-    [Description("Bearer Token für Authorization Header (optional)")]
+    [Description("Bearer Token für Authorization Header (optional). Use @VAR_NAME for sensitive tokens. Beispiel: @HA_TOKEN (dann VariableMappings: {\"HA_TOKEN\": \"vault:Home_Assistant_Token\"})")]
     public string? BearerToken { get; set; }
 
-    [Description("Custom Headers als JSON Object z.B. {\"X-Custom-Header\": \"value\"}")]
+    [Description("Custom Headers als JSON Object. Use @VAR_NAME for variable substitution. Beispiel: {\"X-Custom-Header\": \"@CUSTOM_VALUE\"}")]
     public string? Headers { get; set; }
 
     [Description("SSL-Zertifikat ignorieren (nur für self-signed Certs, z.B. qdha.duckdns.org)")]
@@ -40,7 +40,26 @@ public class HttpRequestTool : BaseTool<HttpRequestParams>
     private readonly ILogger<HttpRequestTool> _logger;
 
     public override string Name => "http_request";
-    public override string Description => "Führt HTTP Requests durch (GET, POST, PUT, DELETE, PATCH). Unterstützt Bearer Token, Custom Headers, JSON Body und SSL-Verifikation.";
+    public override string Description => """
+        Führt HTTP Requests durch (GET, POST, PUT, DELETE, PATCH).
+        Unterstützt Bearer Token, Custom Headers, JSON Body und SSL-Verifikation.
+        
+        WICHTIG: Nutze @VAR_NAME für Tokens/Secrets + VariableMappings!
+        
+        Beispiel (Home Assistant Light ausschalten):
+        {
+          "method": "POST",
+          "url": "https://qdha.duckdns.org:8123/api/services/light/turn_off",
+          "bearerToken": "@HA_TOKEN",
+          "body": "{"entity_id": "@ENTITY_ID"}",
+          "variableMappings": {
+            "HA_TOKEN": "vault:Home_Assistant_Token",
+            "ENTITY_ID": "env:LIGHT_ENTITY_ID"
+          },
+          "ignoreSslErrors": true
+        }
+        """;
+
 
     public HttpRequestTool(IHttpClientFactory httpClientFactory, ILogger<HttpRequestTool> logger)
     {
