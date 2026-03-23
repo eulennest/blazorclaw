@@ -86,11 +86,12 @@ namespace BlazorClaw.Core.VFS
             if (s.Contains(string.Concat(DirectorySeparator, DirectorySeparator)))
                 throw new ParseException(s, "Path contains double directory-separators.");
             
-            // Check for segments that contain only dots (., .., ..., etc.)
+            // Check for segments that contain only dots and are longer than 1 (.., ..., etc.)
+            // Single dot (.) is allowed but should not appear in absolute paths
             var segments = s.Split(new[] { DirectorySeparator }, StringSplitOptions.RemoveEmptyEntries);
             foreach (var segment in segments)
             {
-                if (segment.All(c => c == '.'))
+                if (segment.All(c => c == '.') && segment.Length > 1)
                     throw new ParseException(s, $"Path contains invalid segment: \"{segment}\" - use relative path resolution instead");
             }
             
@@ -160,9 +161,9 @@ namespace BlazorClaw.Core.VFS
                     // Invalid: segment contains separator
                     throw new ParseException(relativePath, $"Invalid path segment: {segment}");
                 }
-                else if (segment.All(c => c == '.'))
+                else if (segment.All(c => c == '.') && segment.Length > 1)
                 {
-                    // Segment with only dots
+                    // Segment with multiple dots (.. or more)
                     throw new ParseException(relativePath, $"Invalid path segment: \"{segment}\"");
                 }
                 else
@@ -188,9 +189,9 @@ namespace BlazorClaw.Core.VFS
             {
                 throw new ParseException(relativePath, $"Invalid path segment: {lastSegment}");
             }
-            else if (lastSegment.All(c => c == '.'))
+            else if (lastSegment.All(c => c == '.') && lastSegment.Length > 1)
             {
-                // Segment with only dots
+                // Segment with multiple dots (.. or more)
                 throw new ParseException(relativePath, $"Invalid path segment: \"{lastSegment}\"");
             }
             else
