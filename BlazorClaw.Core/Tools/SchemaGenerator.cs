@@ -19,20 +19,42 @@ public static class SchemaGenerator
             Type propType = prop.PropertyType;
             Type underlyingType = Nullable.GetUnderlyingType(propType) ?? propType;
 
-            // Typ-Mapping
-            string typeName = GetTypeName(underlyingType);
-            propInfo["type"] = typeName;
-
-            if (underlyingType.IsArray)
+            // Spezialfall: Dictionary
+            if (IsDictionaryType(underlyingType))
             {
+                propInfo["type"] = "object";
+                var dictArgs = underlyingType.GetGenericArguments();
+                if (dictArgs.Length == 2)
+                {
+                    propInfo["additionalProperties"] = new
+                    {
+                        type = GetTypeName(dictArgs[1])
+                    };
+                }
+            }
+            // Spezialfall: Array/List
+            else if (underlyingType.IsArray || IsListType(underlyingType))
+            {
+                propInfo["type"] = "array";
+                Type elementType = underlyingType.IsArray 
+                    ? underlyingType.GetElementType()!
+                    : underlyingType.GetGenericArguments().FirstOrDefault() ?? typeof(string);
                 propInfo["items"] = new
                 {
-                    type = GetTypeName(underlyingType.GetElementType()!)
+                    type = GetTypeName(elementType)
                 };
             }
-            if (underlyingType.IsEnum)
+            // Spezialfall: Enum
+            else if (underlyingType.IsEnum)
             {
+                propInfo["type"] = "string";
                 propInfo["enum"] = Enum.GetNames(underlyingType);
+            }
+            // Standard Typ-Mapping
+            else
+            {
+                string typeName = GetTypeName(underlyingType);
+                propInfo["type"] = typeName;
             }
 
             // Beschreibung
@@ -69,6 +91,21 @@ public static class SchemaGenerator
         }
 
         return result;
+    }
+
+    private static bool IsDictionaryType(Type type)
+    {
+        return type.IsGenericType && 
+               (type.GetGenericTypeDefinition() == typeof(Dictionary<,>) ||
+                type.GetGenericTypeDefinition() == typeof(IDictionary<,>));
+    }
+
+    private static bool IsListType(Type type)
+    {
+        return type.IsGenericType &&
+               (type.GetGenericTypeDefinition() == typeof(List<>) ||
+                type.GetGenericTypeDefinition() == typeof(IList<>) ||
+                type.GetGenericTypeDefinition() == typeof(IEnumerable<>));
     }
 
     public static string GetTypeName(Type type)
