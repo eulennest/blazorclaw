@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Linq;
 
 namespace BlazorClaw.Core.VFS
 {
@@ -84,6 +85,15 @@ namespace BlazorClaw.Core.VFS
                 throw new ParseException(s, "Path is not rooted");
             if (s.Contains(string.Concat(DirectorySeparator, DirectorySeparator)))
                 throw new ParseException(s, "Path contains double directory-separators.");
+            
+            // Check for segments that contain only dots (., .., ..., etc.)
+            var segments = s.Split(new[] { DirectorySeparator }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var segment in segments)
+            {
+                if (segment.All(c => c == '.'))
+                    throw new ParseException(s, $"Path contains invalid segment: \"{segment}\" - use relative path resolution instead");
+            }
+            
             return new VfsPath(s);
         }
 
