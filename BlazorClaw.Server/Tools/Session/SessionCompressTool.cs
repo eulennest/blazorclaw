@@ -16,7 +16,8 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
     {
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
         var sess = await sessionManager.GetSessionAsync(context.Session!.Id) ?? throw new KeyNotFoundException($"Session mit ID {context.Session.Id} nicht gefunden.");
-        if (p.Summary.StartsWith("COMPRESSED")) return "COMPRESSED IGNORED: Use a correct Summary!";
+        if (p.Summary.StartsWith("COMPRESSED")) return "ERROR: Use a correct Summary!";
+        if (p.Summary.Length<100) return "ERROR: Use a correct Summary!";
 
         var sb = new StringBuilder();
         sb.AppendLine("📌 ZUSAMMENFASSUNG DES VORHERIGEN GESPRÄCHS (NUR DOKUMENTATION):");
@@ -40,7 +41,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
                 msg.ToolCalls.ForEach(o =>
                 {
                     if (Name.Equals(o.Function.Name))
-                        o.Function.Arguments = "{\"Summary\":\"COMPRESSED see Systemprompt\"}";
+                        o.Function.Arguments = "[Tool-Parameter gekürzt - Volle Summary siehe System-Prompt oben]";
                 });
             }
             if (!hasasist && msg.IsTool) continue;
@@ -63,7 +64,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
 
 public class SessionCompressParams
 {
-    [Description("DieSession Zusammenfassung für die weitere Session Nutzung (Max. 20000 chars)")]
+    [Description("DieSession Zusammenfassung für die weitere Session Nutzung (Min. 100 - Max. 20000 chars)")]
     [Required(ErrorMessage = "The Summary field is required and cannot be empty.")]
     public string Summary { get; set; } = string.Empty;
 }
