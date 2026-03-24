@@ -25,7 +25,7 @@ public class MemorySearchTool : BaseTool<MemorySearchParams>
     {
         var maxResults = p.MaxResults ?? 20;
         var provider = context.Provider.GetRequiredService<IMemorySearchProvider>();
-        var ret = await provider.SearchAsync(p.Queries, maxResults, context).Take(maxResults).ToListAsync();
+        var ret = await provider.SearchAsync(p.Queries, maxResults, context).ToListAsync();
         return string.Join("\n\n---\n\n", ret);
 
     }
