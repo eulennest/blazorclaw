@@ -41,7 +41,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
                 msg.ToolCalls.ForEach(o =>
                 {
                     if (Name.Equals(o.Function.Name))
-                        o.Function.Arguments = "[Tool-Parameter gekürzt - Volle Summary siehe System-Prompt oben]";
+                        o.Function.Arguments = "{\"Summary\":\"[Tool-Parameter gekürzt - Volle Summary siehe System-Prompt oben]\"}";
                 });
             }
             if (!hasasist && msg.IsTool) continue;
@@ -64,7 +64,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
 
 public class SessionCompressParams
 {
-    [Description("DieSession Zusammenfassung für die weitere Session Nutzung (Min. 100 - Max. 20000 chars)")]
+    [Description("DieSession Zusammenfassung für die weitere Session Nutzung (Min. 100 Max. 20000 chars)")]
     [Required(ErrorMessage = "The Summary field is required and cannot be empty.")]
     public string Summary { get; set; } = string.Empty;
 }

@@ -324,7 +324,7 @@ namespace BlazorClaw.Server.Services
                             try
                             {
                                 var tool = toolRegistry.GetTool(call.Function.Name) ?? throw new ToolNotFoundException(call.Function.Name);
-                                var args = tool.BuidlArguments(call.Function.Arguments);
+                                var args = tool.BuildArguments(call.Function.Arguments);
 
                                 await policyProvider.BeforeToolAsync(tool, args, context);
                                 var result = await tool.ExecuteAsync(args, context);

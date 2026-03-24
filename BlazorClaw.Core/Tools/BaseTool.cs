@@ -11,7 +11,7 @@ public interface ITool
     string Name { get; }
     string Description { get; }
     object GetSchema();
-    object BuidlArguments(string arguments);
+    object BuildArguments(string arguments);
     Task<string> ExecuteAsync(object arguments, MessageContext context);
 }
 
@@ -21,7 +21,7 @@ public abstract class BaseTool<TParams> : ITool where TParams : class
     public abstract string Description { get; }
 
     public object GetSchema() => SchemaGenerator.Generate(typeof(TParams));
-    public object BuidlArguments(string arguments) => JsonSerializer.Deserialize<TParams>(arguments, JsonHelper.DefaultOptions)!;
+    public object BuildArguments(string arguments) => JsonSerializer.Deserialize<TParams>(arguments, JsonHelper.DefaultOptions)!;
 
     public async Task<string> ExecuteAsync(object arguments, MessageContext context)
     {
