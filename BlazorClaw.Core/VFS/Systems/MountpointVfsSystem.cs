@@ -32,7 +32,7 @@ namespace BlazorClaw.Core.VFS.Systems
         protected KeyValuePair<VfsPath, MountEntry>? Get(VfsPath path)
         {
             var t = Mounts.FirstOrDefault(pair => pair.Key == path || pair.Key.IsParentOf(path));
-            return t;
+            return t.Value == null ? null : t;
         }
 
         public void Dispose()

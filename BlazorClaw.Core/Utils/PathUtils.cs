@@ -59,6 +59,7 @@ namespace BlazorClaw.Core.Utils
         public static IVfsSystem BuildVFS(string userBaseFolder, bool addRoot)
         {
             var vfs = new MountpointVfsSystem();
+            Directory.CreateDirectory(userBaseFolder);
             if (Directory.Exists(userBaseFolder))
             {
                 Directory.CreateDirectory(Path.Combine(userBaseFolder, "workspace"));
