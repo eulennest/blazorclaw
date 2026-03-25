@@ -1,19 +1,234 @@
 @page "/filemanager"
+@using BlazorClaw.Core.VFS
+@using BlazorClaw.Core.VFS.Systems
 @inject ILogger<FileManager> Logger
 
 <PageTitle>Dateimanager</PageTitle>
 
-<div class="container-fluid mt-3">
-    <h2><i class="bi bi-folder"></i> Dateimanager (Beta)</h2>
+<div class="container-fluid mt-3" style="height: calc(100vh - 80px);">
+    <h2><i class="bi bi-folder"></i> Dateimanager</h2>
     
-    <div class="alert alert-info mt-3">
-        FileManager wird noch entwickelt...
+    <div class="row mt-3" style="height: calc(100vh - 150px);">
+        <!-- Left: Directory Tree -->
+        <div class="col-md-3 border-end" style="overflow-y: auto; overflow-x: hidden;">
+            <h5 class="mb-3">Verzeichnisse</h5>
+            @if (isLoading)
+            {
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Laden...</span>
+                </div>
+            }
+            else
+            {
+                <div class="nav flex-column">
+                    <button class="btn btn-link btn-sm text-start w-100 text-truncate" @onclick="() => SelectDirectory(VfsPath.Root)">
+                        <i class="bi bi-folder"></i> / (Root)
+                    </button>
+                    @if (directories.Any())
+                    {
+                        @foreach (var dir in directories.Take(50))
+                        {
+                            <button class="btn btn-link btn-sm text-start w-100 text-truncate" style="padding-left: 20px;" @onclick="() => SelectDirectory(dir)">
+                                <i class="bi bi-folder"></i> @(dir.EntityName ?? "/")
+                            </button>
+                        }
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Middle: File List -->
+        <div class="col-md-3 border-end" style="overflow-y: auto;">
+            <h5 class="mb-3">
+                @if (currentPath.IsRoot)
+                {
+                    <span>/ (Root)</span>
+                }
+                else
+                {
+                    <span>@currentPath.EntityName</span>
+                }
+            </h5>
+
+            @if (isLoading)
+            {
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Laden...</span>
+                </div>
+            }
+            else if (!currentItems.Any())
+            {
+                <div class="alert alert-info mb-0 small">Verzeichnis ist leer</div>
+            }
+            else
+            {
+                <div class="list-group list-group-sm">
+                    @foreach (var item in currentItems)
+                    {
+                        <button class="list-group-item list-group-item-action @(selectedPath == item ? "active" : "")" 
+                                @onclick="() => SelectItem(item)">
+                            @if (isDirectory[item])
+                            {
+                                <i class="bi bi-folder-fill text-warning"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-file"></i>
+                            }
+                            <span class="ms-2 small">@item.EntityName</span>
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+
+        <!-- Right: Editor/Preview -->
+        <div class="col-md-6" style="overflow-y: auto;">
+            @if (selectedPath == null)
+            {
+                <div class="alert alert-secondary">Wähle eine Datei aus</div>
+            }
+            else if (isDirectory.TryGetValue(selectedPath.Value, out var isDir) && isDir)
+            {
+                <div class="alert alert-info">
+                    <strong>@selectedPath.Value.EntityName</strong> ist ein Verzeichnis
+                </div>
+            }
+            else
+            {
+                <h5>@selectedPath.Value.EntityName</h5>
+                <small class="text-muted">@selectedPath.Value.Path</small>
+                <hr/>
+
+                @if (fileContent == null && !contentError)
+                {
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Laden...</span>
+                    </div>
+                }
+                else if (contentError)
+                {
+                    <div class="alert alert-danger">Binärdatei oder Fehler beim Laden</div>
+                }
+                else
+                {
+                    <textarea class="form-control font-monospace" style="height: 400px; font-size: 0.85rem;" readonly>@fileContent</textarea>
+                }
+            }
+        </div>
     </div>
 </div>
 
 @code {
+    private IVfsSystem? vfs;
+    private VfsPath currentPath = VfsPath.Root;
+    private VfsPath? selectedPath;
+    private List<VfsPath> currentItems = new();
+    private List<VfsPath> directories = new();
+    private Dictionary<VfsPath, bool> isDirectory = new();
+    private string? fileContent;
+    private bool contentError;
+    private bool isLoading;
+
     protected override async Task OnInitializedAsync()
     {
-        Logger.LogInformation("FileManager initialized");
+        try
+        {
+            // Initialize with PhysicalFileSystem for testing
+            vfs = new PhysicalFileSystem("/");
+            await LoadDirectories();
+            await SelectDirectory(VfsPath.Root);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error initializing FileManager");
+        }
+    }
+
+    private async Task LoadDirectories()
+    {
+        try
+        {
+            if (vfs == null) return;
+            directories.Clear();
+            await foreach (var dir in vfs.GetDirectorysAsync(VfsPath.Root))
+            {
+                directories.Add(dir);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading directories");
+        }
+    }
+
+    private async Task SelectDirectory(VfsPath path)
+    {
+        isLoading = true;
+        selectedPath = null;
+        fileContent = null;
+        contentError = false;
+        currentItems.Clear();
+        isDirectory.Clear();
+
+        try
+        {
+            if (vfs == null) return;
+
+            currentPath = path;
+
+            // Load subdirectories
+            await foreach (var dir in vfs.GetDirectorysAsync(path))
+            {
+                currentItems.Add(dir);
+                isDirectory[dir] = true;
+            }
+
+            // Load files
+            await foreach (var file in vfs.GetFilesAsync(path))
+            {
+                currentItems.Add(file);
+                isDirectory[file] = false;
+            }
+
+            currentItems = currentItems.OrderBy(x => isDirectory[x] ? 0 : 1).ThenBy(x => x.EntityName).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading directory: {Path}", path);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SelectItem(VfsPath path)
+    {
+        selectedPath = path;
+        fileContent = null;
+        contentError = false;
+
+        if (isDirectory[path])
+        {
+            await SelectDirectory(path);
+        }
+        else
+        {
+            // Load file content
+            try
+            {
+                if (vfs == null) return;
+
+                using var stream = await vfs.OpenFileAsync(path, FileMode.Open, FileAccess.Read);
+                using var reader = new StreamReader(stream);
+                fileContent = await reader.ReadToEndAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error loading file: {Path}", path);
+                contentError = true;
+            }
+        }
     }
 }
