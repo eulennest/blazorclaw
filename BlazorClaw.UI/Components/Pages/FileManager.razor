@@ -1,45 +1,40 @@
 @page "/filemanager"
+@using BlazorClaw.Core.Data
+@using BlazorClaw.Core.Utils
 @using BlazorClaw.Core.VFS
 @using BlazorClaw.Core.VFS.Systems
 @inject ILogger<FileManager> Logger
+@inject IServiceProvider serviceProvider
+@inject AuthenticationStateProvider authenticationStateProvider
+@inject UserManager<ApplicationUser> userManager
 
 <PageTitle>Dateimanager</PageTitle>
 
 <div class="container-fluid mt-3" style="height: calc(100vh - 80px);">
     <h2><i class="bi bi-folder"></i> Dateimanager</h2>
     
-        <!-- Breadcrumb Navigation -->
-        <div class="row mb-3">
-            <div class="col-12">
-                <nav aria-label="breadcrumb">
-                    <ol class="breadcrumb mb-0">
-                        <li class="breadcrumb-item">
-                            <button class="btn btn-link btn-sm p-0" @onclick="() => SelectDirectory(VfsPath.Root)">
-                                <i class="bi bi-house"></i> Root
+    <!-- Breadcrumb Navigation -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item">
+                        <button class="btn btn-link btn-sm p-0" @onclick="() => SelectDirectory(VfsPath.Root)">
+                            <i class="bi bi-house"></i> Root
+                        </button>
+                    </li>
+                    @foreach (var segment in GetBreadcrumbs())
+                    {
+                        <li class="breadcrumb-item @(segment.IsCurrent ? "active" : "")">
+                            <button class="btn btn-link btn-sm p-0" @onclick="() => SelectDirectory(segment.Path)">
+                                @segment.Name
                             </button>
                         </li>
-                        @if (!currentPath.IsRoot)
-                        {
-                            @foreach (var segment in GetBreadcrumbs())
-                            {
-                                <li class="breadcrumb-item @(segment.IsCurrent ? "active" : "")">
-                                    @if (segment.IsCurrent)
-                                    {
-                                        <span>@segment.Name</span>
-                                    }
-                                    else
-                                    {
-                                        <button class="btn btn-link btn-sm p-0" @onclick="() => SelectDirectory(segment.Path)">
-                                            @segment.Name
-                                        </button>
-                                    }
-                                </li>
-                            }
-                        }
-                    </ol>
-                </nav>
-            </div>
+                    }
+                </ol>
+            </nav>
         </div>
+    </div>
 
     <div class="row mt-3" style="height: calc(100vh - 200px);">
         <!-- File List (Full Width) -->
@@ -94,7 +89,7 @@
                                     <td class="small text-muted">
                                         @if (info != null && !isDirectory[item])
                                         {
-                                            @FormatSize(info.Length)
+                                            <span title="@info.Length bytes">@FormatSize(info.Length)</span>
                                         }
                                     </td>
                                     <td class="small text-muted">
@@ -133,7 +128,7 @@
             {
                 <h5>@selectedPath.Value.EntityName</h5>
                 <small class="text-muted">@selectedPath.Value.Path</small>
-                <hr/>
+                <hr />
 
                 @if (fileContent == null && !contentError)
                 {
@@ -170,8 +165,11 @@
     {
         try
         {
+            var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var userId = userManager.GetUserId(user);
             // Initialize with PhysicalFileSystem for testing
-            vfs = new PhysicalFileSystem("/");
+            vfs = PathUtils.BuildVFS(PathUtils.GetUserBasePath(serviceProvider, Guid.Parse(userId)), false);
             await LoadDirectories();
             await SelectDirectory(VfsPath.Root);
         }
@@ -292,18 +290,18 @@
         var path = currentPath;
 
         // Sammle alle Parent-Paths bis Root
-        do
+        while (!path.IsRoot)
         {
-            items.Add(new BreadcrumbItem 
-            { 
-                Name = path.EntityName ?? "Root", 
+            items.Add(new BreadcrumbItem
+            {
+                Name = path.EntityName ?? "Root",
                 Path = path,
-                IsCurrent = path == currentPath 
+                IsCurrent = path == currentPath
             });
             
             if (path.IsRoot) break;
             path = path.ParentPath;
-        } while (!path.IsRoot);
+        }
 
         // Reverse um von Root zu current zu gehen
         items.Reverse();

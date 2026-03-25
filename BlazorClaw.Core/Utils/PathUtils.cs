@@ -1,4 +1,6 @@
 ﻿using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.VFS;
+using BlazorClaw.Core.VFS.Systems;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -52,6 +54,37 @@ namespace BlazorClaw.Core.Utils
             var fpath = Path.GetFullPath(Path.Combine(path, filename));
             if (!fpath.StartsWith(path)) throw new InvalidOperationException("Path not allowed");
             return fpath;
+        }
+
+        public static IVfsSystem BuildVFS(string userBaseFolder, bool addRoot)
+        {
+            var vfs = new MountpointVfsSystem();
+            if (Directory.Exists(userBaseFolder))
+            {
+                Directory.CreateDirectory(Path.Combine(userBaseFolder, "workspace"));
+                vfs.AddMountpoint(VfsPath.Parse("/~/"), new PhysicalFileSystem(Path.Combine(userBaseFolder, "workspace")));
+                Directory.CreateDirectory(Path.Combine(userBaseFolder, "memory"));
+                vfs.AddMountpoint(VfsPath.Parse("/~memory/"), new PhysicalFileSystem(Path.Combine(userBaseFolder, "memory")));
+                Directory.CreateDirectory(Path.Combine(userBaseFolder, "secure"));
+                vfs.AddMountpoint(VfsPath.Parse("/~secure/"), new PhysicalFileSystem(Path.Combine(userBaseFolder, "secure")), true);
+            }
+
+            if (addRoot)
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    foreach (var item in DriveInfo.GetDrives())
+                    {
+                        vfs.AddMountpoint(VfsPath.Parse($"/{item.Name.Trim(':', '/')}/"), new PhysicalFileSystem(item.RootDirectory.FullName));
+                    }
+                }
+                else
+                {
+                    vfs.AddMountpoint(VfsPath.Root, new PhysicalFileSystem("/"), true);
+                }
+            }
+            return vfs;
+
         }
     }
 

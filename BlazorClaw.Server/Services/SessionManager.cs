@@ -454,40 +454,8 @@ namespace BlazorClaw.Server.Services
             var userId = sessionState.Session.UserId?.ToLowerInvariant();
             if (!Guid.TryParse(userId, out var uuid)) uuid = sessionState.Session.Id;
             var path = PathUtils.GetUserBasePath(sessionState.Services, uuid);
-            sessionState.VFS = BuildVFS(path, true);
+            sessionState.VFS = PathUtils.BuildVFS(path, true);
         }
-
-        public static IVfsSystem BuildVFS(string userBaseFolder, bool addRoot)
-        {
-            var vfs = new MountpointVfsSystem();
-            if (Directory.Exists(userBaseFolder))
-            {
-                Directory.CreateDirectory(Path.Combine(userBaseFolder, "workspace"));
-                vfs.AddMountpoint(VfsPath.Parse("/~/"), new PhysicalFileSystem(Path.Combine(userBaseFolder, "workspace")));
-                Directory.CreateDirectory(Path.Combine(userBaseFolder, "memory"));
-                vfs.AddMountpoint(VfsPath.Parse("/~memory/"), new PhysicalFileSystem(Path.Combine(userBaseFolder, "memory")));
-                Directory.CreateDirectory(Path.Combine(userBaseFolder, "secure"));
-                vfs.AddMountpoint(VfsPath.Parse("/~secure/"), new PhysicalFileSystem(Path.Combine(userBaseFolder, "secure")), true);
-            }
-
-            if (addRoot)
-            {
-                if (OperatingSystem.IsWindows())
-                {
-                    foreach (var item in DriveInfo.GetDrives())
-                    {
-                        vfs.AddMountpoint(VfsPath.Parse($"/{item.Name.Trim(':', '/')}/"), new PhysicalFileSystem(item.RootDirectory.FullName));
-                    }
-                }
-                else
-                {
-                    vfs.AddMountpoint(VfsPath.Root, new PhysicalFileSystem("/"), true);
-                }
-            }
-            return vfs;
-
-        }
-
     }
 
     public class JsonSessionStorage
