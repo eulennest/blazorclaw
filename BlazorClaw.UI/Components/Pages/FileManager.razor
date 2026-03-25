@@ -1,0 +1,19 @@
+@page "/filemanager"
+@inject ILogger<FileManager> Logger
+
+<PageTitle>Dateimanager</PageTitle>
+
+<div class="container-fluid mt-3">
+    <h2><i class="bi bi-folder"></i> Dateimanager (Beta)</h2>
+    
+    <div class="alert alert-info mt-3">
+        FileManager wird noch entwickelt...
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("FileManager initialized");
+    }
+}
