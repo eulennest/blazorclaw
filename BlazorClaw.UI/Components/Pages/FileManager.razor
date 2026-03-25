@@ -8,96 +8,108 @@
 <div class="container-fluid mt-3" style="height: calc(100vh - 80px);">
     <h2><i class="bi bi-folder"></i> Dateimanager</h2>
     
-    <div class="row mt-3" style="height: calc(100vh - 150px);">
-        <!-- Left: Directory Tree -->
-        <div class="col-md-3 border-end" style="overflow-y: auto; overflow-x: hidden;">
-            <h5 class="mb-3">Verzeichnisse</h5>
-            @if (isLoading)
-            {
-                <div class="spinner-border spinner-border-sm" role="status">
-                    <span class="visually-hidden">Laden...</span>
-                </div>
-            }
-            else
-            {
-                <div class="nav flex-column">
-                    <button class="btn btn-link btn-sm text-start w-100 text-truncate" @onclick="() => SelectDirectory(VfsPath.Root)">
-                        <i class="bi bi-folder"></i> / (Root)
-                    </button>
-                    @if (directories.Any())
-                    {
-                        @foreach (var dir in directories.Take(50))
-                        {
-                            <button class="btn btn-link btn-sm text-start w-100 text-truncate" style="padding-left: 20px;" @onclick="() => SelectDirectory(dir)">
-                                <i class="bi bi-folder"></i> @(dir.EntityName ?? "/")
+        <!-- Breadcrumb Navigation -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item">
+                            <button class="btn btn-link btn-sm p-0" @onclick="() => SelectDirectory(VfsPath.Root)">
+                                <i class="bi bi-house"></i> Root
                             </button>
+                        </li>
+                        @if (!currentPath.IsRoot)
+                        {
+                            @foreach (var segment in GetBreadcrumbs())
+                            {
+                                <li class="breadcrumb-item @(segment.IsCurrent ? "active" : "")">
+                                    @if (segment.IsCurrent)
+                                    {
+                                        <span>@segment.Name</span>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-link btn-sm p-0" @onclick="() => SelectDirectory(segment.Path)">
+                                            @segment.Name
+                                        </button>
+                                    }
+                                </li>
+                            }
                         }
-                    }
-                </div>
-            }
+                    </ol>
+                </nav>
+            </div>
         </div>
 
-        <!-- Middle: File List -->
-        <div class="col-md-5 border-end" style="overflow-y: auto;">
-            <h5 class="mb-3">
-                @if (currentPath.IsRoot)
-                {
-                    <span>/ (Root)</span>
-                }
-                else
-                {
-                    <span>@currentPath.EntityName</span>
-                }
-            </h5>
-
+    <div class="row mt-3" style="height: calc(100vh - 200px);">
+        <!-- File List (Full Width) -->
+        <div class="col-12" style="overflow-y: auto;">
             @if (isLoading)
             {
                 <div class="spinner-border spinner-border-sm" role="status">
                     <span class="visually-hidden">Laden...</span>
                 </div>
-            }
-            else if (!currentItems.Any())
-            {
-                <div class="alert alert-info mb-0 small">Verzeichnis ist leer</div>
             }
             else
             {
                 <table class="table table-sm table-hover">
                     <thead class="table-light">
                         <tr>
-                            <th style="width: 40%;">Name</th>
+                            <th style="width: 50%;">Name</th>
                             <th style="width: 20%;">Größe</th>
-                            <th style="width: 40%;">Geändert</th>
+                            <th style="width: 30%;">Geändert</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var item in currentItems)
+                        <!-- Parent folder button -->
+                        @if (!currentPath.IsRoot)
                         {
-                            var info = itemInfos.TryGetValue(item, out var i) ? i : null;
-                            <tr style="cursor: pointer;" @onclick="() => SelectItem(item)" class="@(selectedPath == item ? "table-active" : "")">
+                            <tr style="cursor: pointer;" @onclick="() => SelectDirectory(currentPath.ParentPath)" class="table-light">
                                 <td>
-                                    @if (isDirectory[item])
-                                    {
-                                        <i class="bi bi-folder-fill text-warning"></i>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-file"></i>
-                                    }
-                                    <span class="ms-2">@item.EntityName</span>
+                                    <i class="bi bi-arrow-up"></i>
+                                    <span class="ms-2 fw-bold">../</span>
                                 </td>
-                                <td class="small text-muted">
-                                    @if (info != null && !isDirectory[item])
-                                    {
-                                        @FormatSize(info.Length)
-                                    }
-                                </td>
-                                <td class="small text-muted">
-                                    @if (info != null)
-                                    {
-                                        @info.LastWriteTime.ToString("dd.MM.yyyy HH:mm")
-                                    }
-                                </td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                        }
+
+                        @if (currentItems.Any())
+                        {
+                            @foreach (var item in currentItems)
+                            {
+                                var info = itemInfos.TryGetValue(item, out var i) ? i : null;
+                                <tr style="cursor: pointer;" @onclick="() => SelectItem(item)" class="@(selectedPath == item ? "table-active" : "")">
+                                    <td>
+                                        @if (isDirectory[item])
+                                        {
+                                            <i class="bi bi-folder-fill text-warning"></i>
+                                        }
+                                        else
+                                        {
+                                            <i class="bi bi-file"></i>
+                                        }
+                                        <span class="ms-2">@item.EntityName</span>
+                                    </td>
+                                    <td class="small text-muted">
+                                        @if (info != null && !isDirectory[item])
+                                        {
+                                            @FormatSize(info.Length)
+                                        }
+                                    </td>
+                                    <td class="small text-muted">
+                                        @if (info != null)
+                                        {
+                                            @info.LastWriteTime.ToString("dd.MM.yyyy HH:mm")
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="3" class="text-center text-muted py-4">Verzeichnis ist leer</td>
                             </tr>
                         }
                     </tbody>
@@ -105,8 +117,8 @@
             }
         </div>
 
-        <!-- Right: Editor/Preview -->
-        <div class="col-md-4" style="overflow-y: auto;">
+        <!-- Right: Editor/Preview (Hidden for now) -->
+        <div class="col-12" style="overflow-y: auto; display: none;">
             @if (selectedPath == null)
             {
                 <div class="alert alert-secondary">Wähle eine Datei aus</div>
@@ -272,5 +284,32 @@
             len = len / 1024;
         }
         return $"{len:0.##} {sizes[order]}";
+    }
+
+    private List<BreadcrumbItem> GetBreadcrumbs()
+    {
+        var items = new List<BreadcrumbItem>();
+        var segments = currentPath.GetDirectorySegments();
+        var path = VfsPath.Root;
+
+        foreach (var segment in segments)
+        {
+            path = VfsPath.Parse(path, segment + "/");
+            items.Add(new BreadcrumbItem 
+            { 
+                Name = segment, 
+                Path = path,
+                IsCurrent = path == currentPath 
+            });
+        }
+
+        return items;
+    }
+
+    private class BreadcrumbItem
+    {
+        public string Name { get; set; } = "";
+        public VfsPath Path { get; set; }
+        public bool IsCurrent { get; set; }
     }
 }
