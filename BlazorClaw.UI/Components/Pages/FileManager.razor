@@ -69,14 +69,13 @@
                             </tr>
                         }
 
-                        @if (currentItems.Any())
+                        @if (itemInfos.Any())
                         {
-                            @foreach (var item in currentItems)
+                            @foreach (var info in itemInfos)
                             {
-                                var info = itemInfos.TryGetValue(item, out var i) ? i : null;
-                                <tr style="cursor: pointer;" @onclick="() => SelectItem(item)" class="@(selectedPath == item ? "table-active" : "")">
+                                <tr style="cursor: pointer;" @onclick="() => SelectItem(info.Entry.Path)" class="@(selectedPath == info.Entry.Path ? "table-active" : "")">
                                     <td>
-                                        @if (isDirectory[item])
+                                        @if (info.Entry.Path.IsDirectory)
                                         {
                                             <i class="bi bi-folder-fill text-warning"></i>
                                         }
@@ -84,10 +83,10 @@
                                         {
                                             <i class="bi bi-file"></i>
                                         }
-                                        <span class="ms-2">@item.EntityName</span>
+                                        <span class="ms-2">@info.Name</span>
                                     </td>
                                     <td class="small text-muted">
-                                        @if (info != null && !isDirectory[item])
+                                        @if (!info.Entry.Path.IsDirectory)
                                         {
                                             <span title="@info.Length bytes">@FormatSize(info.Length)</span>
                                         }
@@ -118,7 +117,7 @@
             {
                 <div class="alert alert-secondary">Wähle eine Datei aus</div>
             }
-            else if (isDirectory.TryGetValue(selectedPath.Value, out var isDir) && isDir)
+            else if (selectedPath.Value.IsDirectory)
             {
                 <div class="alert alert-info">
                     <strong>@selectedPath.Value.EntityName</strong> ist ein Verzeichnis
@@ -153,10 +152,7 @@
     private IVfsSystem? vfs;
     private VfsPath currentPath = VfsPath.Root;
     private VfsPath? selectedPath;
-    private List<VfsPath> currentItems = new();
-    private List<VfsPath> directories = new();
-    private Dictionary<VfsPath, bool> isDirectory = new();
-    private Dictionary<VfsPath, VfsPathInfo> itemInfos = new();
+    private List<VfsPathInfo> itemInfos = new();
     private string? fileContent;
     private bool contentError;
     private bool isLoading;
@@ -168,9 +164,8 @@
             var authState = await authenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
             var userId = userManager.GetUserId(user);
-            // Initialize with PhysicalFileSystem for testing
+
             vfs = PathUtils.BuildVFS(PathUtils.GetUserBasePath(serviceProvider, Guid.Parse(userId)), false);
-            await LoadDirectories();
             await SelectDirectory(VfsPath.Root);
         }
         catch (Exception ex)
@@ -179,22 +174,6 @@
         }
     }
 
-    private async Task LoadDirectories()
-    {
-        try
-        {
-            if (vfs == null) return;
-            directories.Clear();
-            await foreach (var dir in vfs.GetDirectorysAsync(VfsPath.Root))
-            {
-                directories.Add(dir);
-            }
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "Error loading directories");
-        }
-    }
 
     private async Task SelectDirectory(VfsPath path)
     {
@@ -202,8 +181,6 @@
         selectedPath = null;
         fileContent = null;
         contentError = false;
-        currentItems.Clear();
-        isDirectory.Clear();
         itemInfos.Clear();
 
         try
@@ -213,24 +190,13 @@
             currentPath = path;
 
             // Load all subpaths with metadata
-            var paths = new List<VfsPath>();
+            var infos = new List<Task<VfsPathInfo>>();
             await foreach (var subPath in vfs.GetSubPathsAsync(path))
             {
-                paths.Add(subPath);
-                isDirectory[subPath] = subPath.IsDirectory;
+                infos.Add(vfs.GetMetaInfoAsync(subPath));
             }
-
-            // Load metadata for all paths in parallel
-            var metadataTasks = paths.Select(async p => (Path: p, Info: await vfs.GetMetaInfoAsync(p)));
-            var results = await Task.WhenAll(metadataTasks);
-            
-            foreach (var (p, info) in results)
-            {
-                itemInfos[p] = info;
-                currentItems.Add(p);
-            }
-
-            currentItems = currentItems.OrderBy(x => isDirectory[x] ? 0 : 1).ThenBy(x => x.EntityName).ToList();
+            itemInfos = (await Task.WhenAll(infos))
+                        .OrderBy(x => x.Entry.Path.IsDirectory ? 0 : 1).ThenBy(x => x.Name).ToList();
         }
         catch (Exception ex)
         {
@@ -248,7 +214,7 @@
         fileContent = null;
         contentError = false;
 
-        if (isDirectory[path])
+        if (path.IsDirectory)
         {
             await SelectDirectory(path);
         }
