@@ -56,8 +56,9 @@ namespace BlazorClaw.Server.Services
                         ? (await db.Crontabs.MinAsync(o => o.NextExecution, cancellationToken: ct)) ?? DateTime.MaxValue
                         : DateTime.MaxValue;
 
-                    var newDelay = TimeSpan.FromSeconds(Math.Min(MaxDelay.TotalSeconds, ((nexteexc - start) + TimeSpan.FromSeconds(10)).TotalSeconds));
-                    if (newDelay != aktDelay)
+                    var newSecs = Math.Min(MaxDelay.TotalSeconds, ((nexteexc - start) + TimeSpan.FromSeconds(10)).TotalSeconds);
+                    var newDelay = TimeSpan.FromSeconds(newSecs > 1 ? newSecs : aktDelay.TotalSeconds);
+                    if (newDelay != aktDelay && newDelay.TotalSeconds > 1)
                     {
                         logger.LogDebug("Adjusted cron loop delay to {DelaySeconds}s (next execution: {NextExecution})", newDelay.TotalSeconds, nexteexc);
                         aktDelay = newDelay;

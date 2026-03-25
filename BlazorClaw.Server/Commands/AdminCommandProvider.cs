@@ -36,8 +36,7 @@ public class StatusCommand : ISystemCommand, ISystemCommandExecutor
             $"🧮 Tokens: {tokens}\r\n" +
             $"🧮 Cost: {sessstate?.Costs}\r\n" +
             $"🧵 Session: {context.Session?.Id}\r\n" +
-            $"🧵 Channel: {context.Channel?.ChannelProvider}:{context.Channel?.ChannelId}\r\n" +
-            $"⚙️ Runtime: direct · Think: off";
+            $"🧵 Channel: {context.Channel?.ChannelProvider}:{context.Channel?.ChannelId}";
     }
 }
 

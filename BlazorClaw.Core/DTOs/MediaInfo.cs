@@ -9,6 +9,5 @@ namespace BlazorClaw.Core.DTOs
 
         [JsonPropertyName("url")]
         public string Url { get; set; } = string.Empty;
-
     }
 }
