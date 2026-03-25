@@ -7,11 +7,14 @@
 @using BlazorClaw.Core.Models
 @using BlazorClaw.Core.Data
 @using BlazorClaw.Core.Services
+@using Microsoft.EntityFrameworkCore
 @inject NavigationManager Nav
 @inject ISessionQueryService SessionQueryService
 @inject ISessionManager sessionManager
 @inject UserManager<ApplicationUser> UserManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ApplicationDbContext Db
+@inject ILogger<Home> Logger
 
 <PageTitle>Dashboard - BlazorClaw</PageTitle>
 
@@ -49,7 +52,7 @@
                         <th>Modell</th>
                         <th>Letzte Aktivität</th>
                         <th>Erstellt</th>
-                        <th></th>
+                        <th style="width: 120px;">Aktionen</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -65,9 +68,12 @@
                             <td>@session.LastUsedAt.ToLocalTime().ToString("g")</td>
                             <td>@session.CreatedAt.ToLocalTime().ToString("d")</td>
                             <td>
-                                <a href="/chat/@session.Id" class="btn btn-outline-primary btn-sm">
+                                <a href="/chat/@session.Id" class="btn btn-outline-primary btn-sm" title="Öffnen">
                                     <i class="bi bi-chat"></i>
                                 </a>
+                                <button class="btn btn-outline-danger btn-sm ms-1" @onclick="() => ShowDeleteConfirmation(session)" disabled="@isDeleting" title="Löschen">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </td>
                         </tr>
                     }
@@ -77,10 +83,42 @@
     }
 </div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal @(showDeleteModal ? "show d-block" : "")" tabindex="-1" style="@(showDeleteModal ? "display: block; background: rgba(0,0,0,0.5);" : "display: none;")">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Session löschen</h5>
+                <button type="button" class="btn-close" @onclick="() => showDeleteModal = false"></button>
+            </div>
+            <div class="modal-body">
+                @if (sessionToDelete != null)
+                {
+                    <p>Möchtest du die Session <strong>"@sessionToDelete.Title"</strong> wirklich löschen?</p>
+                    <p class="text-warning"><small><i class="bi bi-exclamation-triangle"></i> Diese Aktion kann nicht rückgängig gemacht werden.</small></p>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="() => showDeleteModal = false">Abbrechen</button>
+                <button type="button" class="btn btn-danger" @onclick="ConfirmDelete" disabled="@isDeleting">
+                    @if (isDeleting)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    Löschen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @code {
     private List<ChatSession>? sessions;
     private bool isAdmin;
     private string? userId;
+    private bool showDeleteModal = false;
+    private ChatSession? sessionToDelete;
+    private bool isDeleting = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -103,5 +141,42 @@
         var newId = Guid.NewGuid();
         var sess = await sessionManager.GetOrCreateSessionAsync(newId);
         if (sess != null) Nav.NavigateTo($"/chat/{sess.Session.Id}");
+    }
+
+    private void ShowDeleteConfirmation(ChatSession session)
+    {
+        sessionToDelete = session;
+        showDeleteModal = true;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (sessionToDelete == null)
+            return;
+
+        isDeleting = true;
+        try
+        {
+            Db.ChatSessions.Remove(sessionToDelete);
+            await Db.SaveChangesAsync();
+
+            showDeleteModal = false;
+            sessionToDelete = null;
+            
+            // Reload sessions
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            sessions = isAdmin 
+                ? await SessionQueryService.GetAllSessionsAsync()
+                : await SessionQueryService.GetSessionsForUserAsync(userId!);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error deleting session");
+        }
+        finally
+        {
+            isDeleting = false;
+        }
     }
 }
