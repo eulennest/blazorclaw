@@ -38,7 +38,7 @@
         </div>
 
         <!-- Middle: File List -->
-        <div class="col-md-3 border-end" style="overflow-y: auto;">
+        <div class="col-md-5 border-end" style="overflow-y: auto;">
             <h5 class="mb-3">
                 @if (currentPath.IsRoot)
                 {
@@ -62,28 +62,51 @@
             }
             else
             {
-                <div class="list-group list-group-sm">
-                    @foreach (var item in currentItems)
-                    {
-                        <button class="list-group-item list-group-item-action @(selectedPath == item ? "active" : "")" 
-                                @onclick="() => SelectItem(item)">
-                            @if (isDirectory[item])
-                            {
-                                <i class="bi bi-folder-fill text-warning"></i>
-                            }
-                            else
-                            {
-                                <i class="bi bi-file"></i>
-                            }
-                            <span class="ms-2 small">@item.EntityName</span>
-                        </button>
-                    }
-                </div>
+                <table class="table table-sm table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 40%;">Name</th>
+                            <th style="width: 20%;">Größe</th>
+                            <th style="width: 40%;">Geändert</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in currentItems)
+                        {
+                            var info = itemInfos.TryGetValue(item, out var i) ? i : null;
+                            <tr style="cursor: pointer;" @onclick="() => SelectItem(item)" class="@(selectedPath == item ? "table-active" : "")">
+                                <td>
+                                    @if (isDirectory[item])
+                                    {
+                                        <i class="bi bi-folder-fill text-warning"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-file"></i>
+                                    }
+                                    <span class="ms-2">@item.EntityName</span>
+                                </td>
+                                <td class="small text-muted">
+                                    @if (info != null && !isDirectory[item])
+                                    {
+                                        @FormatSize(info.Length)
+                                    }
+                                </td>
+                                <td class="small text-muted">
+                                    @if (info != null)
+                                    {
+                                        @info.LastWriteTime.ToString("dd.MM.yyyy HH:mm")
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             }
         </div>
 
         <!-- Right: Editor/Preview -->
-        <div class="col-md-6" style="overflow-y: auto;">
+        <div class="col-md-4" style="overflow-y: auto;">
             @if (selectedPath == null)
             {
                 <div class="alert alert-secondary">Wähle eine Datei aus</div>
@@ -126,6 +149,7 @@
     private List<VfsPath> currentItems = new();
     private List<VfsPath> directories = new();
     private Dictionary<VfsPath, bool> isDirectory = new();
+    private Dictionary<VfsPath, VfsPathInfo> itemInfos = new();
     private string? fileContent;
     private bool contentError;
     private bool isLoading;
@@ -170,6 +194,7 @@
         contentError = false;
         currentItems.Clear();
         isDirectory.Clear();
+        itemInfos.Clear();
 
         try
         {
@@ -177,11 +202,22 @@
 
             currentPath = path;
 
-            // Load all subpaths (files + directories)
+            // Load all subpaths with metadata
+            var paths = new List<VfsPath>();
             await foreach (var subPath in vfs.GetSubPathsAsync(path))
             {
-                currentItems.Add(subPath);
+                paths.Add(subPath);
                 isDirectory[subPath] = subPath.IsDirectory;
+            }
+
+            // Load metadata for all paths in parallel
+            var metadataTasks = paths.Select(async p => (Path: p, Info: await vfs.GetMetaInfoAsync(p)));
+            var results = await Task.WhenAll(metadataTasks);
+            
+            foreach (var (p, info) in results)
+            {
+                itemInfos[p] = info;
+                currentItems.Add(p);
             }
 
             currentItems = currentItems.OrderBy(x => isDirectory[x] ? 0 : 1).ThenBy(x => x.EntityName).ToList();
@@ -223,5 +259,18 @@
                 contentError = true;
             }
         }
+    }
+
+    private string FormatSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
     }
 }
