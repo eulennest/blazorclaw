@@ -50,9 +50,10 @@
                 <table class="table table-sm table-hover">
                     <thead class="table-light">
                         <tr>
-                            <th style="width: 50%;">Name</th>
-                            <th style="width: 20%;">Größe</th>
-                            <th style="width: 30%;">Geändert</th>
+                            <th style="width: 40%;">Name</th>
+                            <th style="width: 15%;">Größe</th>
+                            <th style="width: 25%;">Geändert</th>
+                            <th style="width: 20%;">Aktionen</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -64,6 +65,7 @@
                                     <i class="bi bi-arrow-up"></i>
                                     <span class="ms-2 fw-bold">../</span>
                                 </td>
+                                <td></td>
                                 <td></td>
                                 <td></td>
                             </tr>
@@ -81,7 +83,7 @@
                                         }
                                         else
                                         {
-                                            <i class="bi bi-file"></i>
+                                            <i class="@GetFileIcon(info.Name)"></i>
                                         }
                                         <span class="ms-2">@info.Name</span>
                                     </td>
@@ -97,13 +99,30 @@
                                             @info.LastWriteTime.ToString("dd.MM.yyyy HH:mm")
                                         }
                                     </td>
+                                    <td class="small text-nowrap">
+                                        @if (!info.Entry.Path.IsDirectory)
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" @onclick:stopPropagation="true" @onclick="() => OpenViewer(info)">
+                                                <i class="bi bi-eye"></i> Öffnen
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" @onclick:stopPropagation="true" @onclick="() => DownloadFile(info)">
+                                                <i class="bi bi-download"></i>
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" @onclick:stopPropagation="true" @onclick="() => SelectDirectory(info.Entry.Path)">
+                                                <i class="bi bi-arrow-right"></i> Öffnen
+                                            </button>
+                                        }
+                                    </td>
                                 </tr>
                             }
                         }
                         else
                         {
                             <tr>
-                                <td colspan="3" class="text-center text-muted py-4">Verzeichnis ist leer</td>
+                                <td colspan="4" class="text-center text-muted py-4">Verzeichnis ist leer</td>
                             </tr>
                         }
                     </tbody>
@@ -111,42 +130,51 @@
             }
         </div>
 
-        <!-- Right: Editor/Preview (Hidden for now) -->
-        <div class="col-12" style="overflow-y: auto; display: none;">
-            @if (selectedPath == null)
-            {
-                <div class="alert alert-secondary">Wähle eine Datei aus</div>
-            }
-            else if (selectedPath.Value.IsDirectory)
-            {
-                <div class="alert alert-info">
-                    <strong>@selectedPath.Value.EntityName</strong> ist ein Verzeichnis
-                </div>
-            }
-            else
-            {
-                <h5>@selectedPath.Value.EntityName</h5>
-                <small class="text-muted">@selectedPath.Value.Path</small>
-                <hr />
-
-                @if (fileContent == null && !contentError)
-                {
-                    <div class="spinner-border spinner-border-sm" role="status">
-                        <span class="visually-hidden">Laden...</span>
-                    </div>
-                }
-                else if (contentError)
-                {
-                    <div class="alert alert-danger">Binärdatei oder Fehler beim Laden</div>
-                }
-                else
-                {
-                    <textarea class="form-control font-monospace" style="height: 400px; font-size: 0.85rem;" readonly>@fileContent</textarea>
-                }
-            }
-        </div>
     </div>
 </div>
+
+<!-- Viewer Modal -->
+@if (viewerInfo != null)
+{
+    <div class="modal d-block" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="@GetFileIcon(viewerInfo.Name)"></i>
+                        @viewerInfo.Name
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseViewer"></button>
+                </div>
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                    @if (fileContent == null && !contentError)
+                    {
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Laden...</span>
+                        </div>
+                    }
+                    else if (contentError)
+                    {
+                        <div class="alert alert-warning mb-0">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Binärdatei oder Fehler beim Laden - nur Download verfügbar
+                        </div>
+                    }
+                    else
+                    {
+                        <textarea class="form-control font-monospace" style="height: 50vh; font-size: 0.85rem;" @bind="fileContent"></textarea>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseViewer">Schließen</button>
+                    <button type="button" class="btn btn-primary" @onclick="() => DownloadFile(viewerInfo)">
+                        <i class="bi bi-download"></i> Download
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private IVfsSystem? vfs;
@@ -156,6 +184,7 @@
     private string? fileContent;
     private bool contentError;
     private bool isLoading;
+    private VfsPathInfo? viewerInfo;
 
     protected override async Task OnInitializedAsync()
     {
@@ -280,4 +309,105 @@
         public VfsPath Path { get; set; }
         public bool IsCurrent { get; set; }
     }
+
+    private string GetFileIcon(string filename)
+    {
+        var ext = Path.GetExtension(filename).ToLowerInvariant();
+        
+        // Bild-Dateien
+        if (new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg" }.Contains(ext))
+            return "bi bi-image text-info";
+        
+        // Dokumente
+        if (new[] { ".pdf" }.Contains(ext))
+            return "bi bi-file-pdf text-danger";
+        if (new[] { ".doc", ".docx", ".odt" }.Contains(ext))
+            return "bi bi-file-word text-primary";
+        if (new[] { ".xls", ".xlsx", ".csv", ".ods" }.Contains(ext))
+            return "bi bi-file-spreadsheet text-success";
+        
+        // Code & Config
+        if (new[] { ".cs", ".js", ".ts", ".py", ".java", ".cpp", ".c", ".rb", ".go", ".rs" }.Contains(ext))
+            return "bi bi-file-code text-secondary";
+        if (new[] { ".json", ".xml", ".yaml", ".yml", ".toml", ".ini", ".conf", ".config" }.Contains(ext))
+            return "bi bi-gear text-muted";
+        
+        // Text
+        if (new[] { ".txt", ".md", ".log", ".sh", ".bash", ".ps1", ".bat" }.Contains(ext))
+            return "bi bi-file-text text-dark";
+        
+        // Archive
+        if (new[] { ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2" }.Contains(ext))
+            return "bi bi-file-zip text-warning";
+        
+        // Video & Audio
+        if (new[] { ".mp4", ".avi", ".mov", ".mkv", ".flv", ".wmv" }.Contains(ext))
+            return "bi bi-film text-info";
+        if (new[] { ".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a" }.Contains(ext))
+            return "bi bi-music-note text-info";
+        
+        // Default
+        return "bi bi-file text-muted";
+    }
+
+    private async Task OpenViewer(VfsPathInfo info)
+    {
+        viewerInfo = info;
+        fileContent = null;
+        contentError = false;
+
+        try
+        {
+            if (vfs == null) return;
+
+            using var stream = await vfs.OpenFileAsync(info.Entry.Path, FileMode.Open, FileAccess.Read);
+            
+            // Limit to 1MB for preview
+            if (stream.Length > 1024 * 1024)
+            {
+                contentError = true;
+                return;
+            }
+
+            using var reader = new StreamReader(stream);
+            fileContent = await reader.ReadToEndAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading file: {Path}", info.Path);
+            contentError = true;
+        }
+    }
+
+    private void CloseViewer()
+    {
+        viewerInfo = null;
+        fileContent = null;
+        contentError = false;
+    }
+
+    private async Task DownloadFile(VfsPathInfo info)
+    {
+        try
+        {
+            if (vfs == null) return;
+
+            using var stream = await vfs.OpenFileAsync(info.Entry.Path, FileMode.Open, FileAccess.Read);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            
+            var fileBytes = ms.ToArray();
+            var base64 = Convert.ToBase64String(fileBytes);
+            
+            // Trigger browser download
+            await JS.InvokeVoidAsync("downloadFile", info.Name, base64);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error downloading file: {Path}", info.Path);
+        }
+    }
+
+    [Inject]
+    protected IJSRuntime JS { get; set; } = default!;
 }
