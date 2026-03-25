@@ -289,20 +289,24 @@
     private List<BreadcrumbItem> GetBreadcrumbs()
     {
         var items = new List<BreadcrumbItem>();
-        var segments = currentPath.GetDirectorySegments();
-        var path = VfsPath.Root;
+        var path = currentPath;
 
-        foreach (var segment in segments)
+        // Sammle alle Parent-Paths bis Root
+        do
         {
-            path = VfsPath.Parse(path, segment + "/");
             items.Add(new BreadcrumbItem 
             { 
-                Name = segment, 
+                Name = path.EntityName ?? "Root", 
                 Path = path,
                 IsCurrent = path == currentPath 
             });
-        }
+            
+            if (path.IsRoot) break;
+            path = path.ParentPath;
+        } while (!path.IsRoot);
 
+        // Reverse um von Root zu current zu gehen
+        items.Reverse();
         return items;
     }
 
