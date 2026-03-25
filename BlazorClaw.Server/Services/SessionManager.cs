@@ -451,28 +451,41 @@ namespace BlazorClaw.Server.Services
 
         private void SetVFS(ChatSessionState sessionState)
         {
-            var vfs = new MountpointVfsSystem();
             var userId = sessionState.Session.UserId?.ToLowerInvariant();
             if (!Guid.TryParse(userId, out var uuid)) uuid = sessionState.Session.Id;
-
             var path = PathUtils.GetUserBasePath(sessionState.Services, uuid);
-            vfs.AddMountpoint(VfsPath.Parse("/~/"), new PhysicalFileSystem(Path.Combine(path, "workspace")));
-            vfs.AddMountpoint(VfsPath.Parse("/~memory/"), new PhysicalFileSystem(Path.Combine(path, "memory")));
-            vfs.AddMountpoint(VfsPath.Parse("/~secure/"), new PhysicalFileSystem(Path.Combine(path, "secure")), true);
+            sessionState.VFS = BuildVFS(path, true);
+        }
 
-            if (OperatingSystem.IsWindows())
+        public static IVfsSystem BuildVFS(string userBaseFolder, bool addRoot)
+        {
+            var vfs = new MountpointVfsSystem();
+            if (Directory.Exists(userBaseFolder))
             {
-                foreach (var item in DriveInfo.GetDrives())
+                Directory.CreateDirectory(Path.Combine(userBaseFolder, "workspace"));
+                vfs.AddMountpoint(VfsPath.Parse("/~/"), new PhysicalFileSystem(Path.Combine(userBaseFolder, "workspace")));
+                Directory.CreateDirectory(Path.Combine(userBaseFolder, "memory"));
+                vfs.AddMountpoint(VfsPath.Parse("/~memory/"), new PhysicalFileSystem(Path.Combine(userBaseFolder, "memory")));
+                Directory.CreateDirectory(Path.Combine(userBaseFolder, "secure"));
+                vfs.AddMountpoint(VfsPath.Parse("/~secure/"), new PhysicalFileSystem(Path.Combine(userBaseFolder, "secure")), true);
+            }
+
+            if (addRoot)
+            {
+                if (OperatingSystem.IsWindows())
                 {
-                    vfs.AddMountpoint(VfsPath.Parse($"/{item.Name.Trim(':', '/')}/"), new PhysicalFileSystem(item.RootDirectory.FullName));
+                    foreach (var item in DriveInfo.GetDrives())
+                    {
+                        vfs.AddMountpoint(VfsPath.Parse($"/{item.Name.Trim(':', '/')}/"), new PhysicalFileSystem(item.RootDirectory.FullName));
+                    }
+                }
+                else
+                {
+                    vfs.AddMountpoint(VfsPath.Root, new PhysicalFileSystem("/"), true);
                 }
             }
-            else
-            {
-                vfs.AddMountpoint(VfsPath.Root, new PhysicalFileSystem("/"), true);
-            }
+            return vfs;
 
-            sessionState.VFS = vfs;
         }
 
     }
