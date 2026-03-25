@@ -46,6 +46,11 @@ namespace BlazorClaw.Core.VFS
         }
 
         public virtual VfsPathInfo Clone(IVfsSystem sys, VfsPath path) => Clone(VfsEntity.Create(sys, path));
+
+        public override string ToString()
+        {
+            return Path.ToString();
+        }
     }
 
 }

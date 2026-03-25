@@ -178,7 +178,7 @@
                 <button type="button" class="btn-close" @onclick="() => showDeleteConfirmation = false"></button>
             </div>
             <div class="modal-body">
-                <p>Möchtest du die Datei <strong>@fileToDelete</strong> wirklich löschen?</p>
+                <p>Möchtest du die Datei <strong>@fileToDelete?.Path</strong> wirklich löschen?</p>
                 <p class="text-warning"><small><i class="bi bi-exclamation-triangle"></i> Diese Aktion kann nicht rückgängig gemacht werden.</small></p>
             </div>
             <div class="modal-footer">
