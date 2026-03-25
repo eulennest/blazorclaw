@@ -177,18 +177,11 @@
 
             currentPath = path;
 
-            // Load subdirectories
-            await foreach (var dir in vfs.GetDirectorysAsync(path))
+            // Load all subpaths (files + directories)
+            await foreach (var subPath in vfs.GetSubPathsAsync(path))
             {
-                currentItems.Add(dir);
-                isDirectory[dir] = true;
-            }
-
-            // Load files
-            await foreach (var file in vfs.GetFilesAsync(path))
-            {
-                currentItems.Add(file);
-                isDirectory[file] = false;
+                currentItems.Add(subPath);
+                isDirectory[subPath] = subPath.IsDirectory;
             }
 
             currentItems = currentItems.OrderBy(x => isDirectory[x] ? 0 : 1).ThenBy(x => x.EntityName).ToList();
