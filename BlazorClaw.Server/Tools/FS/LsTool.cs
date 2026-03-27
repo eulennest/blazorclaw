@@ -46,32 +46,36 @@ public class LsTool : BaseTool<LsParams>
         matcher.AddInclude(p.Pattern ?? "*");
 
         var sb = new StringBuilder();
+        var sbhidden = new StringBuilder();
         if (details) sb.AppendLine("path\tedittime\tsize");
         var c = 0;
         var hidden = 0;
+        var limit = p.Recursive ?? false ? 50 : 200;
+        var sbu = sb;
 
         await foreach (var entry in entrys.Where(o => matcher.Match(o.EntityName).HasMatches || matcher.Match(o.ToString()).HasMatches))
         {
             var f = await vfs.GetMetaInfoAsync(entry);
             c++;
-            if(c>50)
+            if (c > limit)
             {
                 hidden++;
-                continue;
+                sbhidden.Append(sb.ToString());
+                sbu = sbhidden;
             }
             if (f.Path.IsFile)
             {
-                sb.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}\t{f.Length}" : f.Path.ToString());
+                sbu.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}\t{f.Length}" : f.Path.ToString());
             }
             else
             {
-                sb.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}" : f.Path.ToString());
+                sbu.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}" : f.Path.ToString());
             }
         }
-        if(hidden >0)
-            sb.AppendLine($"[OUTPUT begrenzt auf {c-hidden}  files, {hidden} files übersprungen]");
+        if (hidden > 0)
+            sb.AppendLine($"[OUTPUT begrenzt auf {c - hidden}  files, {hidden} files übersprungen]");
 
         if (c == 0) return "Keine Dateien gefunden.";
-        return sb.ToString();
+        return (hidden > limit / 2) ? sbhidden.ToString() : sb.ToString();
     }
 }
