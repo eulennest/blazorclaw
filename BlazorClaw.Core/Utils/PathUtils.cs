@@ -71,7 +71,7 @@ namespace BlazorClaw.Core.Utils
             var uuid = Guid.NewGuid();
             if (userId == null)
             {
-                var aus = sp.GetRequiredService<HttpContextAccessor>();
+                var aus = sp.GetRequiredService<IHttpContextAccessor>();
                 if (aus.HttpContext?.User != null)
                 {
                     u = await au.GetUserAsync(aus.HttpContext.User).ConfigureAwait(false);
