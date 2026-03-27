@@ -69,7 +69,7 @@ namespace BlazorClaw.Core.Utils
             var au = sp.GetRequiredService<UserManager<ApplicationUser>>();
             ApplicationUser? u = null;
             var uuid = Guid.NewGuid();
-            if (userId == null)
+            if (string.IsNullOrWhiteSpace(userId))
             {
                 var aus = sp.GetRequiredService<IHttpContextAccessor>();
                 if (aus.HttpContext?.User != null)
