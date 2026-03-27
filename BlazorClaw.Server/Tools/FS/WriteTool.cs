@@ -42,8 +42,6 @@ public class WriteTool : BaseTool<WriteTool.Params>
         await vfs.CreateDirectoryRecursiveAsync(path.ParentPath);
 
         var mi = await vfs.GetMetaInfoAsync(path);
-        if (!mi.Exists) throw new FileNotFoundException($"Die Datei '{p.Path}' wurde nicht gefunden.", p.Path);
-
         var mode = p.Mode ?? WriteMode.Create;
         if (mode == WriteMode.Append)
         {
