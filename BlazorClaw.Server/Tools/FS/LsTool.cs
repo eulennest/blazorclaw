@@ -5,6 +5,7 @@ using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.VFS;
 using Microsoft.Extensions.FileSystemGlobbing;
 using System.ComponentModel;
+using System.Net;
 using System.Text;
 
 namespace BlazorClaw.Server.Tools.FS;
@@ -47,11 +48,17 @@ public class LsTool : BaseTool<LsParams>
         var sb = new StringBuilder();
         if (details) sb.AppendLine("path\tedittime\tsize");
         var c = 0;
+        var hidden = 0;
 
         await foreach (var entry in entrys.Where(o => matcher.Match(o.EntityName).HasMatches || matcher.Match(o.ToString()).HasMatches))
         {
             var f = await vfs.GetMetaInfoAsync(entry);
             c++;
+            if(c>50)
+            {
+                hidden++;
+                continue;
+            }
             if (f.Path.IsFile)
             {
                 sb.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}\t{f.Length}" : f.Path.ToString());
@@ -61,6 +68,8 @@ public class LsTool : BaseTool<LsParams>
                 sb.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}" : f.Path.ToString());
             }
         }
+        if(hidden >0)
+            sb.AppendLine($"[OUTPUT begrenzt auf {c-hidden}  files, {hidden} files übersprungen]");
 
         if (c == 0) return "Keine Dateien gefunden.";
         return sb.ToString();
