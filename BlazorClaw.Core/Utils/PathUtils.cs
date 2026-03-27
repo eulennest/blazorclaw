@@ -128,6 +128,8 @@ namespace BlazorClaw.Core.Utils
             }
             else
             {
+                vfs.AddMountpoint(VfsPath.Parse(VfsPath.Root, Environment.CurrentDirectory, VfsPathParseMode.Directory), new NoOpFileSystem(), true);
+
                 foreach (var item in sandboxPaths)
                 {
                     vfs.AddMountpoint(VfsPath.Parse(VfsPath.Root, item, VfsPathParseMode.Directory), new PhysicalFileSystem(item), true);
