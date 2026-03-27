@@ -137,7 +137,7 @@ namespace BlazorClaw.Core.VFS
             var result = cwd;
 
             string? filename = null;
-            if (mode == VfsPathParseMode.File || (mode == VfsPathParseMode.Auto && allSeps.Contains(relativePath.Last())))
+            if (mode == VfsPathParseMode.File || (mode == VfsPathParseMode.Auto && !allSeps.Contains(relativePath.Last())))
             {
                 filename = segments[^1];
                 segments.RemoveAt(segments.Count - 1);

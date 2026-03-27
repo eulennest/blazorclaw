@@ -69,6 +69,6 @@ public class EditTool : BaseTool<EditTool.Params>
             using var st = new StreamWriter(strm);
             await st.WriteAsync(newContent);
         }
-        return $"Datei '{parameters.Path}' erfolgreich editiert.";
+        return $"Datei '{path}' erfolgreich editiert.";
     }
 }

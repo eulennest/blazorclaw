@@ -29,6 +29,6 @@ public class MkdirTool : BaseTool<MkdirParams>
         var vfs = context.Provider.GetRequiredService<IVfsSystem>();
         var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path, VfsPathParseMode.Directory);
         await vfs.CreateDirectoryRecursiveAsync(path);
-        return $"Verzeichnis {p.Path} erstellt.";
+        return $"Verzeichnis {path} erstellt.";
     }
 }

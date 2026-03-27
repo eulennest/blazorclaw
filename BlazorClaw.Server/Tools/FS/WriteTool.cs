@@ -37,7 +37,7 @@ public class WriteTool : BaseTool<WriteTool.Params>
 
         var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path);
         if (path.IsDirectory)
-            throw new FileNotFoundException($"Path ist keine Datei: {p.Path}");
+            throw new FileNotFoundException($"Path ist keine Datei: {path}");
 
         await vfs.CreateDirectoryRecursiveAsync(path.ParentPath);
 
@@ -50,7 +50,7 @@ public class WriteTool : BaseTool<WriteTool.Params>
             using var stream = await mi.OpenAsync(FileMode.Append, FileAccess.Write);
             using var reader = new StreamWriter(stream);
             await reader.WriteAsync(p.Content);
-            return $"Inhalt erfolgreich an {p.Path} angehängt.";
+            return $"Inhalt erfolgreich an {path} angehängt.";
         }
         else
         {
@@ -61,7 +61,7 @@ public class WriteTool : BaseTool<WriteTool.Params>
             using var reader = new StreamWriter(stream);
             await reader.WriteAsync(p.Content);
 
-            return $"Datei erfolgreich gespeichert unter: {p.Path}";
+            return $"Datei erfolgreich gespeichert unter: {path}";
         }
     }
 }

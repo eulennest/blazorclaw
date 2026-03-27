@@ -33,7 +33,7 @@ public class RmTool : BaseTool<RmParams>
         var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path);
 
         if (!await vfs.ExistsAsync(path))
-            throw new FileNotFoundException($"Der Path '{p.Path}' wurde nicht gefunden.", p.Path);
+            throw new FileNotFoundException($"Der Path '{path}' wurde nicht gefunden.", p.Path);
 
         if (p.Recursive)
             await vfs.DeleteRecursiveAsync(path);
