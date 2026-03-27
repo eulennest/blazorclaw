@@ -38,7 +38,7 @@ public class LsTool : BaseTool<LsParams>
         var vfs = context.Provider.GetRequiredService<IVfsSystem>();
         var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path, VfsPathParseMode.Directory);
 
-        var entrys = p.Recursive ?? false ? vfs.GetSubPathsRecursiveAsync(path) : vfs.GetSubPathsRecursiveAsync(path);
+        var entrys = p.Recursive ?? false ? vfs.GetSubPathsRecursiveAsync(path) : vfs.GetSubPathsAsync(path);
         var details = p.Details ?? false;
 
         var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
@@ -48,7 +48,7 @@ public class LsTool : BaseTool<LsParams>
         if (details) sb.AppendLine("path\tedittime\tsize");
         var c = 0;
 
-        await foreach (var entry in entrys.Where(o=> matcher.Match(o.ToString()).HasMatches))
+        await foreach (var entry in entrys.Where(o => matcher.Match(o.EntityName).HasMatches || matcher.Match(o.ToString()).HasMatches))
         {
             var f = await vfs.GetMetaInfoAsync(entry);
             c++;
