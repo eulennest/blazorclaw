@@ -4,12 +4,11 @@ using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.VFS;
 using BlazorClaw.Core.VFS.Systems;
-using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
 namespace BlazorClaw.Core.Utils
@@ -72,10 +71,13 @@ namespace BlazorClaw.Core.Utils
             var uuid = Guid.NewGuid();
             if (userId == null)
             {
-                var aus = sp.GetRequiredService<AuthenticationState>();
-                u = await au.GetUserAsync(aus.User).ConfigureAwait(false);
-                if (u != null) userId = u.Id;
-                if (!Guid.TryParse(userId, out uuid)) uuid = sess?.Id ?? Guid.NewGuid();
+                var aus = sp.GetRequiredService<HttpContextAccessor>();
+                if (aus.HttpContext?.User != null)
+                {
+                    u = await au.GetUserAsync(aus.HttpContext.User).ConfigureAwait(false);
+                    if (u != null) userId = u.Id;
+                    if (!Guid.TryParse(userId, out uuid)) uuid = sess?.Id ?? Guid.NewGuid();
+                }
             }
             u ??= await au.FindByIdAsync(userId).ConfigureAwait(false);
             var roles = u != null ? await au.GetRolesAsync(u).ConfigureAwait(false) : ["Guest"];
