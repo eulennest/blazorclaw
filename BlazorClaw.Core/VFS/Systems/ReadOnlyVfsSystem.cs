@@ -23,5 +23,9 @@ namespace BlazorClaw.Core.VFS.Systems
         {
             throw new InvalidOperationException("This is a read-only filesystem.");
         }
+        public override Task DeleteRecursiveAsync(VfsPath path, CancellationToken cancelationToken = default)
+        {
+            throw new InvalidOperationException("This is a read-only filesystem.");
+        }
     }
 }

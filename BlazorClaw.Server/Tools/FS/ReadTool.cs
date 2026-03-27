@@ -2,6 +2,7 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -31,13 +32,18 @@ public class ReadTool : BaseTool<ReadParams>
 
     protected override async Task<string> ExecuteInternalAsync(ReadParams p, MessageContext context)
     {
-        var path = Path.Combine(context.GetWorkspacePath(), p.Path);
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
 
-        if (!File.Exists(path)) throw new FileNotFoundException($"Die Datei '{p.Path}' wurde nicht gefunden.", p.Path);
+        var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path);
+        if (path.IsDirectory)
+            throw new FileNotFoundException($"Path ist keine Datei: {p.Path}");
+
+        var mi = await vfs.GetMetaInfoAsync(path);
+        if (!mi.Exists) throw new FileNotFoundException($"Die Datei '{p.Path}' wurde nicht gefunden.", p.Path);
         if (p.Limit.HasValue && p.Limit.Value < 0) throw new ArgumentException("Limit muss größer oder gleich 0 sein.", nameof(p.Limit));
         if (p.Offset.HasValue && p.Offset.Value < 0) throw new ArgumentException("Offset muss größer oder gleich 0 sein.", nameof(p.Offset));
 
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var stream = await mi.OpenReadAsync();
         using var reader = new StreamReader(stream);
         if (p.Offset.HasValue)
         {

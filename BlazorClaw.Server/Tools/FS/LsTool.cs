@@ -2,6 +2,8 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
+using Microsoft.Extensions.FileSystemGlobbing;
 using System.ComponentModel;
 using System.Text;
 
@@ -31,33 +33,36 @@ public class LsTool : BaseTool<LsParams>
     public override string Name => "fs_ls";
     public override string Description => "Listet Dateien in einem Verzeichnis auf (optional mit Glob-Pattern, Details und Rekursion)";
 
-    protected override Task<string> ExecuteInternalAsync(LsParams p, MessageContext context)
+    protected override async Task<string> ExecuteInternalAsync(LsParams p, MessageContext context)
     {
-        var path = Path.Combine(context.GetWorkspacePath(), p.Path).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
-        if (!Directory.Exists(path)) return Task.FromResult("Pfad nicht gefunden");
-        var searchOption = (p.Recursive ?? false) ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        var ml = path.Length;
-        var mdi = new DirectoryInfo(path);
-        var entries = mdi.EnumerateFileSystemInfos(p.Pattern ?? "*", searchOption);
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
+        var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path, VfsPathParseMode.Directory);
+
+        var entrys = p.Recursive ?? false ? vfs.GetSubPathsRecursiveAsync(path) : vfs.GetSubPathsRecursiveAsync(path);
         var details = p.Details ?? false;
+
+        var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
+        matcher.AddInclude(p.Pattern ?? "*");
 
         var sb = new StringBuilder();
         if (details) sb.AppendLine("path\tedittime\tsize");
         var c = 0;
-        foreach (var f in entries)
+
+        await foreach (var entry in entrys.Where(o=> matcher.Match(o.ToString()).HasMatches))
         {
+            var f = await vfs.GetMetaInfoAsync(entry);
             c++;
-            if (f is FileInfo fi)
+            if (f.Path.IsFile)
             {
-                sb.AppendLine(details ? $"{f.FullName[ml..]}\t{f.LastWriteTimeUtc.ToUnix()}\t{fi.Length}" : f.FullName[ml..]);
+                sb.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}\t{f.Length}" : f.Path.ToString());
             }
-            else if (f is DirectoryInfo di)
+            else
             {
-                sb.AppendLine(details ? $"{f.FullName[ml..]}{Path.DirectorySeparatorChar}\t{f.LastWriteTimeUtc.ToUnix()}" : f.FullName[ml..] + Path.DirectorySeparatorChar);
+                sb.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}" : f.Path.ToString());
             }
         }
 
-        if (c == 0) return Task.FromResult("Keine Dateien gefunden.");
-        return Task.FromResult(sb.ToString());
+        if (c == 0) return "Keine Dateien gefunden.";
+        return sb.ToString();
     }
 }

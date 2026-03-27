@@ -2,8 +2,11 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
+using Microsoft.Extensions.FileSystemGlobbing;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Text;
 using System.Text.Json;
 
 
@@ -45,21 +48,33 @@ public class GrepTool : BaseTool<GrepParams>
 
     protected override async Task<string> ExecuteInternalAsync(GrepParams p, MessageContext context)
     {
-        var path = Path.Combine(context.GetWorkspacePath(), p.Path);
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
+        var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path, VfsPathParseMode.Directory);
+
+        var entrys = p.Recursive ?? false ? vfs.GetSubPathsRecursiveAsync(path) : vfs.GetSubPathsRecursiveAsync(path);
+
+        var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
+        matcher.AddInclude(p.Pattern ?? "*");
 
         var results = new List<object>();
-        var searchOption = (p.Recursive ?? true) ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
         var pattern = p.Pattern ?? "*";
         var maxFileSize = p.MaxFileSize ?? 1024 * 10;
         var before = p.BeforeLines ?? 5;
         var after = p.AfterLines ?? 5;
 
-        foreach (var file in Directory.GetFiles(path, pattern, searchOption))
-        {
-            var info = new FileInfo(file);
-            if (info.Length > maxFileSize) continue;
 
-            var lines = await File.ReadAllLinesAsync(file);
+        var sb = new StringBuilder();
+        var c = 0;
+
+        await foreach (var entry in entrys.Where(o => o.IsFile && matcher.Match(o.ToString()).HasMatches))
+        {
+            var f = await vfs.GetMetaInfoAsync(entry);
+            if (f.Length > maxFileSize) continue;
+
+            using var stream = await f.OpenReadAsync();
+            using var reader = new StreamReader(stream);
+            var lines = (await reader.ReadToEndAsync()).Split(new char[] { '\r', '\n' });
+
             for (int i = 0; i < lines.Length; i++)
             {
                 if (lines[i].Contains(p.Query))
@@ -69,7 +84,7 @@ public class GrepTool : BaseTool<GrepParams>
 
                     results.Add(new
                     {
-                        File = file,
+                        File = f.Path.ToString(),
                         Line = i + 1,
                         Match = lines[i],
                         Context = lines.Skip(start).Take(end - start + 1).ToArray()

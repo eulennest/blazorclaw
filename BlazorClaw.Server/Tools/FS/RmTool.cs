@@ -2,6 +2,7 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -25,14 +26,20 @@ public class RmTool : BaseTool<RmParams>
     public override string Name => "fs_rm";
     public override string Description => "Löscht Dateien oder Verzeichnisse";
 
-    protected override Task<string> ExecuteInternalAsync(RmParams p, MessageContext context)
+    protected override async Task<string> ExecuteInternalAsync(RmParams p, MessageContext context)
     {
-        var path = Path.Combine(context.GetWorkspacePath(), p.Path);
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
 
-        if (File.Exists(path)) File.Delete(path);
-        else if (Directory.Exists(path)) Directory.Delete(path, p.Recursive);
-        else return Task.FromResult("Pfad existiert nicht.");
+        var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path);
 
-        return Task.FromResult("Gelöscht.");
+        if (!await vfs.ExistsAsync(path))
+            throw new FileNotFoundException($"Der Path '{p.Path}' wurde nicht gefunden.", p.Path);
+
+        if (p.Recursive)
+            await vfs.DeleteRecursiveAsync(path);
+        else
+            await vfs.DeleteAsync(path);
+
+        return "Gelöscht.";
     }
 }

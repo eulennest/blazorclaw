@@ -111,6 +111,15 @@ namespace BlazorClaw.Core.VFS.Systems
             if (path.IsFile)
                 System.IO.File.Delete(GetPhysicalPath(path));
             else
+                System.IO.Directory.Delete(GetPhysicalPath(path));
+
+            return Task.CompletedTask;
+        }
+        public Task DeleteRecursiveAsync(VfsPath path, CancellationToken cancelationToken = default)
+        {
+            if (path.IsFile)
+                System.IO.File.Delete(GetPhysicalPath(path));
+            else
                 System.IO.Directory.Delete(GetPhysicalPath(path), true);
 
             return Task.CompletedTask;

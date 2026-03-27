@@ -2,6 +2,7 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -34,27 +35,40 @@ public class EditTool : BaseTool<EditTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
-        var path = Path.Combine(context.GetWorkspacePath(), parameters.Path);
-        if (!File.Exists(path))
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
+
+        var path = VfsPath.Parse(VfsPath.Parse("/~/"), parameters.Path);
+        if (path.IsDirectory)
+            throw new FileNotFoundException($"Path ist keine Datei: {parameters.Path}");
+
+        var mi = await vfs.GetMetaInfoAsync(path);
+        if (!mi.Exists)
             throw new FileNotFoundException($"Datei nicht gefunden: {parameters.Path}");
 
-        var content = await File.ReadAllTextAsync(path);
-        if (!content.Contains(parameters.OldText))
-            return "Fehler: Alter Text nicht gefunden.";
-
-        string newContent;
-        if (parameters.Multiple == true)
+        string newContent = string.Empty;
+        using (var strm = await mi.OpenReadAsync())
         {
-            newContent = content.Replace(parameters.OldText, parameters.NewText);
+            using var st = new StreamReader(strm);
+            var content = await st.ReadToEndAsync();
+
+            if (!content.Contains(parameters.OldText))
+                return "Fehler: Alter Text nicht gefunden.";
+
+            if (parameters.Multiple == true)
+            {
+                newContent = content.Replace(parameters.OldText, parameters.NewText);
+            }
+            else
+            {
+                var index = content.IndexOf(parameters.OldText);
+                newContent = content.Remove(index, parameters.OldText.Length).Insert(index, parameters.NewText);
+            }
         }
-        else
+        using (var strm = await mi.OpenWriteAsync())
         {
-            var index = content.IndexOf(parameters.OldText);
-            newContent = content.Remove(index, parameters.OldText.Length).Insert(index, parameters.NewText);
+            using var st = new StreamWriter(strm);
+            await st.WriteAsync(newContent);
         }
-
-        await File.WriteAllTextAsync(path, newContent);
-
-        return "Datei erfolgreich editiert.";
+        return $"Datei '{parameters.Path}' erfolgreich editiert.";
     }
 }

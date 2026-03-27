@@ -2,6 +2,7 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -32,31 +33,35 @@ public class WriteTool : BaseTool<WriteTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params p, MessageContext context)
     {
-        var path = Path.Combine(context.GetWorkspacePath(), p.Path);
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
 
-        var directory = Path.GetDirectoryName(path);
-        if (!string.IsNullOrEmpty(directory))
-            Directory.CreateDirectory(directory);
+        var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path);
+        if (path.IsDirectory)
+            throw new FileNotFoundException($"Path ist keine Datei: {p.Path}");
+
+        await vfs.CreateDirectoryRecursiveAsync(path.ParentPath);
+
+        var mi = await vfs.GetMetaInfoAsync(path);
+        if (!mi.Exists) throw new FileNotFoundException($"Die Datei '{p.Path}' wurde nicht gefunden.", p.Path);
 
         var mode = p.Mode ?? WriteMode.Create;
-
-        if (mode == WriteMode.Create)
+        if (mode == WriteMode.Append)
         {
-            if (File.Exists(path))
-                throw new InvalidOperationException($"Datei existiert bereits: {p.Path}");
-
-            await File.WriteAllTextAsync(path, p.Content);
-            return $"Datei neu erstellt unter: {p.Path}";
-        }
-        else if (mode == WriteMode.Append)
-        {
-            await File.AppendAllTextAsync(path, p.Content);
+            using var stream = await mi.OpenAsync(FileMode.Append, FileAccess.Write);
+            using var reader = new StreamWriter(stream);
+            await reader.WriteAsync(p.Content);
             return $"Inhalt erfolgreich an {p.Path} angehängt.";
         }
-        else // Override
+        else
         {
-            await File.WriteAllTextAsync(path, p.Content);
-            return $"Datei erfolgreich überschrieben unter: {p.Path}";
+            if (mode == WriteMode.Create && mi.Exists)
+                throw new InvalidOperationException($"Datei existiert bereits: {p.Path}");
+
+            using var stream = await mi.OpenWriteAsync();
+            using var reader = new StreamWriter(stream);
+            await reader.WriteAsync(p.Content);
+
+            return $"Datei erfolgreich gespeichert unter: {p.Path}";
         }
     }
 }

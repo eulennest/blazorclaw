@@ -124,7 +124,6 @@ namespace BlazorClaw.Core.Utils
                 else
                 {
                     vfs.AddMountpoint(VfsPath.Root, new PhysicalFileSystem("/"));
-                    vfs.AddMountpoint(VfsPath.Parse("/~root/"), new PhysicalFileSystem("/"));
                 }
             }
             else

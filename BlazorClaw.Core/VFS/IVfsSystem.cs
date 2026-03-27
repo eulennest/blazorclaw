@@ -11,5 +11,6 @@
         Task<Stream> OpenFileAsync(VfsPath path, FileMode mode, FileAccess access, CancellationToken cancelationToken = default);
         Task CreateDirectoryAsync(VfsPath path, CancellationToken cancelationToken = default);
         Task DeleteAsync(VfsPath path, CancellationToken cancelationToken = default);
+        Task DeleteRecursiveAsync(VfsPath path, CancellationToken cancelationToken = default);
     }
 }

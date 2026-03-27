@@ -51,5 +51,9 @@ namespace BlazorClaw.Core.VFS.Systems
         {
             return base.DeleteAsync(AppendRoot(path), cancellationToken);
         }
+        public override Task DeleteRecursiveAsync(VfsPath path, CancellationToken cancellationToken = default)
+        {
+            return base.DeleteRecursiveAsync(AppendRoot(path), cancellationToken);
+        }
     }
 }
