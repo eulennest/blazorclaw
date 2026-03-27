@@ -44,6 +44,13 @@ namespace BlazorClaw.Server.Services
                     sb.AppendLine();
                     sb.AppendLine("⚠️ TOKEN LIMIT CRITICAL (>80%)");
                     sb.AppendLine("Use session_compress IMMEDIATELY. Keep answers SHORT.");
+                    sb.AppendLine();
+                    sb.AppendLine("🔴 CRITICAL: If you see this message:");
+                    sb.AppendLine("→ IMMEDIATELY call session_compress()");
+                    sb.AppendLine("→ Do NOT wait, do NOT ask, do NOT think 'I saw this before'");
+                    sb.AppendLine("→ This prompt is LIVE and DYNAMIC — check it EVERY message!");
+                    sb.AppendLine("→ Use session_compress IMMEDIATELY. Keep answers SHORT.");
+                    sb.AppendLine();
                 }
 
                 sb.AppendLine();

@@ -17,7 +17,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
         var sessionManager = context.Provider.GetRequiredService<ISessionManager>();
         var sess = await sessionManager.GetSessionAsync(context.Session!.Id) ?? throw new KeyNotFoundException($"Session mit ID {context.Session.Id} nicht gefunden.");
         if (p.Summary.StartsWith("COMPRESSED")) return "ERROR: Use a correct Summary!";
-        if (p.Summary.Length<100) return "ERROR: Use a correct Summary!";
+        if (p.Summary.Length < 100) return "ERROR: Use a correct Summary!";
 
         var sb = new StringBuilder();
         sb.AppendLine("📌 ZUSAMMENFASSUNG DES VORHERIGEN GESPRÄCHS (NUR DOKUMENTATION):");
@@ -52,7 +52,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
                 // Kürze alte Tool-Ausgaben, damit die Session nicht zu groß wird.
                 // Die Zusammenfassung sollte ja die wichtigen Infos enthalten, damit das Tool nicht mehr unbedingt nötig ist.
                 var txt = $"... [GEKÜRZT {str.Length} Zeichen]";
-                str = str[..(100 - txt.Length)] + txt;
+                msg.Content = str[..100] + txt;
             }
             sess.MessageHistory.Add(msg);
         }
