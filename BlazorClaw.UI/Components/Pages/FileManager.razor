@@ -3,6 +3,7 @@
 @using BlazorClaw.Core.Utils
 @using BlazorClaw.Core.VFS
 @using BlazorClaw.Core.VFS.Systems
+@using Microsoft.Extensions.DependencyInjection
 @inject ILogger<FileManager> Logger
 @inject IServiceProvider serviceProvider
 @inject AuthenticationStateProvider authenticationStateProvider
@@ -165,7 +166,7 @@
             var user = authState.User;
             var userId = userManager.GetUserId(user);
 
-            vfs = PathUtils.BuildVFS(PathUtils.GetUserBasePath(serviceProvider, Guid.Parse(userId)), false);
+            vfs = serviceProvider.GetRequiredService<IVfsSystem>();
             await SelectDirectory(VfsPath.Root);
         }
         catch (Exception ex)

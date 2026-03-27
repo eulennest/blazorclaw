@@ -139,6 +139,7 @@ namespace BlazorClaw.Core.Utils
 
     public class IgnoreCaseEqualityComparer : IEqualityComparer<string>
     {
+        public static IgnoreCaseEqualityComparer Instance = new();
         public bool Equals(string? x, string? y)
         {
             return (x == null && y == null) || (x?.Equals(y, StringComparison.OrdinalIgnoreCase) ?? false);

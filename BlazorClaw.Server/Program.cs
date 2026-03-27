@@ -10,6 +10,7 @@ using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Speech;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
 using BlazorClaw.Core.Web;
 using BlazorClaw.Server;
 using BlazorClaw.Server.Security.Vault;
@@ -23,6 +24,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Telegram.Bot.Types;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -76,6 +78,10 @@ builder.Services.TryAddScoped<IVaultProvider, JsonVaultProvider>();
 
 builder.Services.TryAddScoped<SessionStateAccessor>();
 builder.Services.TryAddScoped<MessageContextAccessor>();
+builder.Services.TryAddScoped<IVfsSystem>(sp =>
+{
+    return PathUtils.BuildVFSAsync(sp).GetAwaiter().GetResult();
+});
 // Tool registry
 builder.Services.TryAddScoped<IToolRegistry>(sp => new ToolRegistry(PluginUtils.BuildPlugins<ITool>(sp)));
 

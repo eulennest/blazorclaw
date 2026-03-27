@@ -1,9 +1,14 @@
 ﻿using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Data;
+using BlazorClaw.Core.Security;
+using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.VFS;
 using BlazorClaw.Core.VFS.Systems;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace BlazorClaw.Core.Utils
 {
@@ -56,8 +61,33 @@ namespace BlazorClaw.Core.Utils
             return fpath;
         }
 
-        public static IVfsSystem BuildVFS(string userBaseFolder, bool addRoot)
+        public static async Task<MountpointVfsSystem> BuildVFSAsync(IServiceProvider sp)
         {
+            var sess = sp.GetService<SessionStateAccessor>()?.SessionState?.Session;
+            var userId = sess?.UserId?.ToLowerInvariant();
+            if (!Guid.TryParse(userId, out var uuid)) uuid = sess?.Id ?? Guid.NewGuid();
+            var au = sp.GetRequiredService<UserManager<ApplicationUser>>();
+            var u = await au.FindByIdAsync(userId).ConfigureAwait(false);
+            var roles = u != null ? await au.GetRolesAsync(u).ConfigureAwait(false) : ["Guest"];
+            var conf = sp.GetRequiredService<IOptions<SecurityOptions>>();
+
+            var sandboxDisabled = false;
+            var sandboxPaths = new HashSet<string>();
+            foreach (var item in conf.Value.UserGroups)
+            {
+                if (!roles.Contains(item.Key, IgnoreCaseEqualityComparer.Instance)) continue;
+                if (!item.Value.Sandbox.Enabled)
+                {
+                    sandboxDisabled = true;
+                    break;
+                }
+                foreach (var spath in item.Value.Sandbox.Paths)
+                {
+                    sandboxPaths.Add(spath);
+                }
+            }
+
+            var userBaseFolder = GetUserBasePath(sp, uuid);
             var vfs = new MountpointVfsSystem();
             Directory.CreateDirectory(userBaseFolder);
             if (Directory.Exists(userBaseFolder))
@@ -70,7 +100,7 @@ namespace BlazorClaw.Core.Utils
                 vfs.AddMountpoint(VfsPath.Parse("/~secure/"), new PhysicalFileSystem(Path.Combine(userBaseFolder, "secure")), true);
             }
 
-            if (addRoot)
+            if (sandboxDisabled)
             {
                 if (OperatingSystem.IsWindows())
                 {
@@ -84,6 +114,14 @@ namespace BlazorClaw.Core.Utils
                     vfs.AddMountpoint(VfsPath.Root, new PhysicalFileSystem("/"), true);
                 }
             }
+            else
+            {
+                foreach (var item in sandboxPaths)
+                {
+                    vfs.AddMountpoint(VfsPath.Parse(VfsPath.Root, item, VfsPathParseMode.Directory), new PhysicalFileSystem(item), true);
+                }
+            }
+
             return vfs;
 
         }

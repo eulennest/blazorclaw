@@ -12,6 +12,7 @@ using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.VFS;
 using BlazorClaw.Core.VFS.Systems;
 using BlazorClaw.UI.Components.Account;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.CommandLine;
@@ -71,7 +72,7 @@ namespace BlazorClaw.Server.Services
                     Session = sess,
                     Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model?.Split('/')[0] ?? "openrouter") ?? throw new Exception($"No provider found for model {model}")
                 };
-                SetVFS(state);
+                await SetVFSAsync(state);
                 scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
 
 
@@ -100,7 +101,7 @@ namespace BlazorClaw.Server.Services
                         Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model?.Split('/')[0] ?? "openrouter") ?? throw new Exception($"No provider found for model {model}"),
                         MessageHistory = store.MessageHistory
                     };
-                    SetVFS(state);
+                    await SetVFSAsync(state);
                     scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
                     _sessions.TryAdd(sessionId, state);
                     return state;
@@ -449,12 +450,9 @@ namespace BlazorClaw.Server.Services
             return null;
         }
 
-        private void SetVFS(ChatSessionState sessionState)
+        private async Task SetVFSAsync(ChatSessionState sessionState)
         {
-            var userId = sessionState.Session.UserId?.ToLowerInvariant();
-            if (!Guid.TryParse(userId, out var uuid)) uuid = sessionState.Session.Id;
-            var path = PathUtils.GetUserBasePath(sessionState.Services, uuid);
-            sessionState.VFS = PathUtils.BuildVFS(path, true);
+            sessionState.VFS = await PathUtils.BuildVFSAsync(sessionState.Services);
         }
     }
 
