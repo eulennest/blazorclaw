@@ -19,6 +19,7 @@ namespace BlazorClaw.Core.VFS.Systems
             return Path.Combine(PhysicalRoot, path.ToString()[1..].Replace(VfsPath.DirectorySeparator, Path.DirectorySeparatorChar));
         }
 
+
         protected VfsPath GetVirtualFilePath(string physicalPath)
         {
             if (!physicalPath.StartsWith(PhysicalRoot, StringComparison.InvariantCultureIgnoreCase))
@@ -40,6 +41,21 @@ namespace BlazorClaw.Core.VFS.Systems
         }
 
         #endregion
+        public virtual Task<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<string?>(GetPhysicalPath(path));
+        }
+        public virtual Task<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                return Task.FromResult<VfsPath?>(GetVirtualFilePath(path));
+            }
+            catch (Exception)
+            {
+            }
+            return Task.FromResult<VfsPath?>(null);
+        }
 
         void IDisposable.Dispose()
         {

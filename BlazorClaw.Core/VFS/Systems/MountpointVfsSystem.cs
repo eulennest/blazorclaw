@@ -131,9 +131,35 @@ namespace BlazorClaw.Core.VFS.Systems
             var pair = Get(path) ?? throw new FileNotFoundException("mountpoint not found", path.ToString());
             return pair.Value.VFS.DeleteAsync(path.RemoveParent(pair.Key), cancelationToken);
         }
+
         public Task DeleteRecursiveAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
             var pair = Get(path) ?? throw new FileNotFoundException("mountpoint not found", path.ToString());
             return pair.Value.VFS.DeleteRecursiveAsync(path.RemoveParent(pair.Key), cancelationToken);
-        }    }
+        }
+
+        public virtual Task<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
+        {
+            var pair = Get(path) ?? throw new FileNotFoundException("mountpoint not found", path.ToString());
+            return pair.Value.VFS.VfsToRealPathAsync(path.RemoveParent(pair.Key), cancellationToken);
+        }
+
+
+        public virtual async Task<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
+        {
+            foreach (var pair in Mounts)
+            {
+                try
+                {
+                    var ret = await pair.Value.VFS.RealToVfsPathAsync(path, cancellationToken);
+                    if (ret != null)
+                        return pair.Key.AppendPath(ret.Value);
+                }
+                catch (Exception)
+                { }
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+            return null;
+        }
+    }
 }

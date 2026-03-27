@@ -12,5 +12,8 @@
         Task CreateDirectoryAsync(VfsPath path, CancellationToken cancelationToken = default);
         Task DeleteAsync(VfsPath path, CancellationToken cancelationToken = default);
         Task DeleteRecursiveAsync(VfsPath path, CancellationToken cancelationToken = default);
+
+        Task<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancelationToken = default);
+        Task<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancelationToken = default);
     }
 }

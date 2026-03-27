@@ -55,5 +55,16 @@ namespace BlazorClaw.Core.VFS.Systems
         public Task DeleteRecursiveAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
             throw new InvalidOperationException();
-        }    }
+        }
+
+        public virtual Task<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<string?>(null);
+        }
+
+        public virtual Task<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<VfsPath?>(null);
+        }
+    }
 }
