@@ -40,7 +40,7 @@ public class ExecTool : BaseTool<ExecParams>
         var vfs = context.Provider.GetRequiredService<IVfsSystem>();
         var path = await vfs.VfsToRealPathAsync(vpath) ?? throw new InvalidPathException(p.WorkingDirectory);
         await vfs.CreateDirectoryRecursiveAsync(vpath);
-
+        p.Args = await SecureArgsAsync(vfs, vpath, p.Args).ConfigureAwait(false);
 
         var startInfo = new ProcessStartInfo
         {
@@ -48,6 +48,7 @@ public class ExecTool : BaseTool<ExecParams>
             RedirectStandardOutput = true,
             RedirectStandardError = true,
             UseShellExecute = false,
+            CreateNoWindow = true,
             WorkingDirectory = path
         };
 
@@ -67,7 +68,12 @@ public class ExecTool : BaseTool<ExecParams>
         sb.AppendLine("ExitCode: " + process.ExitCode);
         sb.AppendLine("Output:");
 
-        var output = process.StandardOutput.ReadToEnd();
+        var outputTask = process.StandardOutput.ReadToEndAsync();
+        var errorTask = process.StandardError.ReadToEndAsync();
+        await Task.WhenAll(outputTask, errorTask);
+        var output = outputTask.Result;
+        var error = errorTask.Result;
+
         if (output.Length > outputLimit)
         {
             sb.AppendLine(output.Substring(0, outputLimit));
@@ -79,7 +85,6 @@ public class ExecTool : BaseTool<ExecParams>
         }
 
         sb.AppendLine("Error:");
-        var error = process.StandardError.ReadToEnd();
         if (error.Length > outputLimit)
         {
             sb.AppendLine(error.Substring(0, outputLimit));
@@ -92,4 +97,45 @@ public class ExecTool : BaseTool<ExecParams>
 
         return sb.ToString();
     }
+
+    public async Task<string[]> SecureArgsAsync(IVfsSystem vfs, VfsPath workingdir, string[] args)
+    {
+        var list = new List<string>();
+        foreach (var item in args)
+        {
+            if (item.Contains('/') || item.Contains('\\'))
+            {
+                var vfspath = VfsPath.Parse(workingdir, item);
+                var relpath = await vfs.VfsToRealPathAsync(vfspath).ConfigureAwait(false);
+                if (relpath == null)
+                {
+                    var basep = await vfs.VfsToRealPathAsync(workingdir).ConfigureAwait(false);
+                    var fullPath = Path.Combine(basep!, item);
+
+                    // Prüfe ob Path selbst existiert
+                    if (fullPath != null)
+                    {
+                        if (File.Exists(fullPath) || Directory.Exists(fullPath))
+                        {
+                            throw new InvalidPathException($"Path '{item}' exists outside VFS");
+                        }
+
+                        // Prüfe auch das Parent-Directory (für neue Dateien)
+                        var parentDir = Path.GetDirectoryName(fullPath);
+                        if (parentDir != null && (Directory.Exists(parentDir) && !parentDir.StartsWith(basep)))
+                        {
+                            throw new InvalidPathException($"Parent directory of '{item}' is outside VFS");
+                        }
+                    }
+                }
+                else
+                    list.Add(relpath);
+            }
+            else
+                list.Add(item);
+        }
+
+        return list.ToArray();
+    }
+
 }
