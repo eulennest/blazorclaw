@@ -30,7 +30,7 @@ public class RmTool : BaseTool<RmParams>
     {
         var vfs = context.Provider.GetRequiredService<IVfsSystem>();
 
-        var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path);
+        var path = VfsPath.Parse(PathUtils.VfsHome, p.Path);
 
         if (!await vfs.ExistsAsync(path))
             throw new FileNotFoundException($"Der Path '{path}' wurde nicht gefunden.", p.Path);

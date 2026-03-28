@@ -37,7 +37,7 @@ public class EditTool : BaseTool<EditTool.Params>
     {
         var vfs = context.Provider.GetRequiredService<IVfsSystem>();
 
-        var path = VfsPath.Parse(VfsPath.Parse("/~/"), parameters.Path);
+        var path = VfsPath.Parse(PathUtils.VfsHome, parameters.Path);
         if (path.IsDirectory)
             throw new FileNotFoundException($"Path ist keine Datei: {parameters.Path}");
 

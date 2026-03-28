@@ -2,6 +2,7 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
 using Microsoft.Extensions.Options;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -36,8 +37,12 @@ public class GitTool(IOptions<GitOptions> options) : BaseTool<GitTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params p, MessageContext context)
     {
-        var path = Path.Combine(context.GetWorkspacePath(), p.WorkingDirectory ?? "./repos");
-        Directory.CreateDirectory(path);
+        p.WorkingDirectory ??= "./repos";
+        var vpath = VfsPath.Parse(PathUtils.VfsHome, p.WorkingDirectory);
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
+        var path = await vfs.VfsToRealPathAsync(vpath) ?? throw new InvalidPathException(p.WorkingDirectory);
+        await vfs.CreateDirectoryRecursiveAsync(vpath);
+
         var startInfo = new System.Diagnostics.ProcessStartInfo
         {
             FileName = _options.GitPath,

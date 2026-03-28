@@ -34,7 +34,7 @@ public class ReadTool : BaseTool<ReadParams>
     {
         var vfs = context.Provider.GetRequiredService<IVfsSystem>();
 
-        var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path);
+        var path = VfsPath.Parse(PathUtils.VfsHome, p.Path);
         if (path.IsDirectory)
             throw new FileNotFoundException($"Path ist keine Datei: {p.Path}");
 

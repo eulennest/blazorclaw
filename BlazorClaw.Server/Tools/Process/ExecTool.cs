@@ -1,6 +1,7 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
@@ -33,8 +34,13 @@ public class ExecTool : BaseTool<ExecParams>
 
     protected override async Task<string> ExecuteInternalAsync(ExecParams p, MessageContext context)
     {
+        p.WorkingDirectory ??= "./";
         await p.ResolveVarsAsync(context);
-        var path = Path.Combine(context.GetWorkspacePath(), p.WorkingDirectory ?? "./repos");
+        var vpath = VfsPath.Parse(PathUtils.VfsHome, p.WorkingDirectory);
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
+        var path = await vfs.VfsToRealPathAsync(vpath) ?? throw new InvalidPathException(p.WorkingDirectory);
+        await vfs.CreateDirectoryRecursiveAsync(vpath);
+
 
         var startInfo = new ProcessStartInfo
         {

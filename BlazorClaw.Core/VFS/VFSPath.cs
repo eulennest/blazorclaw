@@ -369,4 +369,9 @@ namespace BlazorClaw.Core.VFS
         File = 1,
         Directory = 2
     }
+
+    public class InvalidPathException(string path) : Exception($"Invalid path '{path}'")
+    {
+        public string Path { get; } = path;
+    }
 }

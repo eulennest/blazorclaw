@@ -36,7 +36,7 @@ public class LsTool : BaseTool<LsParams>
     protected override async Task<string> ExecuteInternalAsync(LsParams p, MessageContext context)
     {
         var vfs = context.Provider.GetRequiredService<IVfsSystem>();
-        var path = VfsPath.Parse(VfsPath.Parse("/~/"), p.Path, VfsPathParseMode.Directory);
+        var path = VfsPath.Parse(PathUtils.VfsHome, p.Path, VfsPathParseMode.Directory);
 
         var entrys = p.Recursive ?? false ? vfs.GetSubPathsRecursiveAsync(path) : vfs.GetSubPathsAsync(path);
         var details = p.Details ?? false;
