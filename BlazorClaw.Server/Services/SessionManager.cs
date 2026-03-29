@@ -17,7 +17,10 @@ using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.CommandLine;
 using System.Net;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
+using static Matrix.Sdk.Core.Infrastructure.Dto.Sync.Event.Room.Messaging.ImageContent;
 
 namespace BlazorClaw.Server.Services
 {
@@ -255,6 +258,20 @@ namespace BlazorClaw.Server.Services
                     }
                 }
             }
+            const int maxtoken = 100000;
+            const double warningThreshold = 85;
+            var tokenProz = (sessionState.LastUsage?.PromptTokens ?? 1) / maxtoken * 100.0;
+            var sb = new StringBuilder();
+
+            var lastMsg = sessionState.MessageHistory.LastOrDefault();
+            var lastMsgText = lastMsg?.GetTextContent();
+            if (!string.IsNullOrEmpty(lastMsgText) && tokenProz > warningThreshold)
+            {
+                sessionState.MessageHistory.Last().SetContents([new TextContentEntry() { Text =
+                    $"[SYSTEM: ⚠️ WARNING: Token usage is at {tokenProz}% call sesson_compress IMEDIATELY]\n" +
+                    $"{lastMsgText}"
+                    } ]);
+            }
 
             int count;
             int iterations = 0;
@@ -269,7 +286,12 @@ namespace BlazorClaw.Server.Services
                 }
                 await SaveSessionAsync(sessionState, false);
             }
+
             while (count > 1 && iterations < 10);
+            if (!string.IsNullOrEmpty(lastMsgText))
+            {
+                sessionState.MessageHistory.Last().SetContents([new TextContentEntry() { Text = lastMsgText }]);
+            }
         }
 
         private async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, MessageContext context, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
