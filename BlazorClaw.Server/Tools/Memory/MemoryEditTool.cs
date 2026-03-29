@@ -1,6 +1,8 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
+using ReverseMarkdown.Converters;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -28,27 +30,42 @@ public class MemoryEditTool : BaseTool<MemoryEditTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
     {
-        var fullPath = context.GetMemoryPath(parameters.FileName);
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
+        if (parameters.FileName.StartsWith('/')) parameters.FileName = parameters.FileName[1..];
+        var path = VfsPath.Parse(PathUtils.VfsMemory, parameters.FileName, VfsPathParseMode.File);
+        if (path.IsDirectory)
+            throw new FileNotFoundException($"Path ist keine Datei: {parameters.FileName}");
+        if (!PathUtils.VfsMemory.IsParentOf(path)) throw new InvalidPathException(parameters.FileName);
 
-        if (!File.Exists(fullPath))
+        var mi = await vfs.GetMetaInfoAsync(path);
+        if (!mi.Exists)
             throw new FileNotFoundException($"Memory-Datei nicht gefunden: {parameters.FileName}");
 
-        var content = await File.ReadAllTextAsync(fullPath);
-        if (!content.Contains(parameters.OldText))
-            return "Fehler: Alter Text nicht gefunden.";
-
-        string newContent;
-        if (parameters.Multiple == true)
+        string newContent = string.Empty;
+        using (var strm = await mi.OpenReadAsync())
         {
-            newContent = content.Replace(parameters.OldText, parameters.NewText);
-        }
-        else
-        {
-            var index = content.IndexOf(parameters.OldText);
-            newContent = content.Remove(index, parameters.OldText.Length).Insert(index, parameters.NewText);
+            using var st = new StreamReader(strm);
+            var content = await st.ReadToEndAsync();
+
+            if (!content.Contains(parameters.OldText))
+                return "Fehler: Alter Text nicht gefunden.";
+
+            if (parameters.Multiple == true)
+            {
+                newContent = content.Replace(parameters.OldText, parameters.NewText);
+            }
+            else
+            {
+                var index = content.IndexOf(parameters.OldText);
+                newContent = content.Remove(index, parameters.OldText.Length).Insert(index, parameters.NewText);
+            }
         }
 
-        await File.WriteAllTextAsync(fullPath, newContent);
+        using (var strm = await mi.OpenWriteAsync())
+        {
+            using var st = new StreamWriter(strm);
+            await st.WriteAsync(newContent);
+        }
         return $"Memory-Datei '{parameters.FileName}' erfolgreich editiert.";
     }
 }

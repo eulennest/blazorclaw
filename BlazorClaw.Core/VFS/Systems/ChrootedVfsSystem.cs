@@ -29,7 +29,7 @@ namespace BlazorClaw.Core.VFS.Systems
             return base.GetFilesAsync(path, cancelationToken).Select(RemoveRoot);
         }
 
-        public override Task<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
+        public override ValueTask<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
             return base.ExistsAsync(AppendRoot(path), cancelationToken);
         }

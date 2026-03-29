@@ -79,7 +79,7 @@ namespace BlazorClaw.Core.VFS.Systems
             return System.IO.Directory.EnumerateFiles(physicalPath).ToAsyncEnumerable().Select(GetVirtualFilePath);
         }
 
-        public async Task<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancelationToken = default)
+        public async ValueTask<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
             var real = GetPhysicalPath(path);
             if (path.IsDirectory)
@@ -96,9 +96,9 @@ namespace BlazorClaw.Core.VFS.Systems
             }
         }
 
-        public Task<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
+        public ValueTask<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
-            return Task.FromResult(path.IsFile ? System.IO.File.Exists(GetPhysicalPath(path)) : System.IO.Directory.Exists(GetPhysicalPath(path)));
+            return ValueTask.FromResult(path.IsFile ? System.IO.File.Exists(GetPhysicalPath(path)) : System.IO.Directory.Exists(GetPhysicalPath(path)));
         }
 
         public async Task CreateFileAsync(VfsPath path, Stream data, CancellationToken cancelationToken = default)

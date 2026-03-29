@@ -223,7 +223,7 @@
             var infos = new List<Task<VfsPathInfo>>();
             await foreach (var subPath in vfs.GetSubPathsAsync(path))
             {
-                infos.Add(vfs.GetMetaInfoAsync(subPath));
+                infos.Add(vfs.GetMetaInfoAsync(subPath).AsTask());
             }
             itemInfos = (await Task.WhenAll(infos))
                         .OrderBy(x => x.Entry.Path.IsDirectory ? 0 : 1).ThenBy(x => x.Name).ToList();

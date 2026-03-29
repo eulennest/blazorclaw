@@ -24,12 +24,12 @@ namespace BlazorClaw.Core.VFS.Systems
             return Parent.GetFilesAsync(path, cancelationToken);
         }
 
-        public virtual Task<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancelationToken = default)
+        public virtual ValueTask<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
             return Parent.GetMetaInfoAsync(path, cancelationToken);
         }
 
-        public virtual Task<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
+        public virtual ValueTask<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
             return Parent.ExistsAsync(path, cancelationToken);
         }

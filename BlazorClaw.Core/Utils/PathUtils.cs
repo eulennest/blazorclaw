@@ -16,6 +16,7 @@ namespace BlazorClaw.Core.Utils
     public static class PathUtils
     {
         public static readonly VfsPath VfsHome = VfsPath.Parse("/~/");
+        public static readonly VfsPath VfsMemory = VfsPath.Parse("/~memory/");
         public static string GetAllBasePath(MessageContext context)
         {
             return GetAllBasePath(context.Provider);

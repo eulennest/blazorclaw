@@ -1,33 +1,25 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Security.Vault;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
 using Microsoft.Extensions.Options;
 using System.Text.Json;
 
 namespace BlazorClaw.Server.Security.Vault;
 
-public class JsonVaultProvider : IVaultProvider
+public class JsonVaultProvider(
+    IOptions<JsonVaultOptions> options,
+    MessageContextAccessor mca,
+    IVfsSystem vfs,
+    ILogger<JsonVaultProvider> logger) : IVaultProvider
 {
-    private readonly string _masterKey;
-    private readonly JsonVaultOptions options;
-    private readonly MessageContextAccessor mca;
-    private readonly ILogger<JsonVaultProvider> logger;
-
-    public JsonVaultProvider(
-        IOptions<JsonVaultOptions> options,
-        MessageContextAccessor mca,
-        ILogger<JsonVaultProvider> logger)
-    {
-        this.options = options.Value;
-        this.mca = mca;
-        this.logger = logger;
-        _masterKey = options.Value.MasterPassword
+    private readonly string _masterKey = options.Value.MasterPassword
             ?? throw new InvalidOperationException("Vault:MasterPassword not configured!");
-    }
+    private readonly JsonVaultOptions options = options.Value;
 
-    private string GetFilePath()
+    private VfsFile GetFilePath()
     {
-        return Path.Combine(Core.Utils.PathUtils.GetUserBasePath(mca.Context), "secure", options.FilePath);
+        return new VfsFile(vfs, VfsPath.Parse(VfsPath.Parse("/~secure/"), options.FilePath, VfsPathParseMode.File));
     }
 
     public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
@@ -67,8 +59,8 @@ public class JsonVaultProvider : IVaultProvider
         try
         {
             var filePath = GetFilePath();
-            if (!File.Exists(filePath)) return null;
-            using var sourceStream = File.OpenRead(filePath);
+            if (!await filePath.VFS.ExistsAsync(filePath.Path)) return null;
+            using var sourceStream = await filePath.OpenAsync(FileMode.Open, FileAccess.Read);
             using var destStream = new MemoryStream();
             await sourceStream.DecryptAsync(destStream, _masterKey, mca.Context?.UserId ?? string.Empty);
             destStream.Position = 0;
@@ -84,19 +76,18 @@ public class JsonVaultProvider : IVaultProvider
     private async Task SaveAsync(Dictionary<string, VaultEntry> data)
     {
         var filePath = GetFilePath();
-        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
-        var tempPath = filePath + ".tmp";
+        if (!await filePath.VFS.ExistsAsync(filePath.Path))
+            await vfs.CreateDirectoryRecursiveAsync(filePath.Path.ParentPath);
+        using var sourceStream = await filePath.OpenAsync(FileMode.Open, FileAccess.Read);
 
         var userId = mca.Context?.UserId ?? string.Empty;
         using var tempStream = new MemoryStream();
         await JsonSerializer.SerializeAsync(tempStream, data);
         tempStream.Position = 0;
-
-        using (var destStream = File.Create(tempPath))
+        using (var destStream = await filePath.OpenAsync(FileMode.Create, FileAccess.Write))
         {
             await tempStream.EncryptAsync(destStream, _masterKey, userId);
         }
-        File.Move(tempPath, filePath, overwrite: true);
         logger.LogInformation("Vault saved for user {UserId}, {Count} entries", userId, data.Count);
     }
 }

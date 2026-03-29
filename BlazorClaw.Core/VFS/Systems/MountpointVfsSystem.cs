@@ -46,7 +46,7 @@ namespace BlazorClaw.Core.VFS.Systems
             return [.. Mounts.Where(o => !o.Value.Hidden && !o.Key.IsRoot && path.Equals(o.Key.ParentPath)).Select(o => o.Key).OrderBy(o => o)];
         }
 
-        public async Task<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancelationToken = default)
+        public async ValueTask<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
             var pair = Get(path);
             if (pair != null)
@@ -101,9 +101,9 @@ namespace BlazorClaw.Core.VFS.Systems
             }
         }
 
-        public Task<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
+        public ValueTask<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
-            if (path.IsRoot) return Task.FromResult(true);
+            if (path.IsRoot) return ValueTask.FromResult(true);
             var pair = Get(path) ?? throw new FileNotFoundException("mountpoint not found", path.ToString());
             return pair.Value.VFS.ExistsAsync(path.RemoveParent(pair.Key), cancelationToken);
         }

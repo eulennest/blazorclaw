@@ -55,9 +55,7 @@ public class WriteTool : BaseTool<WriteTool.Params>
             if (mode == WriteMode.Create && mi.Exists)
                 throw new InvalidOperationException($"Datei existiert bereits: {p.Path}");
 
-            using var stream = await mi.OpenWriteAsync();
-            using var reader = new StreamWriter(stream);
-            await reader.WriteAsync(p.Content);
+            await vfs.WriteAllTextAsync(path, p.Content);
 
             return $"Datei erfolgreich gespeichert unter: {path}";
         }

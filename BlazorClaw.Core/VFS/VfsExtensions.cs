@@ -1,3 +1,5 @@
+using System.Runtime.CompilerServices;
+
 namespace BlazorClaw.Core.VFS
 {
     public static class VfsExtensions
@@ -50,6 +52,48 @@ namespace BlazorClaw.Core.VFS
                 if (!await fileSystem.ExistsAsync(currentDirectoryPath))
                     await fileSystem.CreateDirectoryAsync(currentDirectoryPath);
             }
+        }
+
+
+        public static async Task WriteAllTextAsync(this IVfsSystem fileSystem, VfsPath path, string content, CancellationToken cancellationToken = default)
+        {
+            if (path.IsDirectory)
+                throw new ArgumentException("The specified path is not a file.");
+
+            using var stream = await fileSystem.OpenFileAsync(path, FileMode.Create, FileAccess.Write, cancellationToken);
+            using var reader = new StreamWriter(stream);
+            await reader.WriteAsync(content);
+        }
+
+        public static async Task<string> ReadAllTextAsync(this IVfsSystem fileSystem, VfsPath path, CancellationToken cancellationToken = default)
+        {
+            if (path.IsDirectory)
+                throw new ArgumentException("The specified path is not a file.");
+
+            using var stream = await fileSystem.OpenFileAsync(path, FileMode.Open, FileAccess.Read, cancellationToken);
+            using var reader = new StreamReader(stream);
+            return await reader.ReadToEndAsync();
+        }
+
+        public static async IAsyncEnumerable<string> ReadLinesAsync(this IVfsSystem fileSystem, VfsPath path, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (path.IsDirectory)
+                throw new ArgumentException("The specified path is not a file.");
+
+            using var stream = await fileSystem.OpenFileAsync(path, FileMode.Open, FileAccess.Read, cancellationToken);
+            using var reader = new StreamReader(stream);
+
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync(cancellationToken);
+                if (line is not null)
+                    yield return line;
+            }
+        }
+
+        public static async Task<string[]> ReadAllLinesAsync(this IVfsSystem fileSystem, VfsPath path, CancellationToken cancellationToken = default)
+        {
+            return await ReadLinesAsync(fileSystem, path, cancellationToken).ToArrayAsync(cancellationToken);
         }
     }
 }

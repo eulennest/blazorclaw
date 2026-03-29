@@ -1,6 +1,8 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
+using ReverseMarkdown.Converters;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -25,33 +27,34 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
         public WriteMode? Mode { get; set; } = WriteMode.Create;
     }
 
-    protected override async Task<string> ExecuteInternalAsync(Params parameters, MessageContext context)
+    protected override async Task<string> ExecuteInternalAsync(Params p, MessageContext context)
     {
-        var fullPath = context.GetMemoryPath(parameters.FileName);
-        var safeFileName = Path.GetFileName(fullPath);
-        var _memoryPath = Path.GetDirectoryName(fullPath);
-        if (_memoryPath != null && !Directory.Exists(_memoryPath))
-            Directory.CreateDirectory(_memoryPath);
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
+        if (p.FileName.StartsWith('/')) p.FileName = p.FileName[1..];
+        var path = VfsPath.Parse(PathUtils.VfsMemory, p.FileName);
+        if (path.IsDirectory)
+            throw new FileNotFoundException($"Path ist keine Datei: {p.FileName}");
+        if (!PathUtils.VfsMemory.IsParentOf(path)) throw new InvalidPathException(p.FileName);
 
-        var mode = parameters.Mode ?? WriteMode.Create;
+        var safeFileName = path.RemoveParent(PathUtils.VfsMemory);
 
-        if (mode == WriteMode.Create)
+        var mi = await vfs.GetMetaInfoAsync(path);
+        var mode = p.Mode ?? WriteMode.Create;
+        if (mode == WriteMode.Append)
         {
-            if (File.Exists(fullPath))
-                throw new InvalidOperationException($"Memory-Datei existiert bereits: {safeFileName}");
-
-            await File.WriteAllTextAsync(fullPath, parameters.Content);
-            return $"Memory-Datei '{safeFileName}' neu erstellt.";
+            using var stream = await mi.OpenAsync(FileMode.Append, FileAccess.Write);
+            using var reader = new StreamWriter(stream);
+            await reader.WriteAsync(p.Content);
+            return $"Inhalt erfolgreich an {safeFileName} angehängt.";
         }
-        else if (mode == WriteMode.Append)
+        else
         {
-            await File.AppendAllTextAsync(fullPath, parameters.Content);
-            return $"Inhalt erfolgreich an '{safeFileName}' angehängt.";
-        }
-        else // Override
-        {
-            await File.WriteAllTextAsync(fullPath, parameters.Content);
-            return $"Memory-Datei '{safeFileName}' erfolgreich überschrieben.";
+            if (mode == WriteMode.Create && mi.Exists)
+                throw new InvalidOperationException($"Datei existiert bereits: {safeFileName}");
+
+            await vfs.WriteAllTextAsync(path, p.Content);
+
+            return $"Memory-Datei erfolgreich gespeichert unter: {safeFileName}";
         }
     }
 }

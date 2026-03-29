@@ -22,14 +22,14 @@ namespace BlazorClaw.Core.VFS.Systems
             return AsyncEnumerable.Empty<VfsPath>();
         }
 
-        public async Task<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancelationToken = default)
+        public ValueTask<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
-            return new VfsPathInfo(VfsEntity.Create(this, path));
+            return ValueTask.FromResult(new VfsPathInfo(VfsEntity.Create(this, path)));
         }
 
-        public Task<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
+        public ValueTask<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
-            return Task.FromResult(false);
+            return ValueTask.FromResult(false);
         }
 
         public async Task CreateFileAsync(VfsPath path, Stream data, CancellationToken cancelationToken = default)
