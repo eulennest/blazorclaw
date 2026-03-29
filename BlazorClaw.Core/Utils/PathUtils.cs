@@ -70,7 +70,6 @@ namespace BlazorClaw.Core.Utils
             var userId = sess?.UserId?.ToLowerInvariant();
             var au = sp.GetRequiredService<UserManager<ApplicationUser>>();
             ApplicationUser? u = null;
-            var uuid = Guid.NewGuid();
             if (string.IsNullOrWhiteSpace(userId))
             {
                 var aus = sp.GetRequiredService<IHttpContextAccessor>();
@@ -78,10 +77,12 @@ namespace BlazorClaw.Core.Utils
                 {
                     u = await au.GetUserAsync(aus.HttpContext.User).ConfigureAwait(false);
                     if (u != null) userId = u.Id;
-                    if (!Guid.TryParse(userId, out uuid)) uuid = sess?.Id ?? Guid.NewGuid();
                 }
             }
             u ??= await au.FindByIdAsync(userId).ConfigureAwait(false);
+
+            if (!Guid.TryParse(userId, out var uuid)) uuid = sess?.Id ?? Guid.NewGuid();
+
             var roles = u != null ? await au.GetRolesAsync(u).ConfigureAwait(false) : ["Guest"];
             var conf = sp.GetRequiredService<IOptions<SecurityOptions>>();
 
