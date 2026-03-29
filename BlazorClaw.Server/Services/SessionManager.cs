@@ -288,9 +288,9 @@ namespace BlazorClaw.Server.Services
             }
 
             while (count > 1 && iterations < 10);
-            if (!string.IsNullOrEmpty(lastMsgText))
+            if (lastMsg != null && !string.IsNullOrEmpty(lastMsgText) && tokenProz > warningThreshold)
             {
-                sessionState.MessageHistory.Last().SetContents([new TextContentEntry() { Text = lastMsgText }]);
+                lastMsg.SetContents([new TextContentEntry() { Text = lastMsgText }]);
             }
         }
 
