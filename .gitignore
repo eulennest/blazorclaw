@@ -46,3 +46,4 @@ tmp/
 *.db-shm
 *.db-wal
 session_*.json
+BlazorClaw.Server/userdata/

@@ -47,11 +47,11 @@ public class LsTool : BaseTool<LsParams>
 
         var sbLimited = new StringBuilder();
         var sbAll = new StringBuilder();
-        if (details) sbLimited.AppendLine("path\tedittime\tsize");
         var c = 0;
         var hidden = 0;
         var limit = p.Recursive ?? false ? 50 : 200;
-        var sbCurrent = sbLimited;
+        var sbCurrent = sbAll;
+        if (details) sbCurrent.AppendLine("path\tedittime\tsize");
 
         await foreach (var entry in entrys.Where(o => matcher.Match(o.EntityName).HasMatches || matcher.Match(o.ToString()).HasMatches))
         {
@@ -61,7 +61,7 @@ public class LsTool : BaseTool<LsParams>
             {
                 if (hidden == 0)
                 {
-                    sbAll.Append(sbCurrent);
+                    sbLimited.Append(sbCurrent);
                     sbCurrent = sbAll;
                 }
                 hidden++;

@@ -120,7 +120,7 @@ namespace BlazorClaw.Core.Utils
                 {
                     foreach (var item in DriveInfo.GetDrives())
                     {
-                        vfs.AddMountpoint(VfsPath.Parse($"/{item.Name.Trim(':', '/')}/"), new PhysicalFileSystem(item.RootDirectory.FullName));
+                        vfs.AddMountpoint(VfsPath.Parse($"/{item.Name.Trim(':', '/', '\\')}/"), new PhysicalFileSystem(item.RootDirectory.FullName));
                     }
                 }
                 else
@@ -130,7 +130,8 @@ namespace BlazorClaw.Core.Utils
             }
             else
             {
-                vfs.AddMountpoint(VfsPath.Parse(VfsPath.Root, Environment.CurrentDirectory, VfsPathParseMode.Directory), new NoOpFileSystem(), true);
+                var vp = await vfs.RealToVfsPathAsync(Environment.CurrentDirectory) ?? VfsPath.Parse(VfsPath.Root, Environment.CurrentDirectory, VfsPathParseMode.Directory);
+                vfs.AddMountpoint(vp, new NoOpFileSystem(), true);
 
                 foreach (var item in sandboxPaths)
                 {
