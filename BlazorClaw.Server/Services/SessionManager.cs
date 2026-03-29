@@ -244,12 +244,13 @@ namespace BlazorClaw.Server.Services
                 sessionState.SystemPrompts.Add(new DynamicSystemChatMessage(sessionState));
 
                 List<string> files = ["AGENTS.md", "IDENTITY.md", "SOUL.md", "USER.md", "RULES.md", "MEMORY.md"];
+                var vfs = context.Provider.GetRequiredService<IVfsSystem>();
                 foreach (var item in files)
                 {
-                    var agentsPath = context.GetMemoryPath(item);
-                    if (File.Exists(agentsPath))
+                    var vp = VfsPath.Parse(PathUtils.VfsMemory, item);
+                    if (await vfs.ExistsAsync(vp))
                     {
-                        var agentPromptContent = await File.ReadAllTextAsync(agentsPath).ConfigureAwait(false);
+                        var agentPromptContent = await vfs.ReadAllTextAsync(vp).ConfigureAwait(false);
                         sessionState.SystemPrompts.Add(new ChatMessage
                         {
                             Role = "system",
