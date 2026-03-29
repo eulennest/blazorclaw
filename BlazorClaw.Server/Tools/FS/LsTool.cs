@@ -5,6 +5,7 @@ using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.VFS;
 using Microsoft.Extensions.FileSystemGlobbing;
 using System.ComponentModel;
+using System.Net;
 using System.Text;
 
 namespace BlazorClaw.Server.Tools.FS;
@@ -44,13 +45,13 @@ public class LsTool : BaseTool<LsParams>
         var matcher = new Matcher(StringComparison.OrdinalIgnoreCase);
         matcher.AddInclude(p.Pattern ?? "*");
 
-        var sb = new StringBuilder();
-        var sbhidden = new StringBuilder();
-        if (details) sb.AppendLine("path\tedittime\tsize");
+        var sbLimited = new StringBuilder();
+        var sbAll = new StringBuilder();
+        if (details) sbLimited.AppendLine("path\tedittime\tsize");
         var c = 0;
         var hidden = 0;
         var limit = p.Recursive ?? false ? 50 : 200;
-        var sbu = sb;
+        var sbCurrent = sbLimited;
 
         await foreach (var entry in entrys.Where(o => matcher.Match(o.EntityName).HasMatches || matcher.Match(o.ToString()).HasMatches))
         {
@@ -58,23 +59,26 @@ public class LsTool : BaseTool<LsParams>
             c++;
             if (c > limit)
             {
+                if (hidden == 0)
+                {
+                    sbAll.Append(sbCurrent);
+                    sbCurrent = sbAll;
+                }
                 hidden++;
-                sbhidden.Append(sb);
-                sbu = sbhidden;
             }
             if (f.Path.IsFile)
             {
-                sbu.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}\t{f.Length}" : f.Path.ToString());
+                sbCurrent.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}\t{f.Length}" : f.Path.ToString());
             }
             else
             {
-                sbu.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}" : f.Path.ToString());
+                sbCurrent.AppendLine(details ? $"{f.Path}\t{f.LastWriteTime.ToUnix()}" : f.Path.ToString());
             }
         }
         if (hidden > 0)
-            sb.AppendLine($"[OUTPUT begrenzt auf {c - hidden}  files, {hidden} files übersprungen]");
+            sbLimited.AppendLine($"[OUTPUT begrenzt auf {c - hidden}  files, {hidden} files übersprungen]");
 
         if (c == 0) return "Keine Dateien gefunden.";
-        return (hidden > limit / 2) ? sb.ToString() : sbhidden.ToString();
+        return (hidden > limit / 2) ? sb.ToString() : sbAll.ToString();
     }
 }
