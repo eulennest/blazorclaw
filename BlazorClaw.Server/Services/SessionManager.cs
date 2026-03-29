@@ -260,7 +260,7 @@ namespace BlazorClaw.Server.Services
                 }
             }
             const int maxtoken = 100000;
-            const double warningThreshold = 85;
+            const double warningThreshold = 70;
             var tokenProz = (sessionState.LastUsage?.PromptTokens ?? 1) / maxtoken * 100.0;
             var sb = new StringBuilder();
 
@@ -268,10 +268,8 @@ namespace BlazorClaw.Server.Services
             var lastMsgText = lastMsg?.GetTextContent();
             if (!string.IsNullOrEmpty(lastMsgText) && tokenProz > warningThreshold)
             {
-                sessionState.MessageHistory.Last().SetContents([new TextContentEntry() { Text =
-                    $"[SYSTEM: ⚠️ WARNING: Token usage is at {tokenProz}% call sesson_compress IMEDIATELY]\n" +
-                    $"{lastMsgText}"
-                    } ]);
+                lastMsg.Content =
+                    $"[SYSTEM: ⚠️ WARNING: Token usage is at {tokenProz}% call session_compress IMEDIATELY]\r\n{lastMsgText}";
             }
 
             int count;
@@ -291,7 +289,7 @@ namespace BlazorClaw.Server.Services
             while (count > 1 && iterations < 10);
             if (lastMsg != null && !string.IsNullOrEmpty(lastMsgText) && tokenProz > warningThreshold)
             {
-                lastMsg.SetContents([new TextContentEntry() { Text = lastMsgText }]);
+                lastMsg.Content = lastMsgText;
             }
         }
 
