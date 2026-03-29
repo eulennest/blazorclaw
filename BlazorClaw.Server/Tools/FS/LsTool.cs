@@ -79,6 +79,6 @@ public class LsTool : BaseTool<LsParams>
             sbLimited.AppendLine($"[OUTPUT begrenzt auf {c - hidden}  files, {hidden} files übersprungen]");
 
         if (c == 0) return "Keine Dateien gefunden.";
-        return (hidden > limit / 2) ? sb.ToString() : sbAll.ToString();
+        return (hidden > limit / 2) ? sbLimited.ToString() : sbAll.ToString();
     }
 }
