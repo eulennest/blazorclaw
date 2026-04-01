@@ -34,11 +34,12 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
             var f = await vfs.GetMetaInfoAsync(entry);
             using var strm = await f.OpenReadAsync();
             var title = string.Empty;
+            var safeFileName = entry.MakeRelative(PathUtils.VfsMemory);
 
             using var st = new StreamReader(strm);
             title = await st.ReadLineAsync() ?? string.Empty;
             title = title.Replace(entry.EntityName!, "", StringComparison.InvariantCultureIgnoreCase).Replace("  ", " ").Trim(badChars);
-            sb.AppendLine($"{entry.RemoveParent(PathUtils.VfsMemory)}\t{f.LastWriteTime.ToUnix()}\t{f.Length}\t{title}");
+            sb.AppendLine($"{safeFileName}\t{f.LastWriteTime.ToUnix()}\t{f.Length}\t{title}");
         }
 
         if (c == 0) return "Keine Memory-Dateien gefunden.";

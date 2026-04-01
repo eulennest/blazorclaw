@@ -55,14 +55,19 @@ namespace BlazorClaw.Core.VFS.Systems
         {
             return base.DeleteRecursiveAsync(AppendRoot(path), cancellationToken);
         }
-        public override Task<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
+        public override ValueTask<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
         {
             return base.VfsToRealPathAsync(AppendRoot(path), cancellationToken);
         }
-        public override async Task<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
+        public override async ValueTask<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
         {
             var ret = await base.RealToVfsPathAsync(path, cancellationToken);
             return ret != null ? AppendRoot(ret.Value) : null;
+        }
+
+        public override ValueTask MoveAsync(VfsPath pathFrom, VfsPath pathTo, CancellationToken cancellationToken = default)
+        {
+            return base.MoveAsync(AppendRoot(pathFrom), AppendRoot(pathTo), cancellationToken);
         }
     }
 }

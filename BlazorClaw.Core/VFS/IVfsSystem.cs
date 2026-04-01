@@ -2,18 +2,19 @@
 {
     public interface IVfsSystem : IDisposable
     {
-        IAsyncEnumerable<VfsPath> GetSubPathsAsync(VfsPath path, CancellationToken cancelationToken = default);
-        IAsyncEnumerable<VfsPath> GetDirectorysAsync(VfsPath path, CancellationToken cancelationToken = default);
-        IAsyncEnumerable<VfsPath> GetFilesAsync(VfsPath path, CancellationToken cancelationToken = default);
-        ValueTask<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancelationToken = default);
-        ValueTask<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default);
-        Task CreateFileAsync(VfsPath path, Stream data, CancellationToken cancelationToken = default);
-        Task<Stream> OpenFileAsync(VfsPath path, FileMode mode, FileAccess access, CancellationToken cancelationToken = default);
-        Task CreateDirectoryAsync(VfsPath path, CancellationToken cancelationToken = default);
-        Task DeleteAsync(VfsPath path, CancellationToken cancelationToken = default);
-        Task DeleteRecursiveAsync(VfsPath path, CancellationToken cancelationToken = default);
+        IAsyncEnumerable<VfsPath> GetSubPathsAsync(VfsPath path, CancellationToken cancellationToken = default);
+        IAsyncEnumerable<VfsPath> GetDirectorysAsync(VfsPath path, CancellationToken cancellationToken = default);
+        IAsyncEnumerable<VfsPath> GetFilesAsync(VfsPath path, CancellationToken cancellationToken = default);
+        ValueTask<VfsPathInfo> GetMetaInfoAsync(VfsPath path, CancellationToken cancellationToken = default);
+        ValueTask<bool> ExistsAsync(VfsPath path, CancellationToken cancellationToken = default);
+        Task CreateFileAsync(VfsPath path, Stream data, CancellationToken cancellationToken = default);
+        Task<Stream> OpenFileAsync(VfsPath path, FileMode mode, FileAccess access, CancellationToken cancellationToken = default);
+        Task CreateDirectoryAsync(VfsPath path, CancellationToken cancellationToken = default);
+        Task DeleteAsync(VfsPath path, CancellationToken cancellationToken = default);
+        Task DeleteRecursiveAsync(VfsPath path, CancellationToken cancellationToken = default);
+        ValueTask MoveAsync(VfsPath pathFrom, VfsPath pathTo, CancellationToken cancellationToken = default);
 
-        Task<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancelationToken = default);
-        Task<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancelationToken = default);
+        ValueTask<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default);
+        ValueTask<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default);
     }
 }

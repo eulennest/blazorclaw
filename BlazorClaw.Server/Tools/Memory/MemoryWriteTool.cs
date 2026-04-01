@@ -36,7 +36,7 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
             throw new FileNotFoundException($"Path ist keine Datei: {p.FileName}");
         if (!PathUtils.VfsMemory.IsParentOf(path)) throw new InvalidPathException(p.FileName);
 
-        var safeFileName = path.RemoveParent(PathUtils.VfsMemory);
+        var safeFileName = path.MakeRelative(PathUtils.VfsMemory);
 
         var mi = await vfs.GetMetaInfoAsync(path);
         var mode = p.Mode ?? WriteMode.Create;

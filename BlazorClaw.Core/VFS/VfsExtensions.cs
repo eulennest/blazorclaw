@@ -95,5 +95,20 @@ namespace BlazorClaw.Core.VFS
         {
             return await ReadLinesAsync(fileSystem, path, cancellationToken).ToArrayAsync(cancellationToken);
         }
+
+
+        public static async Task CopyAsync(this IVfsSystem fileSystem, VfsPath path, VfsPath pathTo, bool force = false, CancellationToken cancellationToken = default)
+        {
+            if (path.IsDirectory)
+                throw new ArgumentException("The specified path is not a file.");
+            if (pathTo.IsDirectory)
+                pathTo = pathTo.AppendFile(path.EntityName!);
+            if(!force && await fileSystem.ExistsAsync(pathTo))
+                throw new IOException("The destination file already exists.");
+
+            using var stream = await fileSystem.OpenFileAsync(path, FileMode.Open, FileAccess.Read, cancellationToken);
+            using var streamTo = await fileSystem.OpenFileAsync(pathTo, FileMode.Create, FileAccess.Write, cancellationToken);
+            await stream.CopyToAsync(streamTo, cancellationToken);
+        }
     }
 }

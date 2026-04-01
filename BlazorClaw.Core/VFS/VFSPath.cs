@@ -267,6 +267,16 @@ namespace BlazorClaw.Core.VFS
             return new VfsPath(Path[(parent.Path.Length - 1)..]);
         }
 
+        public string MakeRelative(VfsPath parent)
+        {
+            if (!parent.IsDirectory)
+                throw new ArgumentException("The specified path can not be the parent of this path: it is not a directory.");
+            if (!Path.StartsWith(parent.Path))
+                return Path;
+            if (Path.Equals(parent.Path))
+                return "./";
+            return Path[(parent.Path.Length)..];
+        }
 
         public VfsPath RemoveChild(VfsPath child)
         {

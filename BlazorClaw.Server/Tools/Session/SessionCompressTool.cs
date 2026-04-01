@@ -47,7 +47,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
             if (!hasasist && msg.IsTool) continue;
             if (!hasasist && msg.IsAssistant) hasasist = true;
 
-            if (msg.IsTool && msg.Content is string str && str.Length > 100)
+            if (msg.IsTool && msg.GetTextContent() is string str && str.Length > 100)
             {
                 // Kürze alte Tool-Ausgaben, damit die Session nicht zu groß wird.
                 // Die Zusammenfassung sollte ja die wichtigen Infos enthalten, damit das Tool nicht mehr unbedingt nötig ist.

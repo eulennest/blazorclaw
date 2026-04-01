@@ -138,14 +138,14 @@ namespace BlazorClaw.Core.VFS.Systems
             return pair.Value.VFS.DeleteRecursiveAsync(path.RemoveParent(pair.Key), cancelationToken);
         }
 
-        public virtual Task<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
+        public virtual ValueTask<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
         {
             var pair = Get(path) ?? throw new FileNotFoundException("mountpoint not found", path.ToString());
             return pair.Value.VFS.VfsToRealPathAsync(path.RemoveParent(pair.Key), cancellationToken);
         }
 
 
-        public virtual async Task<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
+        public virtual async ValueTask<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
         {
             foreach (var pair in Mounts)
             {
@@ -160,6 +160,15 @@ namespace BlazorClaw.Core.VFS.Systems
                 cancellationToken.ThrowIfCancellationRequested();
             }
             return null;
+        }
+
+        public ValueTask MoveAsync(VfsPath pathFrom, VfsPath pathTo, CancellationToken cancellationToken = default)
+        {
+            var pair1 = Get(pathFrom) ?? throw new FileNotFoundException("mountpoint not found", pathFrom.ToString());
+            var pair2 = Get(pathTo) ?? throw new FileNotFoundException("mountpoint not found", pathTo.ToString());
+            if(pair1.Value.VFS != pair2.Value.VFS) throw new InvalidOperationException("cannot move between different fielsystems");
+
+            return pair1.Value.VFS.MoveAsync(pathFrom.RemoveParent(pair1.Key), pathTo.RemoveParent(pair2.Key), cancellationToken);
         }
     }
 }

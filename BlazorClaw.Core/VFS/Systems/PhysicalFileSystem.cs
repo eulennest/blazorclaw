@@ -41,20 +41,20 @@ namespace BlazorClaw.Core.VFS.Systems
         }
 
         #endregion
-        public virtual Task<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
+        public virtual ValueTask<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<string?>(GetPhysicalPath(path));
+            return ValueTask.FromResult<string?>(GetPhysicalPath(path));
         }
-        public virtual Task<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
+        public virtual ValueTask<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
         {
             try
             {
-                return Task.FromResult<VfsPath?>(GetVirtualFilePath(path));
+                return ValueTask.FromResult<VfsPath?>(GetVirtualFilePath(path));
             }
             catch (Exception)
             {
             }
-            return Task.FromResult<VfsPath?>(null);
+            return ValueTask.FromResult<VfsPath?>(null);
         }
 
         void IDisposable.Dispose()
@@ -99,6 +99,14 @@ namespace BlazorClaw.Core.VFS.Systems
         public ValueTask<bool> ExistsAsync(VfsPath path, CancellationToken cancelationToken = default)
         {
             return ValueTask.FromResult(path.IsFile ? System.IO.File.Exists(GetPhysicalPath(path)) : System.IO.Directory.Exists(GetPhysicalPath(path)));
+        }
+
+        public ValueTask MoveAsync(VfsPath path, VfsPath pathTo, CancellationToken cancelationToken = default)
+        {
+            var from = GetPhysicalPath(path);
+            var to = GetPhysicalPath(pathTo);
+            File.Move(from, to);
+            return ValueTask.CompletedTask;
         }
 
         public async Task CreateFileAsync(VfsPath path, Stream data, CancellationToken cancelationToken = default)

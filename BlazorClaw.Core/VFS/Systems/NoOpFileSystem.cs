@@ -57,14 +57,19 @@ namespace BlazorClaw.Core.VFS.Systems
             throw new InvalidOperationException();
         }
 
-        public virtual Task<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
+        public virtual ValueTask<string?> VfsToRealPathAsync(VfsPath path, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<string?>(null);
+            return ValueTask.FromResult<string?>(null);
         }
 
-        public virtual Task<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
+        public virtual ValueTask<VfsPath?> RealToVfsPathAsync(string path, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult<VfsPath?>(null);
+            return ValueTask.FromResult<VfsPath?>(null);
+        }
+
+        public ValueTask MoveAsync(VfsPath pathFrom, VfsPath pathTo, CancellationToken cancellationToken = default)
+        {
+            throw new InvalidOperationException();
         }
     }
 }
