@@ -1,25 +1,26 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.VFS;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace BlazorClaw.Server.Tools;
 
 public class McpCallParams : BaseToolParams
 {
-    [Description("MCP Server URL (z.B. http://localhost:3000 oder https://blazorclaw-mcp.example.com)")]
+    [Description("MCP Server URI - 2 Optionen:\n1. Direkt: http://localhost:3000, ws://example.com, npx://@package\n2. Aus Registry: mcp://servername (nutzt mcp_list zum Nachschlag)")]
     [Required]
-    public string ServerUrl { get; set; } = string.Empty;
+    public string ServerUri { get; set; } = string.Empty;
 
-    [Description("JSON-RPC Methode (z.B. memory/search, filesystem/list, vault/get)")]
-    [Required]
-    public string Method { get; set; } = string.Empty;
+    [Description("JSON-RPC Methode (z.B. memory/search, filesystem/list, vault/get)\nBei mcp:// Schema wird Method automatisch aus URI extrahiert")]
+    public string? Method { get; set; }
 
     [Description("JSON-RPC Parameter als Dictionary (z.B. {\"query\": \"@SEARCH_QUERY\"} oder {\"path\": \"/home/user/file.txt\"})")]
     public Dictionary<string, object>? Params { get; set; }
 
-    [Description("Bearer Token falls MCP Auth required (optional)")]
+    [Description("Bearer Token falls MCP Auth required (optional). Überschreibt Token aus Registry")]
     public string? BearerToken { get; set; }
 
     [Description("Timeout in Sekunden")]
@@ -30,7 +31,7 @@ public class McpCallParams : BaseToolParams
     public bool IgnoreSslErrors { get; set; } = false;
 }
 
-public class McpCallTool(IHttpClientFactory httpClientFactory, ILogger<McpCallTool> logger) : BaseTool<McpCallParams>
+public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, ILogger<McpCallTool> logger) : BaseTool<McpCallParams>
 {
     public override string Name => "mcp_call";
     public override string Description => """
@@ -73,12 +74,27 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, ILogger<McpCallTo
             // Resolve variables (same as HttpRequestTool)
             await p.ResolveVarsAsync(context);
 
-            // Validate ServerUrl
-            if (!Uri.TryCreate(p.ServerUrl, UriKind.Absolute, out var serverUri))
-                return $"ERROR: Ungültige MCP Server URL: {p.ServerUrl}";
+            var serverUri = p.ServerUri;
+            var method = p.Method;
+            var bearerToken = p.BearerToken;
+
+            // Handle mcp:// schema (registry lookup)
+            if (serverUri.StartsWith("mcp://"))
+            {
+                var (resolvedUri, resolvedMethod, resolvedToken) = await ResolveMcpSchemaAsync(serverUri, method, bearerToken);
+                if (resolvedUri.StartsWith("ERROR:"))
+                    return resolvedUri;
+                serverUri = resolvedUri;
+                method = resolvedMethod ?? method;
+                bearerToken = resolvedToken ?? bearerToken;
+            }
+
+            // Validate ServerUri
+            if (!Uri.TryCreate(serverUri, UriKind.Absolute, out var uri))
+                return $"ERROR: Ungültige MCP Server URI: {serverUri}";
 
             // Validate Method
-            if (string.IsNullOrWhiteSpace(p.Method))
+            if (string.IsNullOrWhiteSpace(method))
                 return "ERROR: Method ist erforderlich";
 
             // Build JSON-RPC Request
@@ -86,13 +102,13 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, ILogger<McpCallTo
             var jsonRpcRequest = new
             {
                 jsonrpc = "2.0",
-                method = p.Method,
+                method = method,
                 @params = p.Params ?? new Dictionary<string, object>(),
                 id = requestId
             };
 
             var requestJson = JsonSerializer.Serialize(jsonRpcRequest);
-            logger.LogInformation($"MCP Request to {p.ServerUrl}: {requestJson}");
+            logger.LogInformation($"MCP Request to {serverUri}: {requestJson}");
 
             // Create HTTP Client
             var httpClient = httpClientFactory.CreateClient();
@@ -106,15 +122,15 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, ILogger<McpCallTo
             }
 
             // Build request
-            var request = new HttpRequestMessage(HttpMethod.Post, p.ServerUrl)
+            var request = new HttpRequestMessage(HttpMethod.Post, serverUri)
             {
                 Content = new StringContent(requestJson, System.Text.Encoding.UTF8, "application/json")
             };
 
             // Add auth if provided
-            if (!string.IsNullOrWhiteSpace(p.BearerToken))
+            if (!string.IsNullOrWhiteSpace(bearerToken))
             {
-                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", p.BearerToken);
+                request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearerToken);
             }
 
             // Send request
@@ -163,5 +179,72 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, ILogger<McpCallTo
             logger.LogError($"MCP Call Error: {ex}");
             return $"ERROR: {ex.Message}";
         }
+    }
+
+    private async Task<(string uri, string? method, string? token)> ResolveMcpSchemaAsync(string mcpUri, string? method, string? bearerToken)
+    {
+        try
+        {
+            // Parse mcp://servername/method format
+            // Examples: mcp://memory/search, mcp://github/pr/create
+            var uriPart = mcpUri.Substring("mcp://".Length);
+            var parts = uriPart.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length < 1)
+                return ("ERROR: mcp:// URI format: mcp://servername/method", null, null);
+
+            var serverName = parts[0];
+            var methodPath = string.Join("/", parts.Skip(1));
+
+            // Load registry
+            var registry = await LoadRegistryAsync();
+
+            // Find matching server
+            var server = registry.Servers.FirstOrDefault(s => s.Name == serverName && s.Enabled);
+            if (server == null)
+                return ($"ERROR: MCP Server '{serverName}' nicht in Registry gefunden oder deaktiviert. Nutze mcp_list zum Anzeigen.", null, null);
+
+            // Set method from URI path if not provided
+            var resolvedMethod = method;
+            if (string.IsNullOrWhiteSpace(method) && !string.IsNullOrWhiteSpace(methodPath))
+                resolvedMethod = methodPath;
+
+            // Use server's bearer token if configured and not overridden
+            var resolvedToken = bearerToken;
+            if (string.IsNullOrWhiteSpace(bearerToken) && server.AuthType == "bearer" && !string.IsNullOrWhiteSpace(server.TokenName))
+                resolvedToken = server.TokenName; // TODO: Resolve from Vault
+
+            logger.LogInformation($"Resolved mcp://{serverName} to {server.ServerUri}");
+            return (server.ServerUri, resolvedMethod, resolvedToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error resolving mcp:// schema");
+            return ($"ERROR: mcp:// resolution failed: {ex.Message}", null, null);
+        }
+    }
+
+    private async Task<McpRegistry> LoadRegistryAsync()
+    {
+        try
+        {
+            var filePath = GetRegistryPath();
+            if (!await vfs.ExistsAsync(filePath))
+                return new McpRegistry();
+
+            using var stream = await vfs.OpenFileAsync(filePath, FileMode.Open, FileAccess.Read);
+            return await JsonSerializer.DeserializeAsync<McpRegistry>(stream)
+                ?? new McpRegistry();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not load MCP registry");
+            return new McpRegistry();
+        }
+    }
+
+    private VfsPath GetRegistryPath()
+    {
+        return VfsPath.Parse(VfsPath.Parse("/~secure/"), "mcp.json", VfsPathParseMode.File);
     }
 }
