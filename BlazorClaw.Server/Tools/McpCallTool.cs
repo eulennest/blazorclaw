@@ -251,7 +251,11 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, I
         {
             // Check if this direct URL is registered in the registry
             var registry = await LoadRegistryAsync();
-            var registeredServer = registry.Servers.FirstOrDefault(s => s.ServerUri == serverUri);
+            
+            // Match with StartsWith (case-insensitive) to handle query params, fragments, paths
+            // This prevents bypassing security by appending ?token=x or #fragment
+            var registeredServer = registry.Servers.FirstOrDefault(s => 
+                serverUri.StartsWith(s.ServerUri, StringComparison.OrdinalIgnoreCase));
 
             if (registeredServer == null)
             {
@@ -264,11 +268,11 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, I
             if (!registeredServer.Enabled)
             {
                 // Registered but disabled → blocked
-                return $"ERROR: MCP Server '{registeredServer.Name}' (URI: {serverUri}) ist deaktiviert. Nutze mcp_set um zu aktivieren.";
+                return $"ERROR: MCP Server '{registeredServer.Name}' ist deaktiviert. Nutze mcp_set um zu aktivieren.";
             }
 
             // Registered and enabled → allowed
-            logger.LogInformation($"Direct URL {serverUri} is registered and enabled ({registeredServer.Name})");
+            logger.LogInformation($"Direct URL {serverUri} matches registered server '{registeredServer.Name}' (enabled)");
             return "OK";
         }
         catch (Exception ex)
