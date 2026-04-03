@@ -10,12 +10,13 @@ namespace BlazorClaw.Server.Tools;
 
 public class McpCallParams : BaseToolParams
 {
-    [Description("MCP Server URI - 2 Optionen:\n1. Direkt: http://localhost:3000, ws://example.com, npx://@package\n2. Aus Registry: mcp://servername (nutzt mcp_list zum Nachschlag)")]
+    [Description("MCP Server URI oder Registry-Name:\n1. Registry: mcp://servername (schlägt in mcp.json nach, mit Access Control)\n2. Direkt: http://localhost:3000, ws://example.com, npx://@package")]
     [Required]
     public string ServerUri { get; set; } = string.Empty;
 
-    [Description("JSON-RPC Methode (z.B. memory/search, filesystem/list, vault/get)\nBei mcp:// Schema wird Method automatisch aus URI extrahiert")]
-    public string? Method { get; set; }
+    [Description("JSON-RPC Methode (z.B. memory/search, filesystem/list, vault/get)")]
+    [Required]
+    public string Method { get; set; } = string.Empty;
 
     [Description("JSON-RPC Parameter als Dictionary (z.B. {\"query\": \"@SEARCH_QUERY\"} oder {\"path\": \"/home/user/file.txt\"})")]
     public Dictionary<string, object>? Params { get; set; }
@@ -78,24 +79,23 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, I
             var method = p.Method;
             var bearerToken = p.BearerToken;
 
-            // Handle mcp:// schema (registry lookup)
+            // Validate Method first
+            if (string.IsNullOrWhiteSpace(method))
+                return "ERROR: Method ist erforderlich";
+
+            // Handle mcp:// schema (registry lookup with access control)
             if (serverUri.StartsWith("mcp://"))
             {
-                var (resolvedUri, resolvedMethod, resolvedToken) = await ResolveMcpSchemaAsync(serverUri, method, bearerToken);
+                var (resolvedUri, resolvedToken) = await ResolveMcpRegistryAsync(serverUri, bearerToken);
                 if (resolvedUri.StartsWith("ERROR:"))
                     return resolvedUri;
                 serverUri = resolvedUri;
-                method = resolvedMethod ?? method;
                 bearerToken = resolvedToken ?? bearerToken;
             }
 
             // Validate ServerUri
             if (!Uri.TryCreate(serverUri, UriKind.Absolute, out var uri))
                 return $"ERROR: Ungültige MCP Server URI: {serverUri}";
-
-            // Validate Method
-            if (string.IsNullOrWhiteSpace(method))
-                return "ERROR: Method ist erforderlich";
 
             // Build JSON-RPC Request
             var requestId = Guid.NewGuid().ToString("N").Substring(0, 8);
@@ -181,46 +181,41 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, I
         }
     }
 
-    private async Task<(string uri, string? method, string? token)> ResolveMcpSchemaAsync(string mcpUri, string? method, string? bearerToken)
+    private async Task<(string uri, string? token)> ResolveMcpRegistryAsync(string mcpUri, string? bearerToken)
     {
         try
         {
-            // Parse mcp://servername/method format
-            // Examples: mcp://memory/search, mcp://github/pr/create
-            var uriPart = mcpUri.Substring("mcp://".Length);
-            var parts = uriPart.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            // Parse mcp://servername format
+            // Example: mcp://memory
+            var serverName = mcpUri.Substring("mcp://".Length).Trim();
 
-            if (parts.Length < 1)
-                return ("ERROR: mcp:// URI format: mcp://servername/method", null, null);
-
-            var serverName = parts[0];
-            var methodPath = string.Join("/", parts.Skip(1));
+            if (string.IsNullOrWhiteSpace(serverName))
+                return ("ERROR: mcp:// URI Format: mcp://servername", null);
 
             // Load registry
             var registry = await LoadRegistryAsync();
 
-            // Find matching server
-            var server = registry.Servers.FirstOrDefault(s => s.Name == serverName && s.Enabled);
+            // Find matching server (enabled + in registry)
+            var server = registry.Servers.FirstOrDefault(s => s.Name == serverName);
             if (server == null)
-                return ($"ERROR: MCP Server '{serverName}' nicht in Registry gefunden oder deaktiviert. Nutze mcp_list zum Anzeigen.", null, null);
+                return ($"ERROR: MCP Server '{serverName}' nicht in Registry gefunden. Nutze mcp_set oder mcp_list.", null);
 
-            // Set method from URI path if not provided
-            var resolvedMethod = method;
-            if (string.IsNullOrWhiteSpace(method) && !string.IsNullOrWhiteSpace(methodPath))
-                resolvedMethod = methodPath;
+            // Check if enabled
+            if (!server.Enabled)
+                return ($"ERROR: MCP Server '{serverName}' ist deaktiviert. Nutze mcp_set um zu aktivieren.", null);
 
             // Use server's bearer token if configured and not overridden
             var resolvedToken = bearerToken;
             if (string.IsNullOrWhiteSpace(bearerToken) && server.AuthType == "bearer" && !string.IsNullOrWhiteSpace(server.TokenName))
-                resolvedToken = server.TokenName; // TODO: Resolve from Vault
+                resolvedToken = server.TokenName; // TODO: Resolve from Vault (VariableResolver)
 
             logger.LogInformation($"Resolved mcp://{serverName} to {server.ServerUri}");
-            return (server.ServerUri, resolvedMethod, resolvedToken);
+            return (server.ServerUri, resolvedToken);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error resolving mcp:// schema");
-            return ($"ERROR: mcp:// resolution failed: {ex.Message}", null, null);
+            logger.LogError(ex, "Error resolving mcp:// registry");
+            return ($"ERROR: mcp:// resolution failed: {ex.Message}", null);
         }
     }
 
