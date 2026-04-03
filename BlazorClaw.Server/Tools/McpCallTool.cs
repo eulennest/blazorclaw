@@ -92,6 +92,13 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, I
                 serverUri = resolvedUri;
                 bearerToken = resolvedToken ?? bearerToken;
             }
+            else
+            {
+                // Check direct URLs against registry (disabled check)
+                var accessResult = await CheckDirectUrlAccessAsync(serverUri);
+                if (accessResult.StartsWith("ERROR:"))
+                    return accessResult;
+            }
 
             // Validate ServerUri
             if (!Uri.TryCreate(serverUri, UriKind.Absolute, out var uri))
@@ -235,6 +242,40 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, I
         {
             logger.LogWarning(ex, "Could not load MCP registry");
             return new McpRegistry();
+        }
+    }
+
+    private async Task<string> CheckDirectUrlAccessAsync(string serverUri)
+    {
+        try
+        {
+            // Check if this direct URL is registered in the registry
+            var registry = await LoadRegistryAsync();
+            var registeredServer = registry.Servers.FirstOrDefault(s => s.ServerUri == serverUri);
+
+            if (registeredServer == null)
+            {
+                // URL not in registry → allowed (permissive by default)
+                logger.LogInformation($"Direct URL {serverUri} not in registry, allowing access");
+                return "OK";
+            }
+
+            // URL is in registry
+            if (!registeredServer.Enabled)
+            {
+                // Registered but disabled → blocked
+                return $"ERROR: MCP Server '{registeredServer.Name}' (URI: {serverUri}) ist deaktiviert. Nutze mcp_set um zu aktivieren.";
+            }
+
+            // Registered and enabled → allowed
+            logger.LogInformation($"Direct URL {serverUri} is registered and enabled ({registeredServer.Name})");
+            return "OK";
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error checking direct URL access");
+            // On error, allow access (fail-open, security via registry)
+            return "OK";
         }
     }
 
