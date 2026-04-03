@@ -14,36 +14,6 @@ public class McpListToolParams : BaseToolParams
     public bool OnlyEnabled { get; set; } = true;
 }
 
-public class McpServerEntry
-{
-    [JsonPropertyName("name")]
-    public string Name { get; set; } = string.Empty;
-
-    [JsonPropertyName("serverUri")]
-    public string ServerUri { get; set; } = string.Empty;
-
-    [JsonPropertyName("authType")]
-    public string AuthType { get; set; } = "none";
-
-    [JsonPropertyName("tokenName")]
-    public string? TokenName { get; set; }
-
-    [JsonPropertyName("description")]
-    public string? Description { get; set; }
-
-    [JsonPropertyName("enabled")]
-    public bool Enabled { get; set; } = true;
-
-    [JsonPropertyName("addedAt")]
-    public DateTime AddedAt { get; set; } = DateTime.UtcNow;
-}
-
-public class McpRegistry
-{
-    [JsonPropertyName("servers")]
-    public List<McpServerEntry> Servers { get; set; } = new();
-}
-
 public class McpListTool(IVfsSystem vfs, MessageContextAccessor mca, ILogger<McpListTool> logger) 
     : BaseTool<McpListToolParams>
 {
