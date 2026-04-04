@@ -13,6 +13,7 @@ using BlazorClaw.Core.VFS;
 using BlazorClaw.Core.VFS.Systems;
 using BlazorClaw.UI.Components.Account;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.CommandLine;
@@ -104,6 +105,13 @@ namespace BlazorClaw.Server.Services
                         Provider = scope.ServiceProvider.GetRequiredService<IProviderManager>().GetProviderConfig(model?.Split('/')[0] ?? "openrouter") ?? throw new Exception($"No provider found for model {model}"),
                         MessageHistory = store.MessageHistory
                     };
+                    using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    if (!await db.ChatSessions.AnyAsync(o => o.Id.Equals(state.Session.Id)))
+                    {
+                        db.ChatSessions.Add(state.Session);
+                        await db.SaveChangesAsync().ConfigureAwait(false);
+                    }
+
                     await SetVFSAsync(state);
                     scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
                     _sessions.TryAdd(sessionId, state);
@@ -118,8 +126,8 @@ namespace BlazorClaw.Server.Services
         {
             using var db = sessionState.Services.GetRequiredService<ApplicationDbContext>();
             sessionState.Session.LastUsedAt = DateTime.UtcNow;
-            db.ChatSessions
-            .Update(sessionState.Session);
+
+            db.ChatSessions.Update(sessionState.Session);
             await db.SaveChangesAsync().ConfigureAwait(false);
             await SaveToDiskAsync(sessionState, newVersion).ConfigureAwait(false);
         }
