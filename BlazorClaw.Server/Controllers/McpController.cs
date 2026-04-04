@@ -132,6 +132,10 @@ public class McpController(ISessionManager sessionManager, ILogger<McpController
             {
                 result = Initialize(context);
             }
+            else if ("notifications/initialized".Equals(method))
+            {
+                result = null;
+            }
             else if ("tools/list".Equals(method))
             {
                 result = Tools_List(context);
