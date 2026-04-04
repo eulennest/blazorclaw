@@ -126,6 +126,7 @@ public class McpController(ISessionManager sessionManager, ILogger<McpController
             request.TryGetProperty("params", out var paramsElement);
 
             object? result = null;
+            logger.LogInformation("MCP call started: {SessionId}:{Method}", session, method);
 
             if ("initialize".Equals(method))
             {
