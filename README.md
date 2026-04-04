@@ -43,6 +43,46 @@ BlazorClaw/
 
 ---
 
+## Sicherheit & Zugriffskontrolle
+
+### MCP (Model Context Protocol) - Transporte & Zugriff
+
+BlazorClaw implementiert **transportbasierte Zugriffskontrolle** für MCP-Tools:
+
+| Transport | Schema | Zugriff | Registry-Pflicht | Anwendungsfall |
+|-----------|--------|--------|------------------|---|
+| **HTTP/HTTPS** | `http://`, `https://` | 🔓 Frei (öffentliche APIs) | ❌ Nein | Externe Web-APIs, LLM-Services |
+| **Unix Socket** | `unix:///path` | 🔒 Nur Admin (lokales IPC) | ✅ Ja (mcp_set) | Lokale IPC-Services |
+| **TCP/UDP** | `tcp://`, `udp://` | 🔒 Nur Admin (Netzwerk) | ✅ Ja (mcp_set) | Interne Netzwerk-Services |
+| **Exec** | `exec://` | 🔒 Nur Admin (RCE-Risiko) | ✅ Ja (mcp_set) | Lokale Prozesse (begrenzt) |
+
+### Access Control Regeln
+
+```
+HTTP/HTTPS:
+  - Direkter Zugriff ohne Registry-Eintrag ✅
+  - Beispiel: mcp_call(serverUri="https://api.example.com")
+
+Unix/TCP/UDP/Exec:
+  - BENÖTIGEN vorherigen Registry-Eintrag via mcp_set ✅
+  - Nur Admins dürfen mcp_set ausführen (Tool-Policy)
+  - Beispiel: 
+    1. mcp_set(name="local-db", serverUri="unix:///tmp/db.sock") [Admin only]
+    2. mcp_call(serverUri="mcp://local-db", method="query") [Jeder]
+```
+
+**Warum?** HTTP/HTTPS sind sichere externe APIs. Unix/TCP/UDP/Exec haben direkten Zugriff auf:
+- Lokale Prozesse (RCE-Risiko)
+- Internes Netzwerk (Lateral Movement)
+- Betriebssystem-Ressourcen
+
+Durch Registry-Pflicht wird verhindert, dass LLM willkürlich:
+- Lokale Binaries ausführt (`exec://`)
+- Interne Services anspricht (`tcp://192.168.x.x`)
+- Datenbanken zerstört (`unix:///var/db.sock`)
+
+---
+
 ## Kanalanbindung
 
 BlazorClaw unterstützt eine einheitliche Schnittstelle (`IChannelBot`). Um einen neuen Kanal (z.B. Slack) anzubinden, implementieren Sie einfach `IChannelBot` und registrieren Sie den Service in `Program.cs`. 
