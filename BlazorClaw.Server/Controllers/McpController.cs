@@ -1,16 +1,8 @@
 using BlazorClaw.Core.Commands;
-using BlazorClaw.Core.DTOs;
-using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
-using BlazorClaw.Core.Utils;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.CommandLine;
-using System.ComponentModel;
-using System.Security.Claims;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace BlazorClaw.Server.Controllers;
 
@@ -82,6 +74,18 @@ public class McpController(ISessionManager sessionManager, ILogger<McpController
     ///   "id": "123"
     /// }
     /// </summary>
+    private static readonly Random random = new Random();
+    [HttpGet()]
+    public async Task Get()
+    {
+        Response.ContentType = "text/event-stream";
+        await Response.Body.FlushAsync();
+
+        while (!HttpContext.RequestAborted.IsCancellationRequested)
+        {
+        }
+    }
+
     [HttpPost()]
     public async Task<IActionResult> Call([FromBody] JsonElement request)
     {
