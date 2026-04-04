@@ -15,6 +15,7 @@ using BlazorClaw.Core.Web;
 using BlazorClaw.Server;
 using BlazorClaw.Server.Security.Vault;
 using BlazorClaw.Server.Services;
+using BlazorClaw.Server.Tools.Mcp;
 using BlazorClaw.Server.Web;
 using BlazorClaw.UI;
 using BlazorClaw.UI.Components.Account;
@@ -47,7 +48,7 @@ builder.Services.AddHttpContextAccessor();
 // Add HttpClient for WebSearchProvider
 builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
 builder.Services.AddHttpClient<BlazorClaw.Server.Tools.ImageGenerationTool>();
-builder.Services.AddHttpClient<BlazorClaw.Server.Tools.McpCallTool>();
+builder.Services.AddHttpClient<McpCallTool>();
 
 // Add HttpClients for HttpRequestTool (normal + insecure for self-signed certs)
 builder.Services.AddHttpClient("HttpClient")
