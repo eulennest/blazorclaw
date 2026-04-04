@@ -60,8 +60,8 @@ BlazorClaw implementiert **transportbasierte Zugriffskontrolle** für MCP-Tools:
 
 **mcp_set** (Tool zur Service-Registrierung):
 - 🔒 **Admin-only** — Nur Admins dürfen neue MCP-Services registrieren
-- Speichert Dienste mit Auth-Daten in `/~secure/mcp.json`
-- Beispiel: `mcp_set(name="github", serverUri="https://mcp.github.com", authType="bearer", tokenName="GH_TOKEN")`
+- Speichert Service-Endpunkte in `/~secure/mcp.json` (ohne Auth-Daten)
+- Beispiel: `mcp_set(name="github", serverUri="https://mcp.github.com", authType="bearer", description="GitHub MCP Service")`
 
 **mcp_call** (Tool zum Service-Aufruf):
 - 🔓 **Für alle User** — Jeder kann registrierte Services nutzen
@@ -81,11 +81,13 @@ BlazorClaw implementiert **transportbasierte Zugriffskontrolle** für MCP-Tools:
 - Interne Netzwerk-Services (Lateral Movement)
 - OS-Ressourcen (Datenbanken, File-System)
 
-Admin registriert Service *einmalig*, dann nutzen **alle** User — oft mit Auth:
+Admin registriert Service *einmalig*, dann nutzen **alle** User mit eigenen Credentials:
 ```
-Admin: mcp_set(name="internal-db", serverUri="tcp://db.local:5432", authType="bearer", tokenName="DB_TOKEN")
-User:  mcp_call(serverUri="mcp://internal-db", method="query", params={...})
-       → Token aus Vault automatisch aufgelöst
+Admin: mcp_set(name="internal-db", serverUri="tcp://db.local:5432", authType="bearer")
+User:  mcp_call(serverUri="mcp://internal-db", method="query", 
+                bearerToken="@MY_DB_TOKEN", 
+                variableMappings={"MY_DB_TOKEN": "vault:MyDbSecret"})
+       → User-Token aus eigener Vault aufgelöst
 ```
 
 ---
