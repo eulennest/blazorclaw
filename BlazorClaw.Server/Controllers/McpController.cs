@@ -113,9 +113,15 @@ public class McpController(ISessionManager sessionManager, ILogger<McpController
             if (string.IsNullOrWhiteSpace(method))
                 return BadRequest(JsonRpcError("Method must not be empty", -32602));
 
-            var requestId = request.TryGetProperty("id", out var idElement)
-                ? idElement.GetString() ?? idElement.GetInt32().ToString()
-                : "1";
+            var requestId = "1";
+            if (request.TryGetProperty("id", out var idElement))
+            {
+                requestId = idElement.ValueKind == System.Text.Json.JsonValueKind.String
+                    ? idElement.GetString() ?? "1"
+                    : idElement.ValueKind == System.Text.Json.JsonValueKind.Number
+                        ? idElement.GetInt32().ToString()
+                        : "1";
+            }
 
             request.TryGetProperty("params", out var paramsElement);
 
