@@ -16,11 +16,11 @@ public class McpCallParams : BaseToolParams
     [Required]
     public string ServerUri { get; set; } = string.Empty;
 
-    [Description("MCP JSON-RPC Methode. Standard-Methoden:\n- 'initialize': MCP-Handshake (nur einmalig am Anfang)\n- 'tools/list': Liste alle verfügbaren Tools auf\n- 'tools/call': Rufe ein Tool auf (params enthalten 'name' und 'arguments')\n\nBeispiele:\n- method='initialize' → params={} (optional)\n- method='tools/list' → params={} (optional)\n- method='tools/call' → params={\"name\": \"web_search\", \"arguments\": {\"query\": \"...\"}}")]
+    [Description("MCP JSON-RPC Methode. Standard-Methoden:\n- 'initialize': MCP-Handshake (Client-Capabilities mitteilen)\n- 'tools/list': Liste alle verfügbaren Tools auf\n- 'tools/call': Rufe ein Tool auf (params enthalten 'name' und 'arguments')\n\nBeispiele:\n- method='initialize' → params={\"protocolVersion\": \"2024-11-05\", \"capabilities\": {...}, \"clientInfo\": {...}}\n- method='tools/list' → params={} (optional)\n- method='tools/call' → params={\"name\": \"web_search\", \"arguments\": {\"query\": \"...\"}}")]
     [Required]
     public string Method { get; set; } = string.Empty;
 
-    [Description("JSON-RPC Parameter als Dictionary (struktur hängt von Methode ab):\n- initialize: {} (leer)\n- tools/list: {} (leer)\n- tools/call: {\"name\": \"tool_name\", \"arguments\": {\"field\": \"value\", ...}}\n\nFür variable Werte: nutze @VAR_NAME + VariableMappings")]
+    [Description("JSON-RPC Parameter als Dictionary (struktur hängt von Methode ab):\n- initialize: {\"protocolVersion\": \"2024-11-05\", \"capabilities\": {...}, \"clientInfo\": {\"name\": \"...\", \"version\": \"...\"}}\n- tools/list: {} (optional, leer)\n- tools/call: {\"name\": \"tool_name\", \"arguments\": {\"field\": \"value\", ...}}\n\nFür variable Werte: nutze @VAR_NAME + VariableMappings")]
     public Dictionary<string, object>? Params { get; set; }
 
     [Description("Bearer Token für MCP Server-Auth (optional). Wird an Authorization Header angehängt")]
@@ -54,30 +54,43 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, I
         
         WICHTIG: Nutze @VAR_NAME für variable Werte + VariableMappings!
         
-        Beispiel 1 - Initialize (BlazorClaw MCP Server):
+        Beispiel 1 - Initialize (Client sendet Capabilities):
         {
           "serverUri": "https://example.com/mcp",
           "method": "initialize",
+          "params": {
+            "protocolVersion": "2024-11-05",
+            "capabilities": {
+              "roots": {"listChanged": true},
+              "sampling": {}
+            },
+            "clientInfo": {"name": "BlazorClaw Client", "version": "1.0.0"}
+          },
           "bearerToken": "@SESSION_TOKEN",
           "variableMappings": {"SESSION_TOKEN": "vault:MySessionId"}
         }
         
-        Beispiel 2 - List Tools:
+        Beispiel 2 - List Tools (Query alle verfügbaren Tools):
         {
           "serverUri": "mcp://blazorclaw",
-          "method": "tools/list",
-          "params": {}
+          "method": "tools/list"
         }
         
-        Beispiel 3 - Call Tool:
+        Beispiel 3 - Call Tool (Spezifisches Tool ausführen):
         {
-          "serverUri": "mcp://memory",
+          "serverUri": "mcp://blazorclaw",
           "method": "tools/call",
           "params": {
             "name": "web_search",
-            "arguments": {"query": "@SEARCH_QUERY"}
+            "arguments": {
+              "query": "@SEARCH_QUERY"
+            }
           },
-          "variableMappings": {"SEARCH_QUERY": "env:SEARCH_INPUT"}
+          "bearerToken": "@SESSION_TOKEN",
+          "variableMappings": {
+            "SEARCH_QUERY": "env:SEARCH_INPUT",
+            "SESSION_TOKEN": "vault:MySessionId"
+          }
         }
         """;
 
