@@ -58,28 +58,35 @@ BlazorClaw implementiert **transportbasierte Zugriffskontrolle** für MCP-Tools:
 
 ### Access Control Regeln
 
+**mcp_set** (Tool zur Service-Registrierung):
+- 🔒 **Admin-only** — Nur Admins dürfen neue MCP-Services registrieren
+- Speichert Dienste mit Auth-Daten in `/~secure/mcp.json`
+- Beispiel: `mcp_set(name="github", serverUri="https://mcp.github.com", authType="bearer", tokenName="GH_TOKEN")`
+
+**mcp_call** (Tool zum Service-Aufruf):
+- 🔓 **Für alle User** — Jeder kann registrierte Services nutzen
+- Whitelist-Check für lokale Transporte:
+  ```
+  HTTP/HTTPS:
+    - Direkter Zugriff ohne Registry ✅ (öffentliche APIs)
+    - mcp_call(serverUri="https://api.example.com", method="search", ...)
+  
+  Unix/TCP/UDP/Exec:
+    - MÜSSEN vorher via mcp_set registriert sein ✅ (Whitelist)
+    - mcp_call(serverUri="mcp://github", method="list_issues", ...)
+  ```
+
+**Warum Whitelist für Unix/TCP/UDP/Exec?**
+- Direkter Zugriff auf lokale Prozesse (RCE-Risiko)
+- Interne Netzwerk-Services (Lateral Movement)
+- OS-Ressourcen (Datenbanken, File-System)
+
+Admin registriert Service *einmalig*, dann nutzen **alle** User — oft mit Auth:
 ```
-HTTP/HTTPS:
-  - Direkter Zugriff ohne Registry-Eintrag ✅
-  - Beispiel: mcp_call(serverUri="https://api.example.com")
-
-Unix/TCP/UDP/Exec:
-  - BENÖTIGEN vorherigen Registry-Eintrag via mcp_set ✅
-  - Nur Admins dürfen mcp_set ausführen (Tool-Policy)
-  - Beispiel: 
-    1. mcp_set(name="local-db", serverUri="unix:///tmp/db.sock") [Admin only]
-    2. mcp_call(serverUri="mcp://local-db", method="query") [Jeder]
+Admin: mcp_set(name="internal-db", serverUri="tcp://db.local:5432", authType="bearer", tokenName="DB_TOKEN")
+User:  mcp_call(serverUri="mcp://internal-db", method="query", params={...})
+       → Token aus Vault automatisch aufgelöst
 ```
-
-**Warum?** HTTP/HTTPS sind sichere externe APIs. Unix/TCP/UDP/Exec haben direkten Zugriff auf:
-- Lokale Prozesse (RCE-Risiko)
-- Internes Netzwerk (Lateral Movement)
-- Betriebssystem-Ressourcen
-
-Durch Registry-Pflicht wird verhindert, dass LLM willkürlich:
-- Lokale Binaries ausführt (`exec://`)
-- Interne Services anspricht (`tcp://192.168.x.x`)
-- Datenbanken zerstört (`unix:///var/db.sock`)
 
 ---
 
