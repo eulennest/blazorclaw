@@ -119,6 +119,33 @@ namespace BlazorClaw.Channels.Services
     public class TelegramChannelBot(TelegramBotClient Client, PathHelper pathHelper) : AbstractChannelBot("Telegram")
     {
         internal TelegramBotClient Client { get; } = Client;
+        
+        private string EscapeMarkdownV2(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+                return text;
+
+            return text
+                .Replace("_", "\\_")
+                .Replace("*", "\\*")
+                .Replace("[", "\\[")
+                .Replace("]", "\\]")
+                .Replace("(", "\\(")
+                .Replace(")", "\\)")
+                .Replace("~", "\\~")
+                .Replace("`", "\\`")
+                .Replace(">", "\\>")
+                .Replace("#", "\\#")
+                .Replace("+", "\\+")
+                .Replace("-", "\\-")
+                .Replace("=", "\\=")
+                .Replace("|", "\\|")
+                .Replace("{", "\\{")
+                .Replace("}", "\\}")
+                .Replace(".", "\\.")
+                .Replace("!", "\\!");
+        }
+        
         public override async Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
             var content = message.GetTextContent() ?? string.Empty;
@@ -151,7 +178,7 @@ namespace BlazorClaw.Channels.Services
 
             if (!string.IsNullOrWhiteSpace(content))
             {
-                var text = content.Replace("\\!", "!").Replace("!", "\\!");
+                var text = EscapeMarkdownV2(content);
                 await Client.SendMessage(channelId.ChannelId, text, ParseMode.MarkdownV2, cancellationToken: cancellationToken);
             }
         }
