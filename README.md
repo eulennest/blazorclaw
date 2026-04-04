@@ -49,6 +49,21 @@ BlazorClaw unterstützt eine einheitliche Schnittstelle (`IChannelBot`). Um eine
 
 ---
 
+## Development & Tool Creation
+
+**Neue Tools bauen?** Siehe **[CODING.md](CODING.md)** für Entwicklungsstandards:
+
+- **Exception-Based Error Handling**: Tools werfen Exceptions (nicht Error-Strings)
+- **Nullable Parameters**: Optional-Parameter müssen nullable sein (`bool?`, `int?`)
+- **Variable Resolution**: Automatische `@VAR_NAME`-Substitution via Vault/Env
+- **HttpClient Pattern**: Immer `IHttpClientFactory` verwenden (nicht `new HttpClient()`)
+- **Socket Tools**: Unified API für Unix-Sockets, TCP, UDP
+- **Audit Logging**: Errors werden vom ToolDispatcher in ProblemDetails JSON konvertiert
+
+**Reference Implementation**: `/BlazorClaw.Server/Tools/Mcp/` (MCP-System mit allen Patterns)
+
+---
+
 ## Lizenz
 
 MIT
