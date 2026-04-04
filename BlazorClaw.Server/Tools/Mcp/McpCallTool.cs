@@ -12,25 +12,25 @@ namespace BlazorClaw.Server.Tools.Mcp;
 
 public class McpCallParams : BaseToolParams
 {
-    [Description("MCP Server URI oder Registry-Name:\n1. Registry: mcp://servername \n2. HTTP(S): http://localhost:3000, https://example.com\n3. Unix-Socket: unix:///path/to/socket\n4. Exec (TODO): exec://npx?@package, exec:///bin/binary")]
+    [Description("MCP Server URI oder Registry-Name:\n1. Registry: mcp://servername (empfohlen)\n2. HTTP(S): http://localhost:3000, https://example.com\n3. Unix-Socket: unix:///path/to/socket\n4. Exec: exec://npx?@package, exec:///bin/binary")]
     [Required]
     public string ServerUri { get; set; } = string.Empty;
 
-    [Description("JSON-RPC Methode (z.B. memory/search, filesystem/list, vault/get)")]
+    [Description("MCP JSON-RPC Methode. Standard-Methoden:\n- 'initialize': MCP-Handshake (nur einmalig am Anfang)\n- 'tools/list': Liste alle verfügbaren Tools auf\n- 'tools/call': Rufe ein Tool auf (params enthalten 'name' und 'arguments')\n\nBeispiele:\n- method='initialize' → params={} (optional)\n- method='tools/list' → params={} (optional)\n- method='tools/call' → params={\"name\": \"web_search\", \"arguments\": {\"query\": \"...\"}}")]
     [Required]
     public string Method { get; set; } = string.Empty;
 
-    [Description("JSON-RPC Parameter als Dictionary (z.B. {\"query\": \"@SEARCH_QUERY\"} oder {\"path\": \"/home/user/file.txt\"})")]
+    [Description("JSON-RPC Parameter als Dictionary (struktur hängt von Methode ab):\n- initialize: {} (leer)\n- tools/list: {} (leer)\n- tools/call: {\"name\": \"tool_name\", \"arguments\": {\"field\": \"value\", ...}}\n\nFür variable Werte: nutze @VAR_NAME + VariableMappings")]
     public Dictionary<string, object>? Params { get; set; }
 
-    [Description("Bearer Token falls MCP Auth required (optional). Überschreibt Token aus Registry")]
+    [Description("Bearer Token für MCP Server-Auth (optional). Wird an Authorization Header angehängt")]
     public string? BearerToken { get; set; }
 
-    [Description("Timeout in Sekunden")]
+    [Description("Timeout in Sekunden (default: 30, max: 300)")]
     [Range(1, 300)]
     public int TimeoutSeconds { get; set; } = 30;
 
-    [Description("SSL-Zertifikat ignorieren, optional (nur für self-signed Certs)")]
+    [Description("SSL-Zertifikat-Validierung ignorieren (nur für self-signed Certs, default: false)")]
     public bool? IgnoreSslErrors { get; set; } = false;
 }
 
@@ -39,36 +39,45 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, I
 {
     public override string Name => "mcp_call";
     public override string Description => """
-        Ruft MCP (Model Context Protocol) Server auf über verschiedene Transport-Layer.
+        Ruft einen MCP (Model Context Protocol) Server auf über verschiedene Transport-Layer.
+        
+        MCP Standard-Workflow:
+        1. initialize → Capabilities ermitteln (einmalig)
+        2. tools/list → Verfügbare Tools auflisten (optional)
+        3. tools/call → Spezifisches Tool aufrufen (wiederholt)
         
         Supported Transports:
-        - http://, https:// - Standard HTTP/HTTPS JSON-RPC
-        - unix:// - Unix Domain Sockets (IPC)
-        - mcp:// - Registry-basiert
-        - exec:// - (TODO) Lokale Prozesse via Exec
+        - http://, https:// - Standard HTTP/HTTPS JSON-RPC (remote/lokal)
+        - unix:// - Unix Domain Sockets (lokal, schneller)
+        - mcp:// - Registry-basiert (aus /~secure/mcp.json)
+        - exec:// - Lokale Prozesse via exec (TODO)
         
         WICHTIG: Nutze @VAR_NAME für variable Werte + VariableMappings!
         
-        Beispiel 1 (HTTP):
+        Beispiel 1 - Initialize (BlazorClaw MCP Server):
         {
-          "serverUri": "http://blazorclaw-mcp:3000",
-          "method": "memory/search",
-          "params": {"query": "@SEARCH_TERM"},
-          "variableMappings": {"SEARCH_TERM": "env:MEMORY_SEARCH"}
+          "serverUri": "https://example.com/mcp",
+          "method": "initialize",
+          "bearerToken": "@SESSION_TOKEN",
+          "variableMappings": {"SESSION_TOKEN": "vault:MySessionId"}
         }
         
-        Beispiel 2 (Registry):
+        Beispiel 2 - List Tools:
+        {
+          "serverUri": "mcp://blazorclaw",
+          "method": "tools/list",
+          "params": {}
+        }
+        
+        Beispiel 3 - Call Tool:
         {
           "serverUri": "mcp://memory",
-          "method": "search",
-          "params": {"query": "..."}
-        }
-        
-        Beispiel 3 (Unix Socket):
-        {
-          "serverUri": "unix:///tmp/mcp-server.sock",
-          "method": "memory/search",
-          "params": {"query": "..."}
+          "method": "tools/call",
+          "params": {
+            "name": "web_search",
+            "arguments": {"query": "@SEARCH_QUERY"}
+          },
+          "variableMappings": {"SEARCH_QUERY": "env:SEARCH_INPUT"}
         }
         """;
 
