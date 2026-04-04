@@ -6,6 +6,7 @@ using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.CommandLine;
 using System.ComponentModel;
 using System.Security.Claims;
 using System.Text.Json;
@@ -18,83 +19,49 @@ namespace BlazorClaw.Server.Controllers;
 /// Exposes BlazorClaw tools as JSON-RPC 2.0 methods.
 /// Auth: Bearer token with session_id
 /// </summary>
-[Authorize]
 [ApiController]
 [Route("mcp")]
 [IgnoreAntiforgeryToken]
-public class McpController(IToolRegistry toolRegistry, IMessageDispatcher messageDispatcher, ILogger<McpController> logger)
+public class McpController(ISessionManager sessionManager, ILogger<McpController> logger)
     : ControllerBase
 {
     private const string MCP_VERSION = "2024-11-05";
 
-    /// <summary>
-    /// Initialize MCP connection and list available tools.
-    /// 
-    /// Request: POST /mcp/initialize
-    /// Header: Authorization: Bearer <session_id>
-    /// 
-    /// Response:
-    /// {
-    ///   "jsonrpc": "2.0",
-    ///   "result": {
-    ///     "protocolVersion": "2024-11-05",
-    ///     "capabilities": {...},
-    ///     "serverInfo": {...},
-    ///     "tools": [
-    ///       { "name": "web_search", "description": "...", "inputSchema": {...} }
-    ///     ]
-    ///   },
-    ///   "id": "init"
-    /// }
-    /// </summary>
-    [HttpPost("initialize")]
-    public IActionResult Initialize()
+    private object Initialize(MessageContext context)
     {
-        try
+        return new
         {
-            var sessionId = ValidateBearerToken();
-            if (sessionId == null)
-                return Unauthorized(JsonRpcError("Invalid or missing Bearer token", -32600));
-
-            var tools = toolRegistry.GetAllTools().ToList();
-
-            var toolSchemas = tools.Select(t => new
+            protocolVersion = MCP_VERSION,
+            capabilities = new
             {
-                name = t.Name,
-                description = t.Description,
-                inputSchema = GetInputSchema(t)
-            }).ToList();
-
-            var response = new
+                tools = new { },
+                resources = new { },
+                logging = new { }
+            },
+            serverInfo = new
             {
-                jsonrpc = "2.0",
-                result = new
-                {
-                    protocolVersion = MCP_VERSION,
-                    capabilities = new
-                    {
-                        tools = new { },
-                        resources = new { },
-                        logging = new { }
-                    },
-                    serverInfo = new
-                    {
-                        name = "BlazorClaw MCP Server",
-                        version = "1.0.0"
-                    },
-                    tools = toolSchemas
-                },
-                id = "init"
-            };
+                name = "BlazorClaw MCP Server",
+                version = "1.0.0"
+            },
+        };
+    }
 
-            logger.LogInformation("MCP initialize: {SessionId}, tools: {ToolCount}", sessionId, tools.Count);
-            return Ok(response);
-        }
-        catch (Exception ex)
+    private object Tools_List(MessageContext context)
+    {
+        var toolRegistry = context.Provider.GetRequiredService<IToolRegistry>();
+        var tools = toolRegistry.GetAllTools().ToList();
+
+        var toolSchemas = tools.Select(t => new
         {
-            logger.LogError(ex, "MCP initialize failed");
-            return BadRequest(JsonRpcError(ex.Message, -32603));
-        }
+            name = t.Name,
+            description = t.Description,
+            inputSchema = GetInputSchema(t)
+        }).ToList();
+
+        return new
+        {
+            tools = toolSchemas
+        };
     }
 
     /// <summary>
@@ -115,14 +82,21 @@ public class McpController(IToolRegistry toolRegistry, IMessageDispatcher messag
     ///   "id": "123"
     /// }
     /// </summary>
-    [HttpPost("call")]
+    [HttpPost()]
     public async Task<IActionResult> Call([FromBody] JsonElement request)
     {
         try
         {
-            var sessionId = ValidateBearerToken();
-            if (sessionId == null)
+            var session = await ValidateBearerTokenAsync();
+            if (session == null)
                 return Unauthorized(JsonRpcError("Invalid or missing Bearer token", -32600));
+
+            var context = new MessageContext
+            {
+                Session = session.Session,
+                Provider = session.Services,
+                UserId = session.Session.UserId
+            };
 
             // Parse JSON-RPC request
             if (!request.TryGetProperty("jsonrpc", out var jsonrpcVer) || jsonrpcVer.GetString() != "2.0")
@@ -141,58 +115,69 @@ public class McpController(IToolRegistry toolRegistry, IMessageDispatcher messag
 
             request.TryGetProperty("params", out var paramsElement);
 
-            // Get tool
-            var tool = toolRegistry.GetTool(method);
-            if (tool == null)
-                return BadRequest(JsonRpcError($"Tool '{method}' not found", -32601, requestId));
+            object? result = null;
 
-            // Create message context (MCP session)
-            var mcpBot = new McpSessionBot(sessionId);
-            messageDispatcher.Register(mcpBot);
-
-            try
+            if ("initialize".Equals(method))
             {
+                result = Initialize(context);
+            }
+            else if ("tools/list".Equals(method))
+            {
+                result = Tools_List(context);
+            }
+            else if ("tools/call".Equals(method))
+            {
+                var toolRegistry = context.Provider.GetRequiredService<IToolRegistry>();
+                // Get tool
+
+                if (!paramsElement.TryGetProperty("name", out var toolElement))
+                    return BadRequest(JsonRpcError("Missing 'name' parameter", -32602, requestId));
+                var toolName = toolElement.GetString();
+                if (string.IsNullOrWhiteSpace(toolName))
+                    return BadRequest(JsonRpcError("'name' parameter must not be empty", -32602, requestId));
+
+                var tool = toolRegistry.GetTool(method);
+                if (tool == null)
+                    return BadRequest(JsonRpcError($"Tool '{method}' not found", -32601, requestId));
+
+                if (!paramsElement.TryGetProperty("arguments", out var argsElement))
+                    return BadRequest(JsonRpcError("Missing 'arguments' parameter", -32602, requestId));
+
                 // Convert params to JSON string for tool deserialization
-                var paramsJson = paramsElement.ValueKind != JsonValueKind.Undefined
+                var paramsJson = argsElement.ValueKind != JsonValueKind.Undefined
                     ? paramsElement.GetRawText()
                     : "{}";
-
-                // Build MessageContext
-                var fakeChatSession = new ChatSession
-                {
-                    Id = Guid.NewGuid(),
-                    Title = $"MCP:{method}",
-                    UserId = Guid.Empty,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                var context = new MessageContext
-                {
-                    Session = new ChatSessionState { Session = fakeChatSession },
-                    User = null,
-                    Message = method
-                };
 
                 // Deserialize tool parameters using tool's BuildArguments
                 var toolArgs = tool.BuildArguments(paramsJson);
 
                 // Execute tool
-                var result = await tool.ExecuteAsync(toolArgs, context);
-
-                var response = new
+                result = new
                 {
-                    jsonrpc = "2.0",
-                    result = result,
-                    id = requestId
+                    content = new object[] {
+                        new
+                        {
+                            type = "text",
+                            text = await tool.ExecuteAsync(toolArgs, context)
+                        }
+                    }
                 };
-
-                logger.LogInformation("MCP call succeeded: {SessionId}:{Method}", sessionId, method);
-                return Ok(response);
             }
-            finally
+            else
             {
-                messageDispatcher.Unregister(mcpBot);
+                return BadRequest(JsonRpcError($"Method '{method}' not found", -32601, requestId));
             }
+
+            var response = new
+            {
+                jsonrpc = "2.0",
+                result = result,
+                id = requestId
+            };
+
+            logger.LogInformation("MCP call succeeded: {SessionId}:{Method}", session, method);
+            return Ok(response);
+
         }
         catch (ArgumentException ex)
         {
@@ -212,14 +197,15 @@ public class McpController(IToolRegistry toolRegistry, IMessageDispatcher messag
     /// Extract and validate Bearer token from Authorization header.
     /// Returns the token value (session_id) or null if invalid.
     /// </summary>
-    private string? ValidateBearerToken()
+    private async Task<ChatSessionState?> ValidateBearerTokenAsync()
     {
         var authHeader = Request.Headers.Authorization.FirstOrDefault();
-        if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer "))
+        if (string.IsNullOrWhiteSpace(authHeader) || !authHeader.StartsWith("Bearer ", StringComparison.CurrentCultureIgnoreCase))
             return null;
-
-        var token = authHeader.Substring("Bearer ".Length).Trim();
-        return string.IsNullOrWhiteSpace(token) ? null : token;
+        var token = authHeader[7..].Trim();
+        if (Guid.TryParse(token, out var sessId))
+            return await sessionManager.GetSessionAsync(sessId);
+        return null;
     }
 
     /// <summary>
@@ -293,29 +279,5 @@ public class McpController(IToolRegistry toolRegistry, IMessageDispatcher messag
             JsonValueKind.Object => JsonElementToDictionary(element),
             _ => element.GetRawText()
         };
-    }
-}
-
-/// <summary>
-/// Session representation for MCP calls (implements IChannelSession).
-/// Messages are not sent anywhere (MCP is bidirectional HTTP request/response).
-/// </summary>
-public class McpSessionBot(string sessionId) : AbstractChannelBot("MCP"), IChannelSession
-{
-    public string SessionId { get; set; } = Guid.NewGuid();
-    public string ChannelId => "mcp";
-    public string SenderId => sessionId;
-    Guid IChannelSession.SessionId { get; set; } = Guid.NewGuid();
-
-    public override Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
-    {
-        // MCP doesn't use channel messaging; responses go via HTTP response
-        return Task.CompletedTask;
-    }
-
-    public override Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
-    {
-        // MCP doesn't use user messaging; responses go via HTTP response
-        return Task.CompletedTask;
     }
 }
