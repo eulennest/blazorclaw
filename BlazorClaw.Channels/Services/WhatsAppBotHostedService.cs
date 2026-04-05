@@ -35,9 +35,22 @@ namespace BlazorClaw.Channels.Services
         {
             logger.LogInformation("WhatsApp Channel Service starting...");
 
-            // Read accounts from config
+            // Register OnChange handler for config reload
+            configuration.OnChange(async (newConfig) =>
+            {
+                logger.LogInformation("WhatsApp config changed — reloading bots...");
+                await ReloadBotsAsync(newConfig);
+            });
 
-            foreach (var accountConfig in configuration.CurrentValue)
+            // Initial load
+            await LoadBotsAsync(configuration.CurrentValue, cancellationToken);
+
+            logger.LogInformation("WhatsApp Channel Service started with {Count} accounts", _bots.Count);
+        }
+
+        private async Task LoadBotsAsync(WhatsAppConfigs config, CancellationToken cancellationToken)
+        {
+            foreach (var accountConfig in config)
             {
                 var accountId = accountConfig.Key;
                 var enabled = accountConfig.Value.Enabled;
@@ -57,8 +70,76 @@ namespace BlazorClaw.Channels.Services
                     logger.LogError(ex, "Failed to initialize WhatsApp account '{AccountId}'", accountId);
                 }
             }
+        }
 
-            logger.LogInformation("WhatsApp Channel Service started with {Count} accounts", _bots.Count);
+        private async Task ReloadBotsAsync(WhatsAppConfigs newConfig)
+        {
+            logger.LogInformation("Reloading WhatsApp bots...");
+
+            // Find removed accounts
+            var currentIds = _bots.Keys.ToList();
+            var newIds = newConfig.Keys.ToList();
+            var removedIds = currentIds.Except(newIds).ToList();
+
+            // Remove old bots
+            foreach (var accountId in removedIds)
+            {
+                await RemoveBotAsync(accountId);
+            }
+
+            // Add/update bots
+            foreach (var accountConfig in newConfig)
+            {
+                var accountId = accountConfig.Key;
+                var enabled = accountConfig.Value.Enabled;
+
+                if (!enabled)
+                {
+                    if (_bots.ContainsKey(accountId))
+                    {
+                        await RemoveBotAsync(accountId);
+                    }
+                    continue;
+                }
+
+                if (!_bots.ContainsKey(accountId))
+                {
+                    try
+                    {
+                        await AddAccountAsync(accountId, accountConfig.Value, CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "Failed to add WhatsApp account '{AccountId}'", accountId);
+                    }
+                }
+            }
+
+            logger.LogInformation("WhatsApp bots reloaded — {Count} accounts active", _bots.Count);
+        }
+
+        private async Task RemoveBotAsync(string accountId)
+        {
+            if (!_bots.TryGetValue(accountId, out var bot))
+                return;
+
+            try
+            {
+                messageDispatcher.Unregister(bot);
+                await bot.DisconnectAsync();
+                _bots.Remove(accountId);
+                
+                lock (_qrLock)
+                {
+                    _qrCodes.Remove(accountId);
+                }
+
+                logger.LogInformation("WhatsApp account '{AccountId}' removed", accountId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to remove WhatsApp account '{AccountId}'", accountId);
+            }
         }
 
         private async Task AddAccountAsync(
