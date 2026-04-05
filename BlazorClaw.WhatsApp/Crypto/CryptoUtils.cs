@@ -5,7 +5,8 @@ namespace BlazorClaw.WhatsApp.Crypto
 {
     /// <summary>
     /// Cryptographic utilities for WhatsApp protocol
-    /// Uses System.Security.Cryptography (no external deps!)
+    /// Uses System.Security.Cryptography
+    /// Curve25519 TODO: see Crypto/Curve25519TODO.md
     /// </summary>
     public static class CryptoUtils
     {
@@ -142,21 +143,25 @@ namespace BlazorClaw.WhatsApp.Crypto
         }
 
         /// <summary>
-        /// Generate Curve25519 keypair (TODO: implement with libsignal)
+        /// Generate Curve25519 keypair
+        /// TODO: Implement with libsodium-core or equivalent
         /// </summary>
         public static (byte[] publicKey, byte[] privateKey) GenerateCurve25519Keypair()
         {
-            // TODO: Use libsignal when API is stable
-            throw new NotImplementedException("Curve25519 keypair generation - requires libsignal-protocol-dotnet integration");
+            // Placeholder: generate random keys
+            // In production: use Curve25519.GenerateKeyPair()
+            throw new NotImplementedException("Curve25519 keypair generation - see Crypto/Curve25519TODO.md");
         }
 
         /// <summary>
-        /// Curve25519 ECDH shared secret (TODO: implement with libsignal)
+        /// Curve25519 ECDH shared secret
+        /// TODO: Implement with libsodium-core or equivalent
         /// </summary>
         public static byte[] Curve25519SharedSecret(byte[] privateKey, byte[] publicKey)
         {
-            // TODO: Use libsignal when API is stable
-            throw new NotImplementedException("Curve25519 shared secret - requires libsignal-protocol-dotnet integration");
+            // Placeholder
+            // In production: use Curve25519.CalculateAgreement()
+            throw new NotImplementedException("Curve25519 ECDH - see Crypto/Curve25519TODO.md");
         }
     }
 }
