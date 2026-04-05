@@ -1,0 +1,162 @@
+syntax = "proto3";
+package proto;
+
+/// Minimal WhatsApp Protobuf Schema for BlazorClaw
+
+message HandshakeMessage {
+    ClientHello clientHello = 2;
+    ServerHello serverHello = 3;
+    ClientFinish clientFinish = 4;
+    
+    message ClientHello {
+        bytes ephemeral = 1;
+    }
+    
+    message ServerHello {
+        bytes ephemeral = 1;
+        bytes static = 2;
+        bytes payload = 3;
+    }
+    
+    message ClientFinish {
+        bytes static = 1;
+        bytes payload = 2;
+    }
+}
+
+message ClientPayload {
+    uint64 username = 1;
+    bool passive = 3;
+    UserAgent userAgent = 5;
+    WebInfo webInfo = 6;
+    string pushName = 7;
+    sfixed32 sessionId = 9;
+    bool shortConnect = 10;
+    ConnectType connectType = 12;
+    ConnectReason connectReason = 13;
+    
+    message UserAgent {
+        Platform platform = 1;
+        AppVersion appVersion = 2;
+        
+        message AppVersion {
+            uint32 primary = 1;
+            uint32 secondary = 2;
+            uint32 tertiary = 3;
+        }
+        
+        enum Platform {
+            ANDROID = 0;
+            WEB = 14;
+        }
+    }
+    
+    message WebInfo {
+        string refToken = 1;
+        string version = 2;
+        WebSubPlatform webSubPlatform = 4;
+        
+        enum WebSubPlatform {
+            WEB_BROWSER = 0;
+        }
+    }
+    
+    enum ConnectType {
+        CELLULAR_UNKNOWN = 0;
+        WIFI_UNKNOWN = 1;
+    }
+    
+    enum ConnectReason {
+        PUSH = 0;
+        USER_ACTIVATED = 1;
+    }
+}
+
+message WebMessageInfo {
+    MessageKey key = 1;
+    Message message = 2;
+    uint64 messageTimestamp = 3;
+    Status status = 4;
+    
+    enum Status {
+        ERROR = 0;
+        PENDING = 1;
+        SERVER_ACK = 2;
+        DELIVERY_ACK = 3;
+        READ = 4;
+        PLAYED = 5;
+    }
+}
+
+message MessageKey {
+    string remoteJid = 1;
+    bool fromMe = 2;
+    string id = 3;
+    string participant = 4;
+}
+
+message Message {
+    string conversation = 1;
+    ImageMessage imageMessage = 2;
+    VideoMessage videoMessage = 3;
+    AudioMessage audioMessage = 4;
+    DocumentMessage documentMessage = 5;
+    ExtendedTextMessage extendedTextMessage = 6;
+    
+    message ExtendedTextMessage {
+        string text = 1;
+        string matchedText = 2;
+    }
+    
+    message ImageMessage {
+        string url = 1;
+        string mimetype = 2;
+        string caption = 3;
+        bytes fileSha256 = 4;
+        uint64 fileLength = 5;
+        uint32 height = 6;
+        uint32 width = 7;
+        bytes mediaKey = 8;
+        bytes fileEncSha256 = 9;
+        bytes jpegThumbnail = 16;
+    }
+    
+    message VideoMessage {
+        string url = 1;
+        string mimetype = 2;
+        bytes fileSha256 = 3;
+        uint64 fileLength = 4;
+        uint32 seconds = 5;
+        bytes mediaKey = 6;
+        string caption = 7;
+        bool gifPlayback = 8;
+        uint32 height = 9;
+        uint32 width = 10;
+        bytes fileEncSha256 = 11;
+        bytes jpegThumbnail = 16;
+    }
+    
+    message AudioMessage {
+        string url = 1;
+        string mimetype = 2;
+        bytes fileSha256 = 3;
+        uint64 fileLength = 4;
+        uint32 seconds = 5;
+        bool ptt = 6;
+        bytes mediaKey = 7;
+        bytes fileEncSha256 = 8;
+    }
+    
+    message DocumentMessage {
+        string url = 1;
+        string mimetype = 2;
+        string title = 3;
+        bytes fileSha256 = 4;
+        uint64 fileLength = 5;
+        uint32 pageCount = 6;
+        bytes mediaKey = 7;
+        string fileName = 8;
+        bytes fileEncSha256 = 9;
+        bytes jpegThumbnail = 16;
+    }
+}
