@@ -1,6 +1,6 @@
 using System.Net.WebSockets;
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Google.Protobuf;
 using BlazorClaw.WhatsApp.Protocol;
 using BlazorClaw.WhatsApp.Events;
 using BlazorClaw.WhatsApp.Crypto;
@@ -8,8 +8,9 @@ using BlazorClaw.WhatsApp.Crypto;
 namespace BlazorClaw.WhatsApp
 {
     /// <summary>
-    /// WhatsApp Web Client - WebSocket-based implementation
-    /// Reverse-engineered from Baileys TypeScript library
+    /// WhatsApp Web Client - Protobuf + WebSocket implementation
+    /// Based on Baileys.js architecture
+    /// Reference: https://github.com/WhiskeySockets/Baileys
     /// </summary>
     public class WhatsAppClient : IDisposable
     {
@@ -20,9 +21,8 @@ namespace BlazorClaw.WhatsApp
         // State
         private WhatsAppAuthState? _authState;
         private NoiseProtocolHandler? _noiseHandler;
-        private SignalProtocolHandler? _signalHandler;
         private bool _isConnected;
-        private uint _messageCounter;
+        private uint _epoch = 1;
 
         // Events
         public event EventHandler<MessageEvent>? OnMessage;
@@ -37,40 +37,38 @@ namespace BlazorClaw.WhatsApp
         }
 
         /// <summary>
-        /// Connect to WhatsApp Web servers and perform Noise Protocol handshake
+        /// Connect to WhatsApp Web servers and perform handshake
         /// </summary>
         public async Task ConnectAsync(CancellationToken cancellationToken = default)
         {
             try
             {
-                _logger?.LogInformation("Connecting to WhatsApp Web servers...");
+                _logger?.LogInformation("Connecting to WhatsApp Web...");
 
-                // 1. Load or initialize auth state
+                // 1. Load auth state
                 _authState = await WhatsAppAuthState.LoadAsync(_config.AuthDir);
 
                 // 2. Connect WebSocket
-                await ConnectWebSocketAsync(cancellationToken);
+                await _webSocket.ConnectAsync(new Uri(_config.WebSocketUrl), cancellationToken);
+                _logger?.LogInformation("WebSocket connected");
 
                 _isConnected = true;
-                OnConnectionUpdate?.Invoke(this, new ConnectionEvent { Status = "open" });
+                OnConnectionUpdate?.Invoke(this, new ConnectionEvent { Status = "connecting" });
 
-                // 3. Initialize Noise Protocol
+                // 3. Initialize Noise handler
+                var (ephemeralPub, ephemeralPriv) = CryptoUtils.GenerateCurve25519Keypair();
                 _noiseHandler = new NoiseProtocolHandler(_authState);
 
-                // 4. Perform Noise handshake
-                await PerformNoiseHandshakeAsync(cancellationToken);
+                // 4. Perform handshake
+                await PerformHandshakeAsync(ephemeralPub, ephemeralPriv, cancellationToken);
 
-                // 5. Initialize Signal Protocol for E2E encryption
-                _signalHandler = await SignalProtocolHandler.InitializeSessionAsync(
-                    "whatsapp_user",
-                    cancellationToken);
-
-                // 6. Save auth state
+                // 5. Save auth state
                 await _authState.SaveAsync(_config.AuthDir);
 
-                // 7. Start message receiving loop
+                // 6. Start receive loop
                 _ = ReceiveLoopAsync(cancellationToken);
 
+                OnConnectionUpdate?.Invoke(this, new ConnectionEvent { Status = "open" });
                 _logger?.LogInformation("✅ Connected to WhatsApp!");
             }
             catch (Exception ex)
@@ -83,108 +81,151 @@ namespace BlazorClaw.WhatsApp
         }
 
         /// <summary>
-        /// Connect to WhatsApp WebSocket endpoint
+        /// Perform Noise_XX handshake with WhatsApp servers
+        /// Follows Baileys validateConnection() pattern
         /// </summary>
-        private async Task ConnectWebSocketAsync(CancellationToken cancellationToken)
+        private async Task PerformHandshakeAsync(
+            byte[] ephemeralPub,
+            byte[] ephemeralPriv,
+            CancellationToken cancellationToken)
         {
             try
             {
-                _logger?.LogDebug("Connecting WebSocket to {Url}", _config.WebSocketUrl);
-                await _webSocket.ConnectAsync(
-                    new Uri(_config.WebSocketUrl),
-                    cancellationToken);
-                _logger?.LogDebug("WebSocket connected");
-            }
-            catch (Exception ex)
-            {
-                _logger?.LogError(ex, "WebSocket connection failed");
-                throw;
-            }
-        }
+                _logger?.LogInformation("Starting Noise handshake...");
 
-        /// <summary>
-        /// Perform Noise_XX_25519_AESGCM_SHA256 handshake
-        /// Establishes encryption keys with WhatsApp servers
-        /// </summary>
-        private async Task PerformNoiseHandshakeAsync(CancellationToken cancellationToken)
-        {
-            try
-            {
-                _logger?.LogInformation("Starting Noise Protocol handshake...");
-
-                // 1. Generate ephemeral keypair for handshake
-                var (clientPubKey, clientPrivKey) = CryptoUtils.GenerateCurve25519Keypair();
-                _authState!.ClientPublicKey = clientPubKey;
-                _authState.ClientPrivateKey = clientPrivKey;
-
-                // 2. Send client hello (public key)
-                var clientHello = new
+                // 1. Build ClientHello with ephemeral public key
+                var clientHello = new Proto.HandshakeMessage
                 {
-                    clientHello = new
+                    ClientHello = new Proto.HandshakeMessage.Types.ClientHello
                     {
-                        ephemeral = Convert.ToBase64String(clientPubKey),
-                        static_text = "",
-                        payload = ""
+                        Ephemeral = ByteString.CopyFrom(ephemeralPub)
                     }
                 };
 
-                var helloJson = JsonSerializer.Serialize(clientHello);
-                await SendRawAsync(helloJson, cancellationToken);
-                _logger?.LogDebug("Sent client hello");
+                // 2. Send ClientHello
+                var helloBytes = clientHello.ToByteArray();
+                await SendRawAsync(helloBytes, cancellationToken);
+                _logger?.LogDebug("Sent ClientHello ({Length} bytes)", helloBytes.Length);
 
-                // 3. Receive server hello
-                var serverHelloBuffer = new byte[4096];
-                var result = await _webSocket.ReceiveAsync(serverHelloBuffer, cancellationToken);
+                // 3. Receive ServerHello
+                var serverHelloData = await ReceiveRawAsync(cancellationToken);
+                var serverHello = Proto.HandshakeMessage.Parser.ParseFrom(serverHelloData);
 
-                if (result.MessageType == WebSocketMessageType.Close)
-                {
-                    throw new InvalidOperationException("WebSocket closed during handshake");
-                }
+                if (serverHello.ServerHello == null)
+                    throw new InvalidOperationException("No ServerHello in response");
 
-                var serverHelloJson = System.Text.Encoding.UTF8.GetString(
-                    serverHelloBuffer, 0, result.Count);
-                _logger?.LogDebug("Received server hello");
+                _logger?.LogDebug("Received ServerHello");
 
-                // 4. Parse server response (extract server public key, compute shared secret)
-                using var doc = JsonDocument.Parse(serverHelloJson);
-                var serverEphemeral = doc.RootElement.GetProperty("serverHello")
-                    .GetProperty("ephemeral").GetString();
-
-                if (serverEphemeral == null)
-                    throw new InvalidOperationException("No server ephemeral key in handshake");
-
-                var serverPubKey = Convert.FromBase64String(serverEphemeral);
+                // 4. Extract server ephemeral key
+                var serverEphemeral = serverHello.ServerHello.Ephemeral.ToByteArray();
+                var serverStatic = serverHello.ServerHello.Static.ToByteArray();
 
                 // 5. Compute shared secret (ECDH)
-                var sharedSecret = CryptoUtils.Curve25519SharedSecret(clientPrivKey, serverPubKey);
-                _logger?.LogDebug("Computed shared secret via ECDH");
+                var sharedSecret = CryptoUtils.Curve25519SharedSecret(ephemeralPriv, serverEphemeral);
 
-                // 6. Derive encryption keys via HKDF
-                var derivedKeys = CryptoUtils.HkdfSha256(
+                // 6. Derive encryption keys (HKDF)
+                var keys = CryptoUtils.HkdfSha256(
                     sharedSecret,
                     null,
-                    System.Text.Encoding.UTF8.GetBytes("WhatsApp"),
+                    System.Text.Encoding.UTF8.GetBytes("WhatsApp Noise Protocol"),
                     64);
 
-                _authState.SendKey = derivedKeys.Take(32).ToArray();
-                _authState.ReceiveKey = derivedKeys.Skip(32).Take(32).ToArray();
+                _authState!.SendKey = keys.Take(32).ToArray();
+                _authState.ReceiveKey = keys.Skip(32).Take(32).ToArray();
 
+                // 7. Build ClientPayload
+                var clientPayload = new Proto.ClientPayload
+                {
+                    Username = 0, // Will be set by WhatsApp
+                    Passive = false,
+                    UserAgent = new Proto.ClientPayload.Types.UserAgent
+                    {
+                        Platform = Proto.ClientPayload.Types.UserAgent.Types.Platform.Web,
+                        AppVersion = new Proto.ClientPayload.Types.UserAgent.Types.AppVersion
+                        {
+                            Primary = 2,
+                            Secondary = 3000,
+                            Tertiary = 1029496320
+                        }
+                    },
+                    WebInfo = new Proto.ClientPayload.Types.WebInfo
+                    {
+                        RefToken = "",
+                        Version = "2.3000.1029496320",
+                        WebSubPlatform = Proto.ClientPayload.Types.WebInfo.Types.WebSubPlatform.WebBrowser
+                    },
+                    PushName = _config.PushName ?? "BlazorClaw",
+                    SessionId = -1,
+                    ShortConnect = true,
+                    ConnectType = Proto.ClientPayload.Types.ConnectType.WifiUnknown,
+                    ConnectReason = Proto.ClientPayload.Types.ConnectReason.UserActivated
+                };
+
+                // 8. Encrypt payload
+                var payloadBytes = clientPayload.ToByteArray();
+                var encryptedPayload = CryptoUtils.AesGcmEncrypt(
+                    payloadBytes,
+                    _authState.SendKey!,
+                    CryptoUtils.DeriveNonce(0));
+
+                // 9. Compute static key encryption (noise key)
+                byte[] keyEnc;
+                if (_authState.NoiseKey == null || _authState.NoiseKey.Length == 0)
+                {
+                    // Generate new noise key on first connection
+                    var (noisePub, noisePriv) = CryptoUtils.GenerateCurve25519Keypair();
+                    _authState.NoiseKey = noisePriv;
+                    _authState.NoiseKeyPublic = noisePub;
+                    keyEnc = noisePub;
+                }
+                else
+                {
+                    keyEnc = _authState.NoiseKeyPublic!;
+                }
+
+                // 10. Send ClientFinish
+                var clientFinish = new Proto.HandshakeMessage
+                {
+                    ClientFinish = new Proto.HandshakeMessage.Types.ClientFinish
+                    {
+                        Static = ByteString.CopyFrom(keyEnc),
+                        Payload = ByteString.CopyFrom(encryptedPayload)
+                    }
+                };
+
+                await SendRawAsync(clientFinish.ToByteArray(), cancellationToken);
                 _logger?.LogInformation("✅ Noise handshake complete");
             }
             catch (Exception ex)
             {
-                _logger?.LogError(ex, "Noise handshake failed");
+                _logger?.LogError(ex, "Handshake failed");
                 throw;
             }
         }
 
         /// <summary>
-        /// Send raw WebSocket message (unencrypted)
+        /// Send raw bytes over WebSocket (unencrypted)
         /// </summary>
-        private async Task SendRawAsync(string text, CancellationToken cancellationToken)
+        private async Task SendRawAsync(byte[] data, CancellationToken cancellationToken)
         {
-            var bytes = System.Text.Encoding.UTF8.GetBytes(text);
-            await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, cancellationToken);
+            if (!_webSocket.State.HasFlag(WebSocketState.Open))
+                throw new InvalidOperationException("WebSocket not open");
+
+            await _webSocket.SendAsync(data, WebSocketMessageType.Binary, true, cancellationToken);
+        }
+
+        /// <summary>
+        /// Receive raw bytes from WebSocket
+        /// </summary>
+        private async Task<byte[]> ReceiveRawAsync(CancellationToken cancellationToken)
+        {
+            var buffer = new byte[8192];
+            var result = await _webSocket.ReceiveAsync(buffer, cancellationToken);
+
+            if (result.MessageType == WebSocketMessageType.Close)
+                throw new InvalidOperationException("WebSocket closed during receive");
+
+            return buffer.Take(result.Count).ToArray();
         }
 
         /// <summary>
@@ -192,25 +233,30 @@ namespace BlazorClaw.WhatsApp
         /// </summary>
         private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
         {
-            var buffer = new byte[8192];
-
             while (_isConnected && !cancellationToken.IsCancellationRequested)
             {
                 try
                 {
-                    var result = await _webSocket.ReceiveAsync(buffer, cancellationToken);
+                    var frameData = await ReceiveRawAsync(cancellationToken);
 
-                    if (result.MessageType == WebSocketMessageType.Close)
+                    // Decrypt frame (after handshake, all frames are encrypted)
+                    if (_authState?.ReceiveKey != null)
                     {
-                        _isConnected = false;
-                        OnConnectionUpdate?.Invoke(this, new ConnectionEvent { Status = "closed" });
-                        break;
-                    }
+                        var nonce = CryptoUtils.DeriveNonce(_epoch++);
+                        var decrypted = CryptoUtils.AesGcmDecrypt(frameData, _authState.ReceiveKey, nonce);
 
-                    // Decrypt message
-                    var messageData = buffer.Take(result.Count).ToArray();
-                    var decrypted = await DecryptMessageAsync(messageData);
-                    await HandleIncomingMessageAsync(decrypted, cancellationToken);
+                        await HandleIncomingFrameAsync(decrypted, cancellationToken);
+                    }
+                    else
+                    {
+                        await HandleIncomingFrameAsync(frameData, cancellationToken);
+                    }
+                }
+                catch (WebSocketException)
+                {
+                    _isConnected = false;
+                    OnConnectionUpdate?.Invoke(this, new ConnectionEvent { Status = "closed" });
+                    break;
                 }
                 catch (Exception ex)
                 {
@@ -220,101 +266,37 @@ namespace BlazorClaw.WhatsApp
         }
 
         /// <summary>
-        /// Decrypt incoming message using Signal Protocol
+        /// Handle incoming frame (protobuf or binary node)
         /// </summary>
-        private async Task<byte[]> DecryptMessageAsync(byte[] ciphertext)
-        {
-            if (_signalHandler == null)
-                throw new InvalidOperationException("Signal handler not initialized");
-
-            return await _signalHandler.DecryptAsync(ciphertext);
-        }
-
-        /// <summary>
-        /// Handle incoming message from WhatsApp
-        /// </summary>
-        private async Task HandleIncomingMessageAsync(byte[] data, CancellationToken cancellationToken)
+        private async Task HandleIncomingFrameAsync(byte[] data, CancellationToken cancellationToken)
         {
             try
             {
-                var json = System.Text.Encoding.UTF8.GetString(data);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
+                // Try parsing as WebMessageInfo
+                var msgInfo = Proto.WebMessageInfo.Parser.ParseFrom(data);
 
-                if (!root.TryGetProperty("type", out var typeElem))
-                    return;
-
-                var msgType = typeElem.GetString();
-
-                switch (msgType)
+                if (msgInfo?.Message != null)
                 {
-                    case "messages":
-                        HandleMessages(root);
-                        break;
-                    case "presence":
-                        HandlePresence(root);
-                        break;
-                    case "qr":
-                        HandleQRCode(root);
-                        break;
+                    var evt = new MessageEvent
+                    {
+                        MessageId = msgInfo.Key?.Id ?? string.Empty,
+                        RemoteJid = msgInfo.Key?.RemoteJid ?? string.Empty,
+                        Text = msgInfo.Message.Conversation ?? string.Empty,
+                        Timestamp = (long)(msgInfo.MessageTimestamp)
+                    };
+
+                    OnMessage?.Invoke(this, evt);
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                _logger?.LogError(ex, "Error handling incoming message");
-            }
-        }
-
-        private void HandleMessages(JsonElement elem)
-        {
-            if (!elem.TryGetProperty("messages", out var messagesElem))
-                return;
-
-            foreach (var msg in messagesElem.EnumerateArray())
-            {
-                var evt = new MessageEvent
-                {
-                    MessageId = msg.TryGetProperty("id", out var id) ? id.GetString() ?? string.Empty : string.Empty,
-                    RemoteJid = msg.TryGetProperty("from", out var from) ? from.GetString() ?? string.Empty : string.Empty,
-                    Text = msg.TryGetProperty("text", out var txt) ? txt.GetString() : string.Empty
-                };
-
-                OnMessage?.Invoke(this, evt);
-            }
-        }
-
-        private void HandlePresence(JsonElement elem)
-        {
-            if (!elem.TryGetProperty("presence", out var presenceElem))
-                return;
-
-            foreach (var p in presenceElem.EnumerateArray())
-            {
-                var evt = new PresenceEvent
-                {
-                    Jid = p.TryGetProperty("id", out var id) ? id.GetString() ?? string.Empty : string.Empty,
-                    Status = p.TryGetProperty("type", out var type) ? type.GetString() ?? "unavailable" : "unavailable"
-                };
-
-                OnPresence?.Invoke(this, evt);
-            }
-        }
-
-        private void HandleQRCode(JsonElement elem)
-        {
-            if (elem.TryGetProperty("qr", out var qr))
-            {
-                var qrString = qr.GetString();
-                if (qrString != null)
-                {
-                    _logger?.LogWarning("📱 QR Code: {QR}", qrString);
-                    OnQRCode?.Invoke(this, qrString);
-                }
+                // Not a WebMessageInfo — might be binary node or other message type
+                _logger?.LogDebug("Received non-message frame ({Length} bytes)", data.Length);
             }
         }
 
         /// <summary>
-        /// Send a message to a contact
+        /// Send a text message
         /// </summary>
         public async Task SendMessageAsync(
             string jid,
@@ -322,40 +304,40 @@ namespace BlazorClaw.WhatsApp
             CancellationToken cancellationToken = default)
         {
             if (!_isConnected)
-                throw new InvalidOperationException("Not connected to WhatsApp");
+                throw new InvalidOperationException("Not connected");
 
-            if (_signalHandler == null)
-                throw new InvalidOperationException("Signal handler not initialized");
-
-            _messageCounter++;
+            if (_authState?.SendKey == null)
+                throw new InvalidOperationException("Handshake not complete");
 
             // Build message
-            var msg = new WhatsAppMessage
+            var message = new Proto.Message { Conversation = text };
+            var key = new Proto.MessageKey
             {
-                Key = new MessageKey
-                {
-                    RemoteJid = jid,
-                    FromMe = true,
-                    Id = GenerateMessageId()
-                },
-                Message = new MessageContent { Conversation = text },
-                MessageTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+                RemoteJid = jid,
+                FromMe = true,
+                Id = GenerateMessageId()
+            };
+
+            var msgInfo = new Proto.WebMessageInfo
+            {
+                Key = key,
+                Message = message,
+                MessageTimestamp = (ulong)DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
             // Serialize + encrypt
-            var json = JsonSerializer.Serialize(msg);
-            var plaintext = System.Text.Encoding.UTF8.GetBytes(json);
-            var ciphertext = await _signalHandler.EncryptAsync(plaintext);
+            var msgBytes = msgInfo.ToByteArray();
+            var nonce = CryptoUtils.DeriveNonce(_epoch++);
+            var encrypted = CryptoUtils.AesGcmEncrypt(msgBytes, _authState.SendKey, nonce);
 
-            // Send via WebSocket
-            await _webSocket.SendAsync(ciphertext, WebSocketMessageType.Binary, true, cancellationToken);
-
+            // Send
+            await SendRawAsync(encrypted, cancellationToken);
             _logger?.LogDebug("Message sent to {Jid}", jid);
         }
 
         private string GenerateMessageId()
         {
-            return $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}-{_messageCounter}";
+            return $"{DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}-{Random.Shared.Next()}";
         }
 
         /// <summary>
@@ -387,31 +369,7 @@ namespace BlazorClaw.WhatsApp
         public string WebSocketUrl { get; set; } = "wss://web.whatsapp.com/ws";
         public string AuthDir { get; set; } = "./whatsapp_auth";
         public string? PhoneNumber { get; set; }
+        public string? PushName { get; set; }
         public bool PrintQRInTerminal { get; set; } = true;
-    }
-
-    /// <summary>
-    /// WhatsApp Message
-    /// </summary>
-    public class WhatsAppMessage
-    {
-        public MessageKey? Key { get; set; }
-        public MessageContent? Message { get; set; }
-        public long MessageTimestamp { get; set; }
-    }
-
-    public class MessageKey
-    {
-        public string RemoteJid { get; set; } = string.Empty;
-        public string Id { get; set; } = string.Empty;
-        public bool FromMe { get; set; }
-    }
-
-    public class MessageContent
-    {
-        public string? Conversation { get; set; }
-        public string? ExtendedTextMessage { get; set; }
-        public object? ImageMessage { get; set; }
-        public object? AudioMessage { get; set; }
     }
 }

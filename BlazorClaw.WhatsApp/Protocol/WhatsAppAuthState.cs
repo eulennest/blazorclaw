@@ -12,9 +12,9 @@ namespace BlazorClaw.WhatsApp.Protocol
         public string ClientToken { get; set; } = string.Empty;
         public string ServerToken { get; set; } = string.Empty;
 
-        // Noise Protocol keys (set during handshake)
-        public byte[]? ClientPublicKey { get; set; }
-        public byte[]? ClientPrivateKey { get; set; }
+        // Noise Protocol keys
+        public byte[]? NoiseKey { get; set; }
+        public byte[]? NoiseKeyPublic { get; set; }
         public byte[]? SendKey { get; set; }
         public byte[]? ReceiveKey { get; set; }
 
@@ -34,20 +34,19 @@ namespace BlazorClaw.WhatsApp.Protocol
                 try
                 {
                     var json = await File.ReadAllTextAsync(credsFile);
-                    return JsonSerializer.Deserialize<WhatsAppAuthState>(json) ?? new();
+                    return JsonSerializer.Deserialize<WhatsAppAuthState>(json) ?? CreateNew();
                 }
                 catch
                 {
-                    // If parsing fails, create new state
-                    return new WhatsAppAuthState { ClientId = Guid.NewGuid().ToString() };
+                    return CreateNew();
                 }
             }
 
-            return new WhatsAppAuthState { ClientId = Guid.NewGuid().ToString() };
+            return CreateNew();
         }
 
         /// <summary>
-        /// Save auth state to disk (encrypted in production!)
+        /// Save auth state to disk
         /// </summary>
         public async Task SaveAsync(string directory)
         {
@@ -55,6 +54,11 @@ namespace BlazorClaw.WhatsApp.Protocol
             var credsFile = Path.Combine(directory, "creds.json");
             var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
             await File.WriteAllTextAsync(credsFile, json);
+        }
+
+        private static WhatsAppAuthState CreateNew()
+        {
+            return new WhatsAppAuthState { ClientId = Guid.NewGuid().ToString() };
         }
     }
 }
