@@ -20,6 +20,7 @@ public interface ILogger
     void Info(object message, string? template = null);
     void Warn(object message, string? template = null);
     void Error(object message, string? template = null);
+    void Exception(Exception ex);
 }
 
 /// <summary>
@@ -39,6 +40,8 @@ public sealed class NullLogger : ILogger
     public void Info(object _, string? __ = null) { }
     public void Warn(object _, string? __ = null) { }
     public void Error(object _, string? __ = null) { }
+
+    public void Exception(Exception ex) {  }
 }
 
 /// <summary>
@@ -82,5 +85,10 @@ public sealed class ConsoleLogger : ILogger
             : string.Empty;
 
         Console.WriteLine($"[{DateTimeOffset.UtcNow:yyyy-MM-ddTHH:mm:ss.fffZ}] {level.ToUpperInvariant()}{ctx}: {template ?? message}");
+    }
+
+    public void Exception(Exception ex)
+    {
+        Log("error", ex.ToString(), null);
     }
 }

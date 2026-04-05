@@ -1,3 +1,5 @@
+using Baileys.Crypto;
+using Baileys.Types;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -155,7 +157,7 @@ namespace BlazorClaw.WhatsApp.Crypto
         /// <summary>
         /// Generate Curve25519 keypair (via curve25519-dotnet)
         /// </summary>
-        public static (byte[] publicKey, byte[] privateKey) GenerateCurve25519Keypair()
+        public static KeyPair GenerateCurve25519Keypair()
         {
             return Curve25519Utils.GenerateKeyPair();
         }

@@ -2,9 +2,15 @@ using Baileys.Defaults;
 using Baileys.Types;
 using Baileys.Utils;
 using Baileys.WABinary;
-using System.Net.WebSockets;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using Google.Protobuf;
+using Microsoft.Extensions.Logging;
+using org.whispersystems.curve25519.csharp;
+using Proto;
+using System.Net.WebSockets;
+using System.Security.Cryptography;
+using System.Text;
+using static Org.BouncyCastle.Math.EC.ECCurve;
+using ILogger = Baileys.Utils.ILogger;
 
 namespace Baileys.Socket;
 
@@ -15,6 +21,9 @@ namespace Baileys.Socket;
 public sealed class BaileysSocket : IAsyncDisposable
 {
     private readonly ClientWebSocket _ws = new();
+    private readonly AuthenticationState _creds;
+    private readonly SignalCreds _signalKeys;
+    private readonly KeyPair _emperalKey;
     private readonly NoiseHandler _noise;
     private readonly ILogger _logger;
     private readonly IBaileysEventEmitter _ev;
@@ -23,9 +32,12 @@ public sealed class BaileysSocket : IAsyncDisposable
     private bool _handshakeComplete;
     private Task? _receiveTask;
 
-    public BaileysSocket(KeyPair noiseKeyPair, IBaileysEventEmitter ev, ILogger logger)
+    public BaileysSocket(AuthenticationState creds, IBaileysEventEmitter ev, ILogger logger)
     {
-        _noise = new NoiseHandler(noiseKeyPair, logger);
+        _creds = creds;
+        _signalKeys = new SignalCreds(creds.Creds.SignedIdentityKey, creds.Creds.SignedPreKey, creds.Creds.RegistrationId);
+        _emperalKey = AuthUtils.GenerateKeyPair();
+        _noise = new NoiseHandler(creds.Creds.NoiseKey, logger);
         _ev = ev;
         _logger = logger.Child(new Dictionary<string, object> { ["class"] = "socket" });
     }
@@ -52,16 +64,12 @@ public sealed class BaileysSocket : IAsyncDisposable
 
     private async Task SendClientHelloAsync(CancellationToken cancellationToken)
     {
-        // Generate ephemeral keypair for this session
-        var ephemeralKeyPair = AuthUtils.GenerateKeyPair();
-        var ephemeralPub = ephemeralKeyPair.Public;
-
         // Build ClientHello protobuf
         var clientHello = new global::Proto.HandshakeMessage
         {
             ClientHello = new global::Proto.HandshakeMessage.Types.ClientHello
             {
-                Ephemeral = ByteString.CopyFrom(ephemeralPub)
+                Ephemeral = ByteString.CopyFrom(_emperalKey.Public)
             }
         };
 
@@ -131,7 +139,7 @@ public sealed class BaileysSocket : IAsyncDisposable
         catch (OperationCanceledException) { }
         catch (Exception ex)
         {
-            _logger.Error($"Receive loop error: {ex.Message}");
+            _logger.Exception(ex);
             _ev.Emit("connection.update", new ConnectionUpdateEvent
             {
                 Connection = WaConnectionState.Close,
@@ -140,12 +148,48 @@ public sealed class BaileysSocket : IAsyncDisposable
         }
     }
 
-    private async Task HandleMessageAsync(byte[] data)
+    private async Task HandleMessageAsync(byte[] data, CancellationToken cancellationToken = default)
     {
         if (!_handshakeComplete)
         {
+            data = data[3..];
+            var key = _noise.ProcessHandshake(Proto.HandshakeMessage.Parser.ParseFrom(data));
+
+            Proto.ClientPayload? cpNode;
+            if (!_creds.Creds.Registered)
+            {
+                cpNode = GenerateRegistrationNode(_signalKeys);
+
+                _logger.Info("not logged in, attempting registration...");
+            }
+            else
+            {
+                cpNode = GenerateLoginNode(null);
+
+                _logger.Info("logging in...");
+            }
+
+            var payloadEnc = _noise.Encrypt(cpNode.ToByteArray());
+
+            // Build ClientHello protobuf
+            var finish = new global::Proto.HandshakeMessage
+            {
+                ClientFinish = new()
+                {
+                    Static = ByteString.CopyFrom(key),
+                    Payload = ByteString.CopyFrom(payloadEnc)
+                }
+            };
+
+            // Encode and frame
+            var frame = EncodeFrame(finish.ToByteArray());
+            await SendRawAsync(frame, cancellationToken).ConfigureAwait(false);
+
+
+
+
             // First message from server is the handshake response
-            _noise.Decrypt(data); // This updates the internal state
+            //            _noise.Decrypt(data); // This updates the internal state
 
             // In a real implementation, we'd process the handshake more carefully.
             // For now, we assume the next step is to send our finish.
@@ -181,4 +225,137 @@ public sealed class BaileysSocket : IAsyncDisposable
         _ws.Dispose();
         _cts.Dispose();
     }
+
+
+
+    public static ClientPayload GenerateRegistrationNode(SignalCreds credentials)
+    {
+        // Hash app version as MD5
+        var versionString = string.Join(".", BaileysDefaults.BaileysVersion);
+        byte[] appVersionBuf;
+
+        using (var md5 = MD5.Create())
+        {
+            appVersionBuf = md5.ComputeHash(Encoding.UTF8.GetBytes(versionString));
+        }
+
+        var companion = new DeviceProps
+        {
+            Os = "win",
+            PlatformType = DeviceProps.Types.PlatformType.Chrome,
+            //           RequireFullSync = config.SyncFullHistory,
+            HistorySyncConfig = new()
+            {
+                StorageQuotaMb = 10240,
+                InlineInitialPayloadInE2EeMsg = true,
+                RecentSyncDaysLimit = 0, // or null equivalent
+                SupportCallLogHistory = false,
+                SupportBotUserAgentChatHistory = true,
+                SupportCagReactionsAndPolls = true,
+                SupportBizHostedMsg = true,
+                SupportRecentSyncChunkMessageCountTuning = true,
+                SupportHostedGroupMsg = true,
+                SupportFbidBotChatHistory = true,
+                SupportAddOnHistorySyncMigration = false,
+                SupportMessageAssociation = true,
+                SupportGroupHistory = false,
+                OnDemandReady = false,
+                SupportGuestChat = false
+            },
+            Version = new()
+            {
+                Primary = 10,
+                Secondary = 15,
+                Tertiary = 7
+            }
+        };
+
+        var companionProto = companion.ToByteString();
+
+        var waversion = BaileysDefaults.BaileysWaVersion;
+        var registerPayload = new ClientPayload
+        {
+            ConnectType = ClientPayload.Types.ConnectType.WifiUnknown,
+            ConnectReason = ClientPayload.Types.ConnectReason.UserActivated,
+            UserAgent = new()
+            {
+                AppVersion = new()
+                {
+                    Primary = (uint)waversion.Major,
+                    Secondary = (uint)waversion.Minor,
+                    Tertiary = (uint)waversion.Patch
+                },
+                Platform = ClientPayload.Types.UserAgent.Types.Platform.Web,
+                ReleaseChannel = ClientPayload.Types.UserAgent.Types.ReleaseChannel.Release,
+                OsVersion = "0.1",
+                Device = "Desktop",
+                OsBuildNumber = "0.1",
+                LocaleLanguageIso6391 = "en",
+                Mnc = "000",
+                Mcc = "000",
+                LocaleCountryIso31661Alpha2 = "de"
+            },
+            WebInfo = new()
+            {
+                WebSubPlatform = ClientPayload.Types.WebInfo.Types.WebSubPlatform.WebBrowser
+            },
+            Passive = false,
+            Pull = false,
+            DevicePairingData = new()
+            {
+                BuildHash = ByteString.CopyFrom(appVersionBuf),
+                DeviceProps = companionProto,
+                ERegid = ByteString.CopyFrom(Generics.EncodeBigEndian(credentials.RegistrationId)),
+                EKeytype = ByteString.CopyFrom(BaileysDefaults.KeyBundleType),
+                EIdent = ByteString.CopyFrom(credentials.SignedIdentityKey.Public),
+                ESkeyId = ByteString.CopyFrom(Generics.EncodeBigEndian(credentials.SignedPreKey.KeyId, 3)),
+                ESkeyVal = ByteString.CopyFrom(credentials.SignedPreKey.KeyPair.Public),
+                ESkeySig = ByteString.CopyFrom(credentials.SignedPreKey.Signature)
+            }
+        };
+
+        return registerPayload;
+    }
+    public static ClientPayload GenerateLoginNode(SignalCreds credentials)
+    {
+        var jid = JidUtils.JidDecode("");
+        var waversion = BaileysDefaults.BaileysWaVersion;
+        var registerPayload = new ClientPayload
+        {
+            ConnectType = ClientPayload.Types.ConnectType.WifiUnknown,
+            ConnectReason = ClientPayload.Types.ConnectReason.UserActivated,
+            UserAgent = new()
+            {
+                AppVersion = new()
+                {
+                    Primary = (uint)waversion.Major,
+                    Secondary = (uint)waversion.Minor,
+                    Tertiary = (uint)waversion.Patch
+                },
+                Platform = ClientPayload.Types.UserAgent.Types.Platform.Web,
+                ReleaseChannel = ClientPayload.Types.UserAgent.Types.ReleaseChannel.Release,
+                OsVersion = "0.1",
+                Device = "Desktop",
+                OsBuildNumber = "0.1",
+                LocaleLanguageIso6391 = "en",
+                Mnc = "000",
+                Mcc = "000",
+                LocaleCountryIso31661Alpha2 = "de"
+            },
+            WebInfo = new()
+            {
+                WebSubPlatform = ClientPayload.Types.WebInfo.Types.WebSubPlatform.WebBrowser
+            },
+            Passive = true,
+            Pull = true,
+            LidDbMigrated = false,
+            Username = ulong.Parse(jid.User),
+            Device = (uint)jid.Device.GetValueOrDefault()
+        };
+
+        return registerPayload;
+
+
+    }
+
 }

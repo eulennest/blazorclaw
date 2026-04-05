@@ -22,6 +22,7 @@ public sealed class BaileysClientHostedService(
         catch (Exception ex)
         {
             logger.Error($"Failed to start Baileys client: {ex.Message}");
+            logger.Exception(ex);
         }
     }
 }

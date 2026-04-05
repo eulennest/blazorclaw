@@ -6,6 +6,7 @@ using Baileys.Types;
 using Baileys.Utils;
 using BlazorClaw.WhatsApp.Protocol;
 using Microsoft.Extensions.Logging;
+using Proto;
 using MsILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace BlazorClaw.WhatsApp
@@ -46,7 +47,7 @@ namespace BlazorClaw.WhatsApp
         {
             var authState = await _authStateProvider.LoadAuthStateAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            _socket = new BaileysSocket(authState.Creds.NoiseKey, _ev, new MsLogger(_logger));
+            _socket = new BaileysSocket(authState, _ev, new MsLogger(_logger));
 
             await _socket.ConnectAsync(BaileysDefaults.WaWebSocketUrl, cancellationToken).ConfigureAwait(false);
         }
@@ -168,5 +169,13 @@ public sealed class MsLogger(Microsoft.Extensions.Logging.ILogger? logger, IRead
             "error" => Microsoft.Extensions.Logging.LogLevel.Error,
             _ => Microsoft.Extensions.Logging.LogLevel.Information
         }, "{ctx}: {message}", ctx, template ?? message.ToString() ?? string.Empty);
+    }
+
+    public void Exception(Exception ex)
+    {
+        var ctx = _context.Count > 0
+            ? " " + string.Join(" ", _context.Select(kv => $"{kv.Key}={kv.Value}"))
+            : string.Empty;
+        logger?.LogError(ex, "{ctx}: {message}", ctx, ex.ToString());
     }
 }

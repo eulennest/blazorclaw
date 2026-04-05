@@ -1,3 +1,5 @@
+using Baileys.Types;
+
 namespace Baileys.Defaults;
 
 /// <summary>
@@ -8,13 +10,14 @@ public static class BaileysDefaults
 {
     /// <summary>Current Baileys/WhatsApp web version triplet [major, minor, patch].</summary>
     public static readonly int[] BaileysVersion = [2, 3000, 1033846690];
+    public static readonly WaVersion BaileysWaVersion = new(2, 3000, 1033846690);
 
     // ──────────────────────────────────────────────────────────
     //  HTTP / WebSocket URLs
     // ──────────────────────────────────────────────────────────
 
-    public const string WaWebSocketUrl  = "wss://web.whatsapp.com/ws/chat";
-    public const string DefaultOrigin   = "https://web.whatsapp.com";
+    public const string WaWebSocketUrl = "wss://web.whatsapp.com/ws/chat";
+    public const string DefaultOrigin = "https://web.whatsapp.com";
     public const string CallVideoPrefix = "https://call.whatsapp.com/video/";
     public const string CallAudioPrefix = "https://call.whatsapp.com/voice/";
 
@@ -22,18 +25,18 @@ public static class BaileysDefaults
     //  Protocol prefixes / tag strings
     // ──────────────────────────────────────────────────────────
 
-    public const string DefCallbackPrefix  = "CB:";
-    public const string DefTagPrefix       = "TAG:";
-    public const string PhoneConnectionCb  = "CB:Pong";
+    public const string DefCallbackPrefix = "CB:";
+    public const string DefTagPrefix = "TAG:";
+    public const string PhoneConnectionCb = "CB:Pong";
 
     // ──────────────────────────────────────────────────────────
     //  Signature prefixes (6-byte protocol markers)
     // ──────────────────────────────────────────────────────────
 
-    public static readonly byte[] WaAdvAccountSigPrefix       = [6, 0];
-    public static readonly byte[] WaAdvDeviceSigPrefix        = [6, 1];
+    public static readonly byte[] WaAdvAccountSigPrefix = [6, 0];
+    public static readonly byte[] WaAdvDeviceSigPrefix = [6, 1];
     public static readonly byte[] WaAdvHostedAccountSigPrefix = [6, 5];
-    public static readonly byte[] WaAdvHostedDeviceSigPrefix  = [6, 6];
+    public static readonly byte[] WaAdvHostedDeviceSigPrefix = [6, 6];
 
     // ──────────────────────────────────────────────────────────
     //  Timing defaults
@@ -74,15 +77,15 @@ public static class BaileysDefaults
     //  Pre-key management
     // ──────────────────────────────────────────────────────────
 
-    public const int MinPreKeyCount    = 5;
+    public const int MinPreKeyCount = 5;
     public const int InitialPreKeyCount = 812;
 
     // ──────────────────────────────────────────────────────────
     //  Upload / download timeouts
     // ──────────────────────────────────────────────────────────
 
-    public const int UploadTimeoutMs      = 30_000;
-    public const int MinUploadIntervalMs  = 5_000;
+    public const int UploadTimeoutMs = 30_000;
+    public const int MinUploadIntervalMs = 5_000;
 
     // ──────────────────────────────────────────────────────────
     //  HTTP status codes that indicate unauthorized / session expired
@@ -96,8 +99,8 @@ public static class BaileysDefaults
     // ──────────────────────────────────────────────────────────
 
     public const int CacheTtlSignalStore = 5 * 60;
-    public const int CacheTtlMsgRetry    = 60 * 60;
-    public const int CacheTtlCallOffer   = 5 * 60;
+    public const int CacheTtlMsgRetry = 60 * 60;
+    public const int CacheTtlCallOffer = 5 * 60;
     public const int CacheTtlUserDevices = 5 * 60;
 
     // ──────────────────────────────────────────────────────────
@@ -105,21 +108,21 @@ public static class BaileysDefaults
     // ──────────────────────────────────────────────────────────
 
     public static readonly TimeSpan TimeMinute = TimeSpan.FromMinutes(1);
-    public static readonly TimeSpan TimeHour   = TimeSpan.FromHours(1);
-    public static readonly TimeSpan TimeDay    = TimeSpan.FromDays(1);
-    public static readonly TimeSpan TimeWeek   = TimeSpan.FromDays(7);
+    public static readonly TimeSpan TimeHour = TimeSpan.FromHours(1);
+    public static readonly TimeSpan TimeDay = TimeSpan.FromDays(1);
+    public static readonly TimeSpan TimeWeek = TimeSpan.FromDays(7);
 
     // ──────────────────────────────────────────────────────────
     //  Connection config defaults
     // ──────────────────────────────────────────────────────────
 
-    public const int ConnectTimeoutMs         = 20_000;
-    public const int KeepAliveIntervalMs      = 30_000;
-    public const int DefaultQueryTimeoutMs    = 60_000;
-    public const int RetryRequestDelayMs      = 250;
-    public const int MaxMsgRetryCount         = 5;
+    public const int ConnectTimeoutMs = 20_000;
+    public const int KeepAliveIntervalMs = 30_000;
+    public const int DefaultQueryTimeoutMs = 60_000;
+    public const int RetryRequestDelayMs = 250;
+    public const int MaxMsgRetryCount = 5;
     public const int LinkPreviewThumbnailWidth = 192;
-    public const int MaxCommitRetries         = 10;
-    public const int DelayBetweenTriesMs      = 3_000;
-    public const string DefaultCountryCode    = "US";
+    public const int MaxCommitRetries = 10;
+    public const int DelayBetweenTriesMs = 3_000;
+    public const string DefaultCountryCode = "US";
 }

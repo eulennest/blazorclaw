@@ -49,7 +49,7 @@ public class BaileysClient : IAsyncDisposable
     {
         var authState = await _authStateProvider.LoadAuthStateAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         
-        _socket = new BaileysSocket(authState.Creds.NoiseKey, _ev, _logger);
+        _socket = new BaileysSocket(authState, _ev, _logger);
         
         await _socket.ConnectAsync(BaileysDefaults.WaWebSocketUrl, cancellationToken).ConfigureAwait(false);
     }

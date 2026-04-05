@@ -1,6 +1,7 @@
+using Baileys.Types;
 using Curve25519Impl = org.whispersystems.curve25519.Curve25519;
 
-namespace BlazorClaw.WhatsApp.Crypto
+namespace Baileys.Crypto
 {
     /// <summary>
     /// Curve25519 Elliptic Curve Diffie-Hellman wrapper
@@ -13,10 +14,10 @@ namespace BlazorClaw.WhatsApp.Crypto
         /// <summary>
         /// Generate a random Curve25519 keypair
         /// </summary>
-        public static (byte[] publicKey, byte[] privateKey) GenerateKeyPair()
+        public static KeyPair GenerateKeyPair()
         {
             var keyPair = _instance.generateKeyPair();
-            return (keyPair.getPublicKey(), keyPair.getPrivateKey());
+            return new(keyPair.getPublicKey(), keyPair.getPrivateKey());
         }
 
         /// <summary>

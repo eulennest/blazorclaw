@@ -1,6 +1,8 @@
-using System.Security.Cryptography;
+using Baileys.Crypto;
 using Baileys.Defaults;
 using Baileys.Types;
+using System.Security.Cryptography;
+using static Proto.HandshakeMessage.Types;
 
 namespace Baileys.Utils;
 
@@ -112,6 +114,22 @@ public sealed class NoiseHandler
         }
     }
 
+    public byte[] ProcessHandshake(Proto.HandshakeMessage serverHello)
+    {
+        var empBytes = serverHello.ServerHello.Ephemeral.ToByteArray();
+        Authenticate(empBytes);
+
+        MixIntoKey(Curve25519Utils.CalculateAgreement(_keyPair.Private, empBytes));
+
+        var decStaticContent = Decrypt(serverHello!.ServerHello.Static.Span);
+        MixIntoKey(Curve25519Utils.CalculateAgreement(_keyPair.Private, decStaticContent));
+
+        var keyEnc = Encrypt(_keyPair.Public);
+        MixIntoKey(Curve25519Utils.CalculateAgreement(_keyPair.Private, empBytes));
+
+        return keyEnc;
+    }
+
     /// <summary>
     /// Finalises the handshake: derives the transport enc/dec keys from the current
     /// salt using HKDF and switches to transport-mode encryption/decryption.
@@ -176,8 +194,8 @@ public sealed class NoiseHandler
     {
         var iv = new byte[IvLength];
         // Use unsigned right-shift (C# 11+: >>>) to avoid sign-extension
-        iv[8]  = (byte)((uint)counter >> 24);
-        iv[9]  = (byte)((uint)counter >> 16);
+        iv[8] = (byte)((uint)counter >> 24);
+        iv[9] = (byte)((uint)counter >> 16);
         iv[10] = (byte)((uint)counter >> 8);
         iv[11] = (byte)counter;
         return iv;
