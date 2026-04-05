@@ -124,18 +124,27 @@ namespace BlazorClaw.WhatsApp.Crypto
         /// <summary>
         /// Mix data into key chain (HKDF)
         /// </summary>
+        /// <summary>
+        /// Mix data into key chain using HMAC-SHA256 (Baileys .NET pattern)
+        /// NOT HKDF! Baileys uses HMAC-based derivation!
+        /// </summary>
         public void MixIntoKey(ReadOnlySpan<byte> data)
         {
-            Console.WriteLine($"[MixIntoKey] Input: {BitConverter.ToString(data.ToArray()).Replace("-", "")}");
-            Console.WriteLine($"[MixIntoKey] Salt before: {BitConverter.ToString(_salt).Replace("-", "")}");
+            // HMAC(data, salt)
+            var hmac1 = HmacSha256(data.ToArray(), _salt);
             
-            var expanded = CryptoUtils.HkdfSha256(data.ToArray(), 64, _salt, Array.Empty<byte>());
-            _salt = expanded[..32];
-            _encKey = expanded[32..];
-            _decKey = expanded[32..];
-            
-            Console.WriteLine($"[MixIntoKey] Salt after: {BitConverter.ToString(_salt).Replace("-", "")}");
-            Console.WriteLine($"[MixIntoKey] EncKey: {BitConverter.ToString(_encKey).Replace("-", "")}");
+            // Derive new keys from hmac1
+            _salt = hmac1;
+            _encKey = HmacSha256(new byte[] { 2 }, hmac1);
+            _decKey = _encKey; // Same as encKey!
+            _writeCounter = 0;
+            _readCounter = 0;
+        }
+        
+        private static byte[] HmacSha256(byte[] data, byte[] key)
+        {
+            using var hmac = new HMACSHA256(key);
+            return hmac.ComputeHash(data);
         }
 
         private void Authenticate(ReadOnlySpan<byte> data)
