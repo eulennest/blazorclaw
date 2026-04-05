@@ -1,7 +1,11 @@
 @page "/admin/channels/whatsapp"
 @using BlazorClaw.Channels.Services
+@using System.Text.Json
+@using Microsoft.Extensions.Configuration
 @inject WhatsAppBotHostedService WhatsAppService
 @inject NavigationManager Navigation
+@inject IConfiguration Configuration
+
 
 <PageTitle>Admin - WhatsApp</PageTitle>
 
@@ -16,6 +20,22 @@
         </button>
     </div>
 </div>
+
+<!-- Error/Success Messages -->
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle"></i> @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
 
 <!-- WhatsApp Accounts Section -->
 <div class="card mb-4">
@@ -62,7 +82,7 @@
                             </td>
                             <td>@account.PushName</td>
                             <td>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAccount(account.Id)">
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(account.Id)">
                                     <i class="bi bi-trash"></i> Löschen
                                 </button>
                             </td>
@@ -101,7 +121,7 @@
                                 
                                 <div class="alert alert-info small mb-0">
                                     <i class="bi bi-phone"></i> Scanne diesen QR-Code mit WhatsApp:
-                                    <br />
+                                    <br/>
                                     <strong>WhatsApp → Verknüpfte Geräte → Gerät verknüpfen</strong>
                                 </div>
                             </div>
@@ -117,7 +137,7 @@
     </div>
 }
 
-<!-- Add Account Modal Placeholder -->
+<!-- Add Account Modal -->
 @if (showAddModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
@@ -127,25 +147,55 @@
                     <h5 class="modal-title">Neuer WhatsApp Account</h5>
                     <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
                 </div>
-                <div class="modal-body">                    
+                <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Account ID</label>
-                        <input type="text" class="form-control" placeholder="z.B. default, kaspar, daniel" disabled />
-                        <div class="mb-3">
-                            <label class="form-label">Account ID</label>
-                            <input type="text" class="form-control" placeholder="z.B. default, kaspar, daniel" disabled />
-                            <small class="form-text text-muted">Eindeutige ID für diesen Account</small>
-                        </div>
+                        <input type="text" class="form-control" @bind="newAccountId" placeholder="z.B. default, kaspar, daniel" />
+                        <small class="form-text text-muted">Eindeutige ID für diesen Account</small>
+                    </div>
                     
-                        <div class="mb-3">
-                            <label class="form-label">Push Name</label>
-                            <input type="text" class="form-control" placeholder="z.B. BlazorClaw Bot" disabled />
-                            <small class="form-text text-muted">Anzeigename für WhatsApp-Nutzer</small>
-                        </div>
+                    <div class="mb-3">
+                        <label class="form-label">Push Name</label>
+                        <input type="text" class="form-control" @bind="newPushName" placeholder="z.B. BlazorClaw Bot" />
+                        <small class="form-text text-muted">Anzeigename für WhatsApp-Nutzer</small>
+                    </div>
+                    
+                    <div class="alert alert-info small">
+                        <strong>Auth Directory:</strong> Wird automatisch als <code>./whatsapp_auth/@newAccountId</code> gesetzt.
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">Schließen</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">Abbrechen</button>
+                    <button type="button" class="btn btn-success" @onclick="SaveNewAccount" disabled="@(string.IsNullOrWhiteSpace(newAccountId) || string.IsNullOrWhiteSpace(newPushName))">
+                        <i class="bi bi-save"></i> Speichern
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (showDeleteModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Account löschen</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Möchtest du den WhatsApp-Account <strong>@accountToDelete</strong> wirklich löschen?</p>
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i> Diese Aktion kann nicht rückgängig gemacht werden!
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Abbrechen</button>
+                    <button type="button" class="btn btn-danger" @onclick="DeleteAccount">
+                        <i class="bi bi-trash"></i> Löschen
+                    </button>
                 </div>
             </div>
         </div>
@@ -156,6 +206,12 @@
     private List<WhatsAppQRCodeData> qrCodes = new();
     private List<WhatsAppAccountInfo> accounts = new();
     private bool showAddModal = false;
+    private bool showDeleteModal = false;
+    private string newAccountId = string.Empty;
+    private string newPushName = string.Empty;
+    private string? accountToDelete = null;
+    private string? errorMessage = null;
+    private string? successMessage = null;
 
     protected override void OnInitialized()
     {
@@ -165,17 +221,25 @@
     private void LoadData()
     {
         qrCodes = WhatsAppService.GetCurrentQRCodes();
+        accounts = LoadAccountsFromConfig();
+    }
+
+    private List<WhatsAppAccountInfo> LoadAccountsFromConfig()
+    {
+        var accountList = new List<WhatsAppAccountInfo>();
+        var accountsSection = Configuration.GetSection("Channels:WhatsApp:Accounts");
         
-        // TODO: Get real account list from service
-        // For now, infer from bots count
-        var accountCount = WhatsAppService.GetAccountCount();
-        accounts = Enumerable.Range(1, accountCount)
-            .Select(i => new WhatsAppAccountInfo
+        foreach (var child in accountsSection.GetChildren())
+        {
+            accountList.Add(new WhatsAppAccountInfo
             {
-                Id = $"account_{i}",
-                PushName = "BlazorClaw",
-            })
-            .ToList();
+                Id = child.Key,
+                PushName = child["PushName"] ?? "BlazorClaw",
+                Enabled = child.GetValue<bool>("Enabled", true)
+            });
+        }
+        
+        return accountList;
     }
 
     private void RefreshData()
@@ -186,6 +250,8 @@
 
     private void ShowAddAccountModal()
     {
+        newAccountId = string.Empty;
+        newPushName = string.Empty;
         showAddModal = true;
     }
 
@@ -194,9 +260,108 @@
         showAddModal = false;
     }
 
-    private void DeleteAccount(string accountId)
+    private async Task SaveNewAccount()
     {
-        // TODO: Implement account deletion
+        try
+        {
+            var configPath = "/app/appsettings.Development.json";
+            var json = await File.ReadAllTextAsync(configPath);
+            var config = JsonDocument.Parse(json);
+            var root = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+
+            if (root == null)
+            {
+                errorMessage = "Fehler beim Lesen der Config-Datei";
+                return;
+            }
+
+            // Navigate to Channels:WhatsApp:Accounts
+            if (!root.ContainsKey("Channels"))
+                root["Channels"] = new Dictionary<string, object>();
+            
+            var channels = JsonSerializer.Deserialize<Dictionary<string, object>>(root["Channels"].ToString()!);
+            if (!channels!.ContainsKey("WhatsApp"))
+                channels["WhatsApp"] = new Dictionary<string, object>();
+            
+            var whatsapp = JsonSerializer.Deserialize<Dictionary<string, object>>(channels["WhatsApp"].ToString()!);
+            if (!whatsapp!.ContainsKey("Accounts"))
+                whatsapp["Accounts"] = new Dictionary<string, object>();
+            
+            var accounts = JsonSerializer.Deserialize<Dictionary<string, object>>(whatsapp["Accounts"].ToString()!);
+            
+            // Add new account
+            accounts![newAccountId] = new Dictionary<string, object>
+            {
+                ["Enabled"] = true,
+                ["PushName"] = newPushName,
+                ["AuthDir"] = $"./whatsapp_auth/{newAccountId}"
+            };
+
+            whatsapp["Accounts"] = accounts;
+            channels["WhatsApp"] = whatsapp;
+            root["Channels"] = channels;
+
+            // Write back
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var newJson = JsonSerializer.Serialize(root, options);
+            await File.WriteAllTextAsync(configPath, newJson);
+
+            successMessage = $"Account '{newAccountId}' erfolgreich hinzugefügt! Bitte Server neu starten.";
+            CloseAddModal();
+            LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler: {ex.Message}";
+        }
+    }
+
+    private void ConfirmDelete(string accountId)
+    {
+        accountToDelete = accountId;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        accountToDelete = null;
+    }
+
+    private async Task DeleteAccount()
+    {
+        if (accountToDelete == null) return;
+
+        try
+        {
+            var configPath = "/app/appsettings.Development.json";
+            var json = await File.ReadAllTextAsync(configPath);
+            var root = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
+
+            if (root == null) return;
+
+            var channels = JsonSerializer.Deserialize<Dictionary<string, object>>(root["Channels"].ToString()!);
+            var whatsapp = JsonSerializer.Deserialize<Dictionary<string, object>>(channels!["WhatsApp"].ToString()!);
+            var accounts = JsonSerializer.Deserialize<Dictionary<string, object>>(whatsapp!["Accounts"].ToString()!);
+            
+            accounts!.Remove(accountToDelete);
+
+            whatsapp["Accounts"] = accounts;
+            channels["WhatsApp"] = whatsapp;
+            root["Channels"] = channels;
+
+            var options = new JsonSerializerOptions { WriteIndented = true };
+            var newJson = JsonSerializer.Serialize(root, options);
+            await File.WriteAllTextAsync(configPath, newJson);
+
+            successMessage = $"Account '{accountToDelete}' erfolgreich gelöscht! Bitte Server neu starten.";
+            CloseDeleteModal();
+            LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler: {ex.Message}";
+        }
     }
 
     private void GoBack()
@@ -216,5 +381,6 @@
     {
         public string Id { get; set; } = string.Empty;
         public string PushName { get; set; } = string.Empty;
+        public bool Enabled { get; set; } = true;
     }
 }
