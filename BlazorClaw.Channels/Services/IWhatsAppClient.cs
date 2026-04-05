@@ -1,7 +1,10 @@
+using BlazorClaw.Core.Sessions;
+
 namespace BlazorClaw.Channels.Services
 {
     /// <summary>
     /// WhatsApp client abstraction - decouples from Baileys.NET implementation
+    /// Inherits from IChannelBot for dispatcher compatibility
     /// </summary>
     public interface IWhatsAppClient : IChannelBot
     {
@@ -29,26 +32,6 @@ namespace BlazorClaw.Channels.Services
         /// Send read receipt for a message
         /// </summary>
         Task SendReadReceipt(string jid, string messageId, CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// Fired when a message is received
-        /// </summary>
-        event EventHandler<(string jid, string message)>? OnMessageReceived;
-
-        /// <summary>
-        /// Fired when presence changes (online/offline/typing)
-        /// </summary>
-        event EventHandler<(string jid, string presence)>? OnPresenceUpdate;
-
-        /// <summary>
-        /// Fired when connection state changes
-        /// </summary>
-        event EventHandler<string>? OnConnectionUpdate;
-
-        /// <summary>
-        /// Fired when QR code is available for scanning
-        /// </summary>
-        event EventHandler<string>? OnQRCode;
     }
 
     /// <summary>

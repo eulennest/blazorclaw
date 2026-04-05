@@ -1,4 +1,3 @@
-using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
@@ -12,7 +11,7 @@ namespace BlazorClaw.Channels.Services
 {
     /// <summary>
     /// WhatsApp Channel - Multi-Account Hosted Service
-    /// Manages multiple WhatsApp accounts via Baileys.NET
+    /// Manages multiple WhatsApp accounts
     /// </summary>
     public class WhatsAppBotHostedService : IHostedService
     {
@@ -87,16 +86,9 @@ namespace BlazorClaw.Channels.Services
             // Store config
             _accounts[accountId] = config;
 
-            // TODO: Create Baileys client once .NET 10 is available
-            // For now: placeholder interface
-            // var client = new BaileysClient(new BaileysClientOptions { ... });
-
             // Create wrapper
-            var bot = new WhatsAppChannelBot(accountId, config, _pathHelper);
+            var bot = new WhatsAppChannelBot(accountId, config, _logger, _pathHelper);
             _clients[accountId] = bot;
-
-            // Register event handlers
-            RegisterEventHandlers(accountId, bot);
 
             // Register with dispatcher
             _messageDispatcher.Register(bot);
@@ -104,7 +96,7 @@ namespace BlazorClaw.Channels.Services
             _logger.LogInformation("WhatsApp account '{AccountId}' registered", accountId);
 
             // TODO: Connect to WhatsApp
-            // await client.ConnectAsync(cancellationToken);
+            // await bot.ConnectAsync(cancellationToken);
         }
 
         /// <summary>
@@ -117,8 +109,8 @@ namespace BlazorClaw.Channels.Services
 
             _logger.LogInformation("WhatsApp account '{AccountId}' disconnecting...", accountId);
 
-            // TODO: Disconnect
-            // await client.DisconnectAsync(cancellationToken);
+            // Disconnect
+            await client.DisconnectAsync(cancellationToken);
 
             _messageDispatcher.Unregister(client);
             _clients.Remove(accountId);
@@ -160,44 +152,6 @@ namespace BlazorClaw.Channels.Services
                 x => _clients.ContainsKey(x.Key));
         }
 
-        /// <summary>
-        /// Register event handlers for a WhatsApp client
-        /// </summary>
-        private void RegisterEventHandlers(string accountId, IWhatsAppClient client)
-        {
-            // Message events
-            client.OnMessageReceived += async (jid, msg) =>
-            {
-                try
-                {
-                    var session = new ChannelSession(client, jid);
-                    await _messageDispatcher.DispatchAsync(session, msg);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error dispatching message from {Jid}", jid);
-                }
-            };
-
-            // Presence events
-            client.OnPresenceUpdate += (jid, presence) =>
-            {
-                _logger.LogDebug("Presence: {Jid} = {Status}", jid, presence);
-            };
-
-            // Connection events
-            client.OnConnectionUpdate += (status) =>
-            {
-                _logger.LogInformation("Connection status: {Status}", status);
-            };
-
-            // QR code
-            client.OnQRCode += (qr) =>
-            {
-                _logger.LogWarning("QR Code for account '{AccountId}': {QR}", accountId, qr);
-            };
-        }
-
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("WhatsApp Channel Service stopping...");
@@ -226,23 +180,21 @@ namespace BlazorClaw.Channels.Services
     {
         private readonly string _accountId;
         private readonly WhatsAppAccountConfig _config;
+        private readonly ILogger<WhatsAppBotHostedService> _logger;
         private readonly PathHelper _pathHelper;
 
         public string AccountId => _accountId;
 
-        public event EventHandler<(string jid, string message)>? OnMessageReceived;
-        public event EventHandler<(string jid, string presence)>? OnPresenceUpdate;
-        public event EventHandler<string>? OnConnectionUpdate;
-        public event EventHandler<string>? OnQRCode;
-
         public WhatsAppChannelBot(
             string accountId,
             WhatsAppAccountConfig config,
+            ILogger<WhatsAppBotHostedService> logger,
             PathHelper pathHelper)
             : base("WhatsApp")
         {
             _accountId = accountId;
             _config = config;
+            _logger = logger;
             _pathHelper = pathHelper;
         }
 
@@ -255,34 +207,13 @@ namespace BlazorClaw.Channels.Services
             {
                 var content = message.GetTextContent() ?? string.Empty;
 
-                // 1. Send images
-                if (message.Images?.Count > 0)
-                {
-                    foreach (var img in message.Images)
-                    {
-                        await SendImageAsync(
-                            channelId.ChannelId,
-                            img.ImageUrl?.Url ?? string.Empty,
-                            message.GetTextContent() ?? string.Empty,
-                            cancellationToken);
-                    }
-                    content = null;
-                }
-
-                // 2. Send media (voice/video/document)
-                if (message.MediaContent != null && !string.IsNullOrWhiteSpace(message.MediaContent.Url))
-                {
-                    await SendMediaAsync(
-                        channelId.ChannelId,
-                        message.MediaContent,
-                        cancellationToken);
-                }
-
-                // 3. Send text
+                // Send text
                 if (!string.IsNullOrWhiteSpace(content))
                 {
-                    await SendTextAsync(channelId.ChannelId, content, cancellationToken);
+                    await SendMessageAsync(channelId.ChannelId, content, cancellationToken);
                 }
+
+                // TODO: Send images, media, etc.
             }
             catch (Exception ex)
             {
@@ -299,65 +230,33 @@ namespace BlazorClaw.Channels.Services
             return SendChannelAsync(channelId, message, cancellationToken);
         }
 
-        private async Task SendTextAsync(string jid, string text, CancellationToken cancellationToken)
+        private async Task SendMessageAsync(string jid, string text, CancellationToken cancellationToken)
         {
-            // TODO: Implement Baileys client.SendMessage()
-            // await _client.SendMessage(jid, new { text });
+            await SendMessage(jid, new { text }, cancellationToken);
         }
 
-        private async Task SendImageAsync(
-            string jid,
-            string imageUrl,
-            string caption,
-            CancellationToken cancellationToken)
-        {
-            // TODO: Implement Baileys client.SendMessage() with image
-            // var file = await GetMediaFileAsync(imageUrl);
-            // await _client.SendMessage(jid, new { image = file, caption });
-        }
-
-        private async Task SendMediaAsync(
-            string jid,
-            MediaContent media,
-            CancellationToken cancellationToken)
-        {
-            // TODO: Implement based on media type
-            // switch (media.Type.ToLower()) {
-            //     case "voice": await _client.SendMessage(jid, new { audio = ... }); break;
-            //     case "video": await _client.SendMessage(jid, new { video = ... }); break;
-            //     default: await _client.SendMessage(jid, new { document = ... }); break;
-            // }
-        }
-
-        private async Task<object> GetMediaFileAsync(string url)
-        {
-            // TODO: Download and prepare media for WhatsApp
-            var file = await _pathHelper.GetMediaFileAsync(url);
-            return file?.Item1 ?? url;
-        }
-
-        // IWhatsAppClient implementation stubs
+        // IWhatsAppClient implementation
         public Task ConnectAsync(CancellationToken cancellationToken = default)
         {
-            // TODO: Initialize Baileys client, start Noise protocol, display QR
+            // TODO: Connect via WhatsApp WebSocket + Noise Protocol
             return Task.CompletedTask;
         }
 
         public Task DisconnectAsync(CancellationToken cancellationToken = default)
         {
-            // TODO: Close WebSocket connection
+            // TODO: Disconnect
             return Task.CompletedTask;
         }
 
         public Task SendMessage(string jid, object messageContent, CancellationToken cancellationToken = default)
         {
-            // TODO: Delegate to Baileys client
+            // TODO: Encrypt + send via WebSocket
             return Task.CompletedTask;
         }
 
         public Task SendReadReceipt(string jid, string messageId, CancellationToken cancellationToken = default)
         {
-            // TODO: Send read receipt via Baileys
+            // TODO: Send read receipt
             return Task.CompletedTask;
         }
     }
