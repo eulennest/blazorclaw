@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BlazorClaw.Core\BlazorClaw.Core.csproj" />
+    <ProjectReference Include="..\BlazorClaw.WhatsApp\BlazorClaw.WhatsApp.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

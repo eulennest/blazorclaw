@@ -2,6 +2,8 @@ using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Utils;
+using BlazorClaw.WhatsApp;
+using BlazorClaw.WhatsApp.Events;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -11,7 +13,7 @@ namespace BlazorClaw.Channels.Services
 {
     /// <summary>
     /// WhatsApp Channel - Multi-Account Hosted Service
-    /// Manages multiple WhatsApp accounts
+    /// Manages multiple WhatsApp accounts via WhatsAppClient
     /// </summary>
     public class WhatsAppBotHostedService : IHostedService
     {
@@ -21,8 +23,7 @@ namespace BlazorClaw.Channels.Services
         private readonly ILogger<WhatsAppBotHostedService> _logger;
         private readonly PathHelper _pathHelper;
 
-        private readonly Dictionary<string, IWhatsAppClient> _clients = new();
-        private readonly Dictionary<string, WhatsAppAccountConfig> _accounts = new();
+        private readonly Dictionary<string, WhatsAppChannelBot> _bots = new();
 
         public WhatsAppBotHostedService(
             IConfiguration configuration,
@@ -42,16 +43,15 @@ namespace BlazorClaw.Channels.Services
         {
             _logger.LogInformation("WhatsApp Channel Service starting...");
 
-            // Read all accounts from config
-            var whatsappConfigs = _configuration.GetSection("Channels:WhatsApp:Accounts").GetChildren();
+            // Read accounts from config
+            var accounts = _configuration.GetSection("Channels:WhatsApp:Accounts").GetChildren();
 
-            foreach (var accountConfig in whatsappConfigs)
+            foreach (var accountConfig in accounts)
             {
                 var accountId = accountConfig.Key;
-                var config = new WhatsAppAccountConfig();
-                accountConfig.Bind(config);
+                var enabled = accountConfig.GetValue<bool>("Enabled", true);
 
-                if (!config.Enabled)
+                if (!enabled)
                 {
                     _logger.LogInformation("WhatsApp account '{AccountId}' is disabled", accountId);
                     continue;
@@ -59,7 +59,7 @@ namespace BlazorClaw.Channels.Services
 
                 try
                 {
-                    await AddAccountAsync(accountId, config, cancellationToken);
+                    await AddAccountAsync(accountId, accountConfig, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -67,101 +67,71 @@ namespace BlazorClaw.Channels.Services
                 }
             }
 
-            _logger.LogInformation("WhatsApp Channel Service started with {Count} accounts", _clients.Count);
+            _logger.LogInformation("WhatsApp Channel Service started with {Count} accounts", _bots.Count);
         }
 
-        /// <summary>
-        /// Add a new WhatsApp account dynamically
-        /// </summary>
-        public async Task AddAccountAsync(
+        private async Task AddAccountAsync(
             string accountId,
-            WhatsAppAccountConfig config,
-            CancellationToken cancellationToken = default)
+            IConfigurationSection config,
+            CancellationToken cancellationToken)
         {
-            if (_clients.ContainsKey(accountId))
-                throw new InvalidOperationException($"Account '{accountId}' already exists");
+            _logger.LogInformation("Initializing WhatsApp account '{AccountId}'...", accountId);
 
-            _logger.LogInformation("WhatsApp account '{AccountId}' initializing...", accountId);
+            var authDir = config.GetValue<string>("AuthDir") ?? $"./whatsapp_auth/{accountId}";
+            var pushName = config.GetValue<string>("PushName") ?? "BlazorClaw";
 
-            // Store config
-            _accounts[accountId] = config;
+            var whatsappConfig = new WhatsAppConfig
+            {
+                AuthDir = authDir,
+                PushName = pushName
+            };
 
-            // Create wrapper
-            var bot = new WhatsAppChannelBot(accountId, config, _logger, _pathHelper);
-            _clients[accountId] = bot;
+            var client = new WhatsAppClient(whatsappConfig);
+            var bot = new WhatsAppChannelBot(accountId, client, _logger, _pathHelper);
 
-            // Register with dispatcher
+            // Register event handlers
+            client.OnMessage += (sender, evt) =>
+            {
+                _ = bot.OnMessageReceivedAsync(
+                    new ChannelSession(bot, evt.RemoteJid),
+                    evt.Text);
+            };
+
+            client.OnQRCode += (sender, qr) =>
+            {
+                _logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", accountId, qr);
+                // TODO: Display QR in frontend
+            };
+
+            client.OnConnectionUpdate += (sender, evt) =>
+            {
+                _logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", accountId, evt.Status);
+                if (!string.IsNullOrEmpty(evt.Error))
+                {
+                    _logger.LogError("WhatsApp '{AccountId}' error: {Error}", accountId, evt.Error);
+                }
+            };
+
+            // Connect
+            await client.ConnectAsync(cancellationToken);
+
+            _bots[accountId] = bot;
             _messageDispatcher.Register(bot);
 
             _logger.LogInformation("WhatsApp account '{AccountId}' registered", accountId);
-
-            // TODO: Connect to WhatsApp
-            // await bot.ConnectAsync(cancellationToken);
-        }
-
-        /// <summary>
-        /// Remove a WhatsApp account
-        /// </summary>
-        public async Task RemoveAccountAsync(string accountId, CancellationToken cancellationToken = default)
-        {
-            if (!_clients.TryGetValue(accountId, out var client))
-                throw new KeyNotFoundException($"Account '{accountId}' not found");
-
-            _logger.LogInformation("WhatsApp account '{AccountId}' disconnecting...", accountId);
-
-            // Disconnect
-            await client.DisconnectAsync(cancellationToken);
-
-            _messageDispatcher.Unregister(client);
-            _clients.Remove(accountId);
-            _accounts.Remove(accountId);
-
-            _logger.LogInformation("WhatsApp account '{AccountId}' removed", accountId);
-        }
-
-        /// <summary>
-        /// Set account enabled/disabled
-        /// </summary>
-        public async Task SetAccountEnabledAsync(
-            string accountId,
-            bool enabled,
-            CancellationToken cancellationToken = default)
-        {
-            if (!_accounts.TryGetValue(accountId, out var config))
-                throw new KeyNotFoundException($"Account '{accountId}' not found");
-
-            config.Enabled = enabled;
-
-            if (enabled && !_clients.ContainsKey(accountId))
-            {
-                await AddAccountAsync(accountId, config, cancellationToken);
-            }
-            else if (!enabled && _clients.ContainsKey(accountId))
-            {
-                await RemoveAccountAsync(accountId, cancellationToken);
-            }
-        }
-
-        /// <summary>
-        /// Get account status
-        /// </summary>
-        public Dictionary<string, bool> GetAccountStatus()
-        {
-            return _accounts.ToDictionary(
-                x => x.Key,
-                x => _clients.ContainsKey(x.Key));
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("WhatsApp Channel Service stopping...");
 
-            var accountIds = _clients.Keys.ToList();
-            foreach (var accountId in accountIds)
+            foreach (var (accountId, bot) in _bots)
             {
                 try
                 {
-                    await RemoveAccountAsync(accountId, cancellationToken);
+                    _messageDispatcher.Unregister(bot);
+                    await bot.DisconnectAsync();
+                    _logger.LogInformation("WhatsApp account '{AccountId}' stopped", accountId);
                 }
                 catch (Exception ex)
                 {
@@ -169,6 +139,7 @@ namespace BlazorClaw.Channels.Services
                 }
             }
 
+            _bots.Clear();
             _logger.LogInformation("WhatsApp Channel Service stopped");
         }
     }
@@ -179,7 +150,7 @@ namespace BlazorClaw.Channels.Services
     public class WhatsAppChannelBot : AbstractChannelBot, IWhatsAppClient
     {
         private readonly string _accountId;
-        private readonly WhatsAppAccountConfig _config;
+        private readonly WhatsAppClient _client;
         private readonly ILogger<WhatsAppBotHostedService> _logger;
         private readonly PathHelper _pathHelper;
 
@@ -187,13 +158,13 @@ namespace BlazorClaw.Channels.Services
 
         public WhatsAppChannelBot(
             string accountId,
-            WhatsAppAccountConfig config,
+            WhatsAppClient client,
             ILogger<WhatsAppBotHostedService> logger,
             PathHelper pathHelper)
             : base("WhatsApp")
         {
             _accountId = accountId;
-            _config = config;
+            _client = client;
             _logger = logger;
             _pathHelper = pathHelper;
         }
@@ -207,10 +178,9 @@ namespace BlazorClaw.Channels.Services
             {
                 var content = message.GetTextContent() ?? string.Empty;
 
-                // Send text
                 if (!string.IsNullOrWhiteSpace(content))
                 {
-                    await SendMessageAsync(channelId.ChannelId, content, cancellationToken);
+                    await _client.SendMessageAsync(channelId.ChannelId, content, cancellationToken);
                 }
 
                 // TODO: Send images, media, etc.
@@ -230,33 +200,29 @@ namespace BlazorClaw.Channels.Services
             return SendChannelAsync(channelId, message, cancellationToken);
         }
 
-        private async Task SendMessageAsync(string jid, string text, CancellationToken cancellationToken)
-        {
-            await SendMessage(jid, new { text }, cancellationToken);
-        }
-
         // IWhatsAppClient implementation
         public Task ConnectAsync(CancellationToken cancellationToken = default)
         {
-            // TODO: Connect via WhatsApp WebSocket + Noise Protocol
-            return Task.CompletedTask;
+            return _client.ConnectAsync(cancellationToken);
         }
 
         public Task DisconnectAsync(CancellationToken cancellationToken = default)
         {
-            // TODO: Disconnect
-            return Task.CompletedTask;
+            return _client.DisconnectAsync();
         }
 
         public Task SendMessage(string jid, object messageContent, CancellationToken cancellationToken = default)
         {
-            // TODO: Encrypt + send via WebSocket
+            if (messageContent is string text)
+            {
+                return _client.SendMessageAsync(jid, text, cancellationToken);
+            }
             return Task.CompletedTask;
         }
 
         public Task SendReadReceipt(string jid, string messageId, CancellationToken cancellationToken = default)
         {
-            // TODO: Send read receipt
+            // TODO: Implement read receipts
             return Task.CompletedTask;
         }
     }
