@@ -1,3 +1,4 @@
+using BlazorClaw.Channels.Services;
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Memory;
@@ -25,7 +26,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Telegram.Bot.Types;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -150,10 +150,12 @@ builder.Services.AddScoped<ISessionQueryService, BlazorClaw.Core.Services.Sessio
 builder.Services.AddSingleton<CronJobService>();
 builder.Services.AddSingleton<ICronJobService>(sp => sp.GetRequiredService<CronJobService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<CronJobService>());
-builder.Services.AddHostedService<BlazorClaw.Channels.Services.TelegramBotHostedService>();
-builder.Services.AddHostedService<BlazorClaw.Channels.Services.MatrixBotHostedService>();
-builder.Services.AddSingleton<BlazorClaw.Channels.Services.WhatsAppBotHostedService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<BlazorClaw.Channels.Services.WhatsAppBotHostedService>());
+builder.Services.AddHostedService<TelegramBotHostedService>();
+builder.Services.AddHostedService<MatrixBotHostedService>();
+
+builder.Services.Configure<WhatsAppConfigs>(builder.Configuration.GetSection(WhatsAppConfigs.Section));
+builder.Services.AddSingleton<WhatsAppBotHostedService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<WhatsAppBotHostedService>());
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

@@ -4,6 +4,7 @@ using BlazorClaw.WhatsApp;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace BlazorClaw.Channels.Services
 {
@@ -22,7 +23,7 @@ namespace BlazorClaw.Channels.Services
     /// Manages multiple WhatsApp accounts via WhatsAppClient
     /// </summary>
     public class WhatsAppBotHostedService(
-        IConfiguration configuration,
+        IOptionsMonitor<WhatsAppConfigs> configuration,
         IMessageDispatcher messageDispatcher,
         ILogger<WhatsAppBotHostedService> logger) : IHostedService
     {
@@ -35,12 +36,11 @@ namespace BlazorClaw.Channels.Services
             logger.LogInformation("WhatsApp Channel Service starting...");
 
             // Read accounts from config
-            var accounts = configuration.GetSection("Channels:WhatsApp:Accounts").GetChildren();
 
-            foreach (var accountConfig in accounts)
+            foreach (var accountConfig in configuration.CurrentValue)
             {
                 var accountId = accountConfig.Key;
-                var enabled = accountConfig.GetValue<bool>("Enabled", true);
+                var enabled = accountConfig.Value.Enabled;
 
                 if (!enabled)
                 {
@@ -50,7 +50,7 @@ namespace BlazorClaw.Channels.Services
 
                 try
                 {
-                    await AddAccountAsync(accountId, accountConfig, cancellationToken);
+                    await AddAccountAsync(accountId, accountConfig.Value, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -63,13 +63,13 @@ namespace BlazorClaw.Channels.Services
 
         private async Task AddAccountAsync(
             string accountId,
-            IConfigurationSection config,
+            WhatsAppConfigEntry config,
             CancellationToken cancellationToken)
         {
             logger.LogInformation("Initializing WhatsApp account '{AccountId}'...", accountId);
 
-            var authDir = config.GetValue<string>("AuthDir") ?? $"./whatsapp_auth/{accountId}";
-            var pushName = config.GetValue<string>("PushName") ?? "BlazorClaw";
+            var authDir = config.AuthDir ?? $"./whatsapp_auth/{accountId}";
+            var pushName = config.PushName ?? "BlazorClaw";
 
             var whatsappConfig = new WhatsAppConfig
             {
@@ -91,7 +91,7 @@ namespace BlazorClaw.Channels.Services
             client.OnQRCode += (sender, qr) =>
             {
                 logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", accountId, qr);
-                
+
                 // Store QR code
                 lock (_qrLock)
                 {
@@ -107,7 +107,7 @@ namespace BlazorClaw.Channels.Services
             client.OnConnectionUpdate += (sender, evt) =>
             {
                 logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", accountId, evt.Status);
-                
+
                 // Clear QR code when connected
                 if (evt.Status == "open" || evt.Status == "paired")
                 {
@@ -180,7 +180,7 @@ namespace BlazorClaw.Channels.Services
             }
 
             _bots.Clear();
-            
+
             lock (_qrLock)
             {
                 _qrCodes.Clear();
@@ -268,5 +268,17 @@ namespace BlazorClaw.Channels.Services
             // TODO: Implement read receipts
             return Task.CompletedTask;
         }
+    }
+
+    public class WhatsAppConfigs : Dictionary<string, WhatsAppConfigEntry>
+    {
+        public const string Section = "Channels:WhatsApp:Accounts";
+    }
+    public class WhatsAppConfigEntry
+    {
+        public bool Enabled { get; set; } = true;
+        public string? PhoneNumber { get; set; }
+        public string? AuthDir { get; set; }
+        public string? PushName { get; set; }
     }
 }

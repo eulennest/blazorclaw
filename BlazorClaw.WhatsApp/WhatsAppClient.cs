@@ -486,6 +486,5 @@ namespace BlazorClaw.WhatsApp
         public string AuthDir { get; set; } = "./whatsapp_auth";
         public string? PhoneNumber { get; set; }
         public string? PushName { get; set; }
-        public bool PrintQRInTerminal { get; set; } = true;
     }
 }

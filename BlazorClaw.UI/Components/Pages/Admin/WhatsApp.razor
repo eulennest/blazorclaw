@@ -29,7 +29,7 @@
         @if (accounts.Count == 0)
         {
             <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> Keine WhatsApp-Accounts konfiguriert. 
+                <i class="bi bi-info-circle"></i> Keine WhatsApp-Accounts konfiguriert.
                 <button class="btn btn-link p-0" @onclick="ShowAddAccountModal">Jetzt einen Account hinzufügen</button>
             </div>
         }
@@ -41,7 +41,6 @@
                         <th>Account ID</th>
                         <th>Status</th>
                         <th>Push Name</th>
-                        <th>Auth Directory</th>
                         <th>Aktionen</th>
                     </tr>
                 </thead>
@@ -62,7 +61,6 @@
                                 }
                             </td>
                             <td>@account.PushName</td>
-                            <td><small class="text-muted">@account.AuthDir</small></td>
                             <td>
                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAccount(account.Id)">
                                     <i class="bi bi-trash"></i> Löschen
@@ -103,7 +101,7 @@
                                 
                                 <div class="alert alert-info small mb-0">
                                     <i class="bi bi-phone"></i> Scanne diesen QR-Code mit WhatsApp:
-                                    <br/>
+                                    <br />
                                     <strong>WhatsApp → Verknüpfte Geräte → Gerät verknüpfen</strong>
                                 </div>
                             </div>
@@ -129,33 +127,21 @@
                     <h5 class="modal-title">Neuer WhatsApp Account</h5>
                     <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="alert alert-warning">
-                        <i class="bi bi-info-circle"></i> 
-                        <strong>Hinweis:</strong> Aktuell müssen neue WhatsApp-Accounts manuell in der 
-                        <code>appsettings.Development.json</code> konfiguriert werden.
-                        <br/><br/>
-                        Pfad: <code>Channels:WhatsApp:Accounts</code>
-                    </div>
-                    
+                <div class="modal-body">                    
                     <div class="mb-3">
                         <label class="form-label">Account ID</label>
                         <input type="text" class="form-control" placeholder="z.B. default, kaspar, daniel" disabled />
-                    <div class="mb-3">
-                        <label class="form-label">Account ID</label>
-                        <input type="text" class="form-control" placeholder="z.B. default, kaspar, daniel" disabled />
-                        <small class="form-text text-muted">Eindeutige ID für diesen Account</small>
-                    </div>
+                        <div class="mb-3">
+                            <label class="form-label">Account ID</label>
+                            <input type="text" class="form-control" placeholder="z.B. default, kaspar, daniel" disabled />
+                            <small class="form-text text-muted">Eindeutige ID für diesen Account</small>
+                        </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label">Push Name</label>
-                        <input type="text" class="form-control" placeholder="z.B. BlazorClaw Bot" disabled />
-                        <small class="form-text text-muted">Anzeigename für WhatsApp-Nutzer</small>
-                    </div>
-                    
-                    <div class="alert alert-info small">
-                        <strong>Auth Directory:</strong> Wird automatisch als <code>./whatsapp_auth/{accountId}</code> gesetzt.
-                    </div>
+                        <div class="mb-3">
+                            <label class="form-label">Push Name</label>
+                            <input type="text" class="form-control" placeholder="z.B. BlazorClaw Bot" disabled />
+                            <small class="form-text text-muted">Anzeigename für WhatsApp-Nutzer</small>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -184,11 +170,10 @@
         // For now, infer from bots count
         var accountCount = WhatsAppService.GetAccountCount();
         accounts = Enumerable.Range(1, accountCount)
-            .Select(i => new WhatsAppAccountInfo 
-            { 
+            .Select(i => new WhatsAppAccountInfo
+            {
                 Id = $"account_{i}",
                 PushName = "BlazorClaw",
-                AuthDir = $"./whatsapp_auth/account_{i}"
             })
             .ToList();
     }
@@ -231,6 +216,5 @@
     {
         public string Id { get; set; } = string.Empty;
         public string PushName { get; set; } = string.Empty;
-        public string AuthDir { get; set; } = string.Empty;
     }
 }
