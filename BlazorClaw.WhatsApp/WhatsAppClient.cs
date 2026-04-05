@@ -140,9 +140,8 @@ namespace BlazorClaw.WhatsApp
                 var sharedEphemeral = CryptoUtils.Curve25519SharedSecret(ephemeralPriv, serverEphemeral);
                 _noise.MixIntoKey(sharedEphemeral);
 
-                // Decrypt server static key
+                // Decrypt server static key (authenticate is automatic inside Decrypt)
                 var serverStatic = _noise.Decrypt(serverStaticCiphertext);
-                _noise.MixHash(serverStatic);
                 
                 // Compute ECDH: our ephemeral private × server static public
                 var sharedStatic = CryptoUtils.Curve25519SharedSecret(ephemeralPriv, serverStatic);
