@@ -29,7 +29,7 @@ namespace BlazorClaw.WhatsApp.Crypto
                 var ciphertext = new byte[plaintext.Length];
                 var tag = new byte[TAG_LENGTH];
 
-                cipher.Encrypt(nonce, plaintext, null, ciphertext, tag);
+                cipher.Encrypt(nonce, plaintext, ciphertext, tag, associatedData: null);
 
                 // Return ciphertext + tag
                 return ciphertext.Concat(tag).ToArray();
@@ -55,7 +55,7 @@ namespace BlazorClaw.WhatsApp.Crypto
             using (var cipher = new AesGcm(key, TAG_LENGTH))
             {
                 var plaintext = new byte[ciphertext.Length];
-                cipher.Decrypt(nonce, ciphertext, null, tag, plaintext);
+                cipher.Decrypt(nonce, ciphertext, tag, plaintext, associatedData: null);
                 return plaintext;
             }
         }
