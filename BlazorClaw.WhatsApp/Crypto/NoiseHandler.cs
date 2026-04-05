@@ -87,6 +87,12 @@ namespace BlazorClaw.WhatsApp.Crypto
             {
                 Authenticate(ciphertext);
                 var iv = GenerateIv(_readCounter++);
+                
+                Console.WriteLine($"[Decrypt] DecKey: {BitConverter.ToString(_decKey).Replace("-", "")}");
+                Console.WriteLine($"[Decrypt] IV: {BitConverter.ToString(iv).Replace("-", "")}");
+                Console.WriteLine($"[Decrypt] Hash (AAD): {BitConverter.ToString(_hash).Replace("-", "")}");
+                Console.WriteLine($"[Decrypt] Ciphertext (first 64): {BitConverter.ToString(ciphertext.ToArray().Take(64).ToArray()).Replace("-", "")}");
+                
                 var plaintext = CryptoUtils.AesGcmDecrypt(ciphertext.ToArray(), _decKey, iv, _hash);
                 Authenticate(plaintext);
                 return plaintext;
@@ -120,10 +126,16 @@ namespace BlazorClaw.WhatsApp.Crypto
         /// </summary>
         public void MixIntoKey(ReadOnlySpan<byte> data)
         {
+            Console.WriteLine($"[MixIntoKey] Input: {BitConverter.ToString(data.ToArray()).Replace("-", "")}");
+            Console.WriteLine($"[MixIntoKey] Salt before: {BitConverter.ToString(_salt).Replace("-", "")}");
+            
             var expanded = CryptoUtils.HkdfSha256(data.ToArray(), 64, _salt, Array.Empty<byte>());
             _salt = expanded[..32];
             _encKey = expanded[32..];
             _decKey = expanded[32..];
+            
+            Console.WriteLine($"[MixIntoKey] Salt after: {BitConverter.ToString(_salt).Replace("-", "")}");
+            Console.WriteLine($"[MixIntoKey] EncKey: {BitConverter.ToString(_encKey).Replace("-", "")}");
         }
 
         private void Authenticate(ReadOnlySpan<byte> data)
