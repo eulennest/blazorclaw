@@ -1,77 +1,217 @@
 @page "/admin/channels/whatsapp"
 @using BlazorClaw.Channels.Services
 @inject WhatsAppBotHostedService WhatsAppService
+@inject NavigationManager Navigation
 
 <PageTitle>Admin - WhatsApp</PageTitle>
 
-<h2>WhatsApp Kanal-Verwaltung</h2>
-<p class="text-muted">Verwaltung von WhatsApp-Accounts und QR-Code-Pairing.</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>WhatsApp Kanal-Verwaltung</h2>
+        <p class="text-muted">Verwaltung von WhatsApp-Accounts und QR-Code-Pairing.</p>
+    </div>
+    <div>
+        <button class="btn btn-secondary" @onclick="GoBack">
+            <i class="bi bi-arrow-left"></i> Zurück
+        </button>
+    </div>
+</div>
 
-<div class="mt-4">
-    @if (qrCodes == null || qrCodes.Count == 0)
-    {
-        <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> Keine QR-Codes vorhanden. Alle WhatsApp-Accounts sind verbunden oder es sind keine Accounts konfiguriert.
+<!-- WhatsApp Accounts Section -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-whatsapp"></i> WhatsApp Accounts</h5>
+        <button class="btn btn-sm btn-success" @onclick="ShowAddAccountModal">
+            <i class="bi bi-plus-circle"></i> Neuer Account
+        </button>
+    </div>
+    <div class="card-body">
+        @if (accounts.Count == 0)
+        {
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i> Keine WhatsApp-Accounts konfiguriert. 
+                <button class="btn btn-link p-0" @onclick="ShowAddAccountModal">Jetzt einen Account hinzufügen</button>
+            </div>
+        }
+        else
+        {
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Account ID</th>
+                        <th>Status</th>
+                        <th>Push Name</th>
+                        <th>Auth Directory</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var account in accounts)
+                    {
+                        var hasQR = qrCodes.Any(q => q.AccountId == account.Id);
+                        <tr>
+                            <td><code>@account.Id</code></td>
+                            <td>
+                                @if (hasQR)
+                                {
+                                    <span class="badge bg-warning">Wartet auf Pairing</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Verbunden</span>
+                                }
+                            </td>
+                            <td>@account.PushName</td>
+                            <td><small class="text-muted">@account.AuthDir</small></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteAccount(account.Id)">
+                                    <i class="bi bi-trash"></i> Löschen
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- QR Codes Section -->
+@if (qrCodes.Count > 0)
+{
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-qr-code"></i> Offene Pairings</h5>
         </div>
-    }
-    else
-    {
-        <div class="row">
-            @foreach (var qr in qrCodes)
-            {
-                <div class="col-md-6 col-lg-4 mb-4">
-                    <div class="card">
-                        <div class="card-header bg-success text-white">
-                            <h5 class="mb-0">
-                                <i class="bi bi-whatsapp"></i> @qr.AccountId
-                            </h5>
-                        </div>
-                        <div class="card-body text-center">
-                            @* QR-Code als Base64 SVG *@
-                            <div class="mb-3">
-                                @((MarkupString)GenerateQRCodeSvg(qr.QRCode))
+        <div class="card-body">
+            <div class="row">
+                @foreach (var qr in qrCodes)
+                {
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card border-warning">
+                            <div class="card-header bg-warning text-dark">
+                                <h6 class="mb-0">
+                                    <i class="bi bi-whatsapp"></i> @qr.AccountId
+                                </h6>
                             </div>
-                            
-                            <p class="text-muted small">
-                                <i class="bi bi-clock"></i> Generiert: @qr.GeneratedAt.ToString("HH:mm:ss")
-                            </p>
-                            
-                            <div class="alert alert-info small">
-                                <i class="bi bi-phone"></i> Scanne diesen QR-Code mit WhatsApp auf deinem Handy:
-                                <br/>
-                                <strong>WhatsApp → Verknüpfte Geräte → Gerät verknüpfen</strong>
+                            <div class="card-body text-center">
+                                @((MarkupString)GenerateQRCodeSvg(qr.QRCode))
+                                
+                                <p class="text-muted small mt-3">
+                                    <i class="bi bi-clock"></i> Generiert: @qr.GeneratedAt.ToString("HH:mm:ss")
+                                </p>
+                                
+                                <div class="alert alert-info small mb-0">
+                                    <i class="bi bi-phone"></i> Scanne diesen QR-Code mit WhatsApp:
+                                    <br/>
+                                    <strong>WhatsApp → Verknüpfte Geräte → Gerät verknüpfen</strong>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            }
+                }
+            </div>
+            
+            <button class="btn btn-primary" @onclick="RefreshData">
+                <i class="bi bi-arrow-clockwise"></i> Aktualisieren
+            </button>
         </div>
-    }
-</div>
+    </div>
+}
 
-<div class="mt-4">
-    <button class="btn btn-primary" @onclick="RefreshQRCodes">
-        <i class="bi bi-arrow-clockwise"></i> Aktualisieren
-    </button>
-</div>
+<!-- Add Account Modal Placeholder -->
+@if (showAddModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Neuer WhatsApp Account</h5>
+                    <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle"></i> 
+                        <strong>Hinweis:</strong> Aktuell müssen neue WhatsApp-Accounts manuell in der 
+                        <code>appsettings.Development.json</code> konfiguriert werden.
+                        <br/><br/>
+                        Pfad: <code>Channels:WhatsApp:Accounts</code>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Account ID</label>
+                        <input type="text" class="form-control" placeholder="z.B. default, kaspar, daniel" disabled />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Push Name</label>
+                        <input type="text" class="form-control" placeholder="z.B. BlazorClaw Bot" disabled />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Auth Directory</label>
+                        <input type="text" class="form-control" placeholder="z.B. ./whatsapp_auth/default" disabled />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">Schließen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
-    private List<WhatsAppQRCodeData>? qrCodes;
+    private List<WhatsAppQRCodeData> qrCodes = new();
+    private List<WhatsAppAccountInfo> accounts = new();
+    private bool showAddModal = false;
 
     protected override void OnInitialized()
     {
-        LoadQRCodes();
+        LoadData();
     }
 
-    private void LoadQRCodes()
+    private void LoadData()
     {
         qrCodes = WhatsAppService.GetCurrentQRCodes();
+        
+        // TODO: Get real account list from service
+        // For now, infer from bots count
+        var accountCount = WhatsAppService.GetAccountCount();
+        accounts = Enumerable.Range(1, accountCount)
+            .Select(i => new WhatsAppAccountInfo 
+            { 
+                Id = $"account_{i}",
+                PushName = "BlazorClaw",
+                AuthDir = $"./whatsapp_auth/account_{i}"
+            })
+            .ToList();
     }
 
-    private void RefreshQRCodes()
+    private void RefreshData()
     {
-        LoadQRCodes();
+        LoadData();
         StateHasChanged();
+    }
+
+    private void ShowAddAccountModal()
+    {
+        showAddModal = true;
+    }
+
+    private void CloseAddModal()
+    {
+        showAddModal = false;
+    }
+
+    private void DeleteAccount(string accountId)
+    {
+        // TODO: Implement account deletion
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/admin/channels");
     }
 
     private string GenerateQRCodeSvg(string data)
@@ -80,5 +220,12 @@
         using var qrCodeData = qrGenerator.CreateQrCode(data, QRCoder.QRCodeGenerator.ECCLevel.Q);
         using var qrCode = new QRCoder.SvgQRCode(qrCodeData);
         return qrCode.GetGraphic(20);
+    }
+
+    public class WhatsAppAccountInfo
+    {
+        public string Id { get; set; } = string.Empty;
+        public string PushName { get; set; } = string.Empty;
+        public string AuthDir { get; set; } = string.Empty;
     }
 }
