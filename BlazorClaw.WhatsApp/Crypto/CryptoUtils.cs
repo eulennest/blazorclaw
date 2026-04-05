@@ -27,7 +27,7 @@ namespace BlazorClaw.WhatsApp.Crypto
         /// <summary>
         /// AES-256-GCM Encryption
         /// </summary>
-        public static byte[] AesGcmEncrypt(byte[] plaintext, byte[] key, byte[] nonce)
+        public static byte[] AesGcmEncrypt(byte[] plaintext, byte[] key, byte[] nonce, byte[]? aad = null)
         {
             if (key.Length != KEY_LENGTH)
                 throw new ArgumentException($"Key must be {KEY_LENGTH} bytes", nameof(key));
@@ -39,7 +39,7 @@ namespace BlazorClaw.WhatsApp.Crypto
                 var ciphertext = new byte[plaintext.Length];
                 var tag = new byte[TAG_LENGTH];
 
-                cipher.Encrypt(nonce, plaintext, ciphertext, tag, associatedData: null);
+                cipher.Encrypt(nonce, plaintext, ciphertext, tag, aad ?? Array.Empty<byte>());
 
                 // Return ciphertext + tag
                 return ciphertext.Concat(tag).ToArray();
@@ -49,7 +49,7 @@ namespace BlazorClaw.WhatsApp.Crypto
         /// <summary>
         /// AES-256-GCM Decryption
         /// </summary>
-        public static byte[] AesGcmDecrypt(byte[] ciphertextWithTag, byte[] key, byte[] nonce)
+        public static byte[] AesGcmDecrypt(byte[] ciphertextWithTag, byte[] key, byte[] nonce, byte[]? aad = null)
         {
             if (key.Length != KEY_LENGTH)
                 throw new ArgumentException($"Key must be {KEY_LENGTH} bytes", nameof(key));
@@ -65,7 +65,7 @@ namespace BlazorClaw.WhatsApp.Crypto
             using (var cipher = new AesGcm(key, TAG_LENGTH))
             {
                 var plaintext = new byte[ciphertext.Length];
-                cipher.Decrypt(nonce, ciphertext, tag, plaintext, associatedData: null);
+                cipher.Decrypt(nonce, ciphertext, tag, plaintext, aad ?? Array.Empty<byte>());
                 return plaintext;
             }
         }

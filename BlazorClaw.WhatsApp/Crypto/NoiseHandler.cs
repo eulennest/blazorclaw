@@ -68,7 +68,7 @@ namespace BlazorClaw.WhatsApp.Crypto
             {
                 Authenticate(plaintext);
                 var iv = GenerateIv(_writeCounter++);
-                var ciphertext = CryptoUtils.AesGcmEncrypt(plaintext.ToArray(), _encKey, iv);
+                var ciphertext = CryptoUtils.AesGcmEncrypt(plaintext.ToArray(), _encKey, iv, _hash);
                 Authenticate(ciphertext);
                 return ciphertext;
             }
@@ -87,7 +87,7 @@ namespace BlazorClaw.WhatsApp.Crypto
             {
                 Authenticate(ciphertext);
                 var iv = GenerateIv(_readCounter++);
-                var plaintext = CryptoUtils.AesGcmDecrypt(ciphertext.ToArray(), _decKey, iv);
+                var plaintext = CryptoUtils.AesGcmDecrypt(ciphertext.ToArray(), _decKey, iv, _hash);
                 Authenticate(plaintext);
                 return plaintext;
             }
