@@ -49,4 +49,13 @@
     <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.4" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.29.2" />
+    <PackageReference Include="Grpc.Tools" Version="2.71.0" PrivateAssets="All" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Proto/**/*.proto" GrpcServices="None" ProtoRoot="Proto" OutputDir="%(RelativeDir)" />
+  </ItemGroup>
+
 </Project>

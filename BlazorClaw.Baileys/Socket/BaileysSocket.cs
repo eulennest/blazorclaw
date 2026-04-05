@@ -4,6 +4,7 @@ using Baileys.Utils;
 using Baileys.WABinary;
 using System.Net.WebSockets;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using Google.Protobuf;
 
 namespace Baileys.Socket;
 
@@ -37,6 +38,7 @@ public sealed class BaileysSocket : IAsyncDisposable
 
         // Start the Noise handshake
         await SendIntroHeaderAsync(cancellationToken).ConfigureAwait(false);
+        await SendClientHelloAsync(cancellationToken).ConfigureAwait(false);
 
         _receiveTask = ReceiveLoopAsync(_cts.Token);
     }
@@ -46,6 +48,39 @@ public sealed class BaileysSocket : IAsyncDisposable
         var header = _noise.IntroHeader.ToArray();
         await SendRawAsync(header, cancellationToken).ConfigureAwait(false);
         _logger.Debug("Sent intro header.");
+    }
+
+    private async Task SendClientHelloAsync(CancellationToken cancellationToken)
+    {
+        // Generate ephemeral keypair for this session
+        var ephemeralKeyPair = AuthUtils.GenerateKeyPair();
+        var ephemeralPub = ephemeralKeyPair.Public;
+
+        // Build ClientHello protobuf
+        var clientHello = new global::Proto.HandshakeMessage
+        {
+            ClientHello = new global::Proto.HandshakeMessage.Types.ClientHello
+            {
+                Ephemeral = ByteString.CopyFrom(ephemeralPub)
+            }
+        };
+
+        // Encode and frame
+        var helloBytes = clientHello.ToByteArray();
+        var frame = EncodeFrame(helloBytes);
+
+        await SendRawAsync(frame, cancellationToken).ConfigureAwait(false);
+        _logger.Debug($"Sent ClientHello ({frame.Length} bytes)");
+    }
+
+    private static byte[] EncodeFrame(byte[] payload)
+    {
+        var frame = new byte[3 + payload.Length];
+        frame[0] = (byte)((payload.Length >> 16) & 0xFF);
+        frame[1] = (byte)((payload.Length >> 8) & 0xFF);
+        frame[2] = (byte)(payload.Length & 0xFF);
+        payload.CopyTo(frame, 3);
+        return frame;
     }
 
     public async Task SendNodeAsync(BinaryNode node, CancellationToken cancellationToken = default)
