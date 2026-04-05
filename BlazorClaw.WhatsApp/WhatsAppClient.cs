@@ -265,9 +265,13 @@ namespace BlazorClaw.WhatsApp
             {
                 try
                 {
-                    var frameData = await ReceiveRawAsync(cancellationToken);
+                    var frameRaw = await ReceiveRawAsync(cancellationToken);
 
-                    // Decrypt frame (after handshake, all frames are encrypted)
+                    // 1. Decode frame (extract data from 3-byte length prefix)
+                    var (frameLength, frameData) = NoiseFrameEncoder.DecodeFrame(frameRaw);
+                    _logger?.LogDebug("Received frame: {Length} bytes", frameLength);
+
+                    // 2. Decrypt frame (after handshake, all frames are encrypted)
                     if (_authState?.ReceiveKey != null)
                     {
                         var nonce = CryptoUtils.DeriveNonce(_epoch++);
