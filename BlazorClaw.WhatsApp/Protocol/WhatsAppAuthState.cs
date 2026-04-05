@@ -4,14 +4,23 @@ namespace BlazorClaw.WhatsApp.Protocol
 {
     /// <summary>
     /// WhatsApp Authentication State - persistent storage
+    /// Stores keys, tokens, and credentials between sessions
     /// </summary>
     public class WhatsAppAuthState
     {
         public string ClientId { get; set; } = string.Empty;
         public string ClientToken { get; set; } = string.Empty;
         public string ServerToken { get; set; } = string.Empty;
-        public Dictionary<string, string> KeyPair { get; set; } = new();
-        public byte[]? EncryptionKey { get; set; }
+
+        // Noise Protocol keys (set during handshake)
+        public byte[]? ClientPublicKey { get; set; }
+        public byte[]? ClientPrivateKey { get; set; }
+        public byte[]? SendKey { get; set; }
+        public byte[]? ReceiveKey { get; set; }
+
+        // Signal Protocol identity keys
+        public byte[]? IdentityPrivateKey { get; set; }
+        public byte[]? IdentityPublicKey { get; set; }
 
         /// <summary>
         /// Load auth state from disk
@@ -22,18 +31,23 @@ namespace BlazorClaw.WhatsApp.Protocol
 
             if (File.Exists(credsFile))
             {
-                var json = await File.ReadAllTextAsync(credsFile);
-                return JsonSerializer.Deserialize<WhatsAppAuthState>(json) ?? new();
+                try
+                {
+                    var json = await File.ReadAllTextAsync(credsFile);
+                    return JsonSerializer.Deserialize<WhatsAppAuthState>(json) ?? new();
+                }
+                catch
+                {
+                    // If parsing fails, create new state
+                    return new WhatsAppAuthState { ClientId = Guid.NewGuid().ToString() };
+                }
             }
 
-            return new WhatsAppAuthState
-            {
-                ClientId = Guid.NewGuid().ToString(),
-            };
+            return new WhatsAppAuthState { ClientId = Guid.NewGuid().ToString() };
         }
 
         /// <summary>
-        /// Save auth state to disk
+        /// Save auth state to disk (encrypted in production!)
         /// </summary>
         public async Task SaveAsync(string directory)
         {
