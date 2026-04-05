@@ -1,11 +1,11 @@
 @page "/admin/channels/whatsapp"
 @using BlazorClaw.Channels.Services
 @using System.Text.Json
-@using Microsoft.Extensions.Configuration
+@using Microsoft.Extensions.Options
 @inject WhatsAppBotHostedService WhatsAppService
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
-
+@inject IOptionsMonitor<WhatsAppConfigs> WhatsAppOptions
 
 <PageTitle>Admin - WhatsApp</PageTitle>
 
@@ -67,9 +67,9 @@
                 <tbody>
                     @foreach (var account in accounts)
                     {
-                        var hasQR = qrCodes.Any(q => q.AccountId == account.Id);
+                        var hasQR = qrCodes.Any(q => q.AccountId == account.Key);
                         <tr>
-                            <td><code>@account.Id</code></td>
+                            <td><code>@account.Key</code></td>
                             <td>
                                 @if (hasQR)
                                 {
@@ -80,9 +80,9 @@
                                     <span class="badge bg-success">Verbunden</span>
                                 }
                             </td>
-                            <td>@account.PushName</td>
+                            <td>@account.Value.PushName</td>
                             <td>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(account.Id)">
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(account.Key)">
                                     <i class="bi bi-trash"></i> Löschen
                                 </button>
                             </td>
@@ -204,7 +204,7 @@
 
 @code {
     private List<WhatsAppQRCodeData> qrCodes = new();
-    private List<WhatsAppAccountInfo> accounts = new();
+    private Dictionary<string, WhatsAppConfigEntry> accounts = new();
     private bool showAddModal = false;
     private bool showDeleteModal = false;
     private string newAccountId = string.Empty;
@@ -221,25 +221,7 @@
     private void LoadData()
     {
         qrCodes = WhatsAppService.GetCurrentQRCodes();
-        accounts = LoadAccountsFromConfig();
-    }
-
-    private List<WhatsAppAccountInfo> LoadAccountsFromConfig()
-    {
-        var accountList = new List<WhatsAppAccountInfo>();
-        var accountsSection = Configuration.GetSection("Channels:WhatsApp:Accounts");
-        
-        foreach (var child in accountsSection.GetChildren())
-        {
-            accountList.Add(new WhatsAppAccountInfo
-            {
-                Id = child.Key,
-                PushName = child["PushName"] ?? "BlazorClaw",
-                Enabled = child.GetValue<bool>("Enabled", true)
-            });
-        }
-        
-        return accountList;
+        accounts = WhatsAppOptions.CurrentValue;
     }
 
     private void RefreshData()
@@ -266,49 +248,61 @@
         {
             var configPath = "/app/appsettings.Development.json";
             var json = await File.ReadAllTextAsync(configPath);
-            var config = JsonDocument.Parse(json);
-            var root = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
-
-            if (root == null)
+            
+            using var doc = JsonDocument.Parse(json);
+            var root = new Dictionary<string, JsonElement>();
+            
+            foreach (var prop in doc.RootElement.EnumerateObject())
             {
-                errorMessage = "Fehler beim Lesen der Config-Datei";
-                return;
+                root[prop.Name] = prop.Value;
             }
 
-            // Navigate to Channels:WhatsApp:Accounts
-            if (!root.ContainsKey("Channels"))
-                root["Channels"] = new Dictionary<string, object>();
+            // Navigate using WhatsAppConfigs.Section
+            var section = Configuration.GetSection(WhatsAppConfigs.Section);
             
-            var channels = JsonSerializer.Deserialize<Dictionary<string, object>>(root["Channels"].ToString()!);
-            if (!channels!.ContainsKey("WhatsApp"))
-                channels["WhatsApp"] = new Dictionary<string, object>();
-            
-            var whatsapp = JsonSerializer.Deserialize<Dictionary<string, object>>(channels["WhatsApp"].ToString()!);
-            if (!whatsapp!.ContainsKey("Accounts"))
-                whatsapp["Accounts"] = new Dictionary<string, object>();
-            
-            var accounts = JsonSerializer.Deserialize<Dictionary<string, object>>(whatsapp["Accounts"].ToString()!);
-            
-            // Add new account
-            accounts![newAccountId] = new Dictionary<string, object>
+            // Build new account entry
+            var newAccount = new Dictionary<string, object>
             {
                 ["Enabled"] = true,
                 ["PushName"] = newPushName,
                 ["AuthDir"] = $"./whatsapp_auth/{newAccountId}"
             };
 
-            whatsapp["Accounts"] = accounts;
-            channels["WhatsApp"] = whatsapp;
-            root["Channels"] = channels;
+            // Read existing accounts
+            var accountsDict = new Dictionary<string, object>();
+            foreach (var child in section.GetChildren())
+            {
+                accountsDict[child.Key] = new Dictionary<string, object>
+                {
+                    ["Enabled"] = child.GetValue<bool>("Enabled", true),
+                    ["PushName"] = child["PushName"] ?? "BlazorClaw",
+                    ["AuthDir"] = child["AuthDir"] ?? $"./whatsapp_auth/{child.Key}"
+                };
+            }
+            
+            // Add new
+            accountsDict[newAccountId] = newAccount;
 
-            // Write back
+            // Rebuild JSON structure
+            var channels = root.ContainsKey("Channels") 
+                ? JsonSerializer.Deserialize<Dictionary<string, object>>(root["Channels"].GetRawText())!
+                : new Dictionary<string, object>();
+            
+            var whatsapp = channels.ContainsKey("WhatsApp")
+                ? JsonSerializer.Deserialize<Dictionary<string, object>>(channels["WhatsApp"].ToString()!)!
+                : new Dictionary<string, object>();
+            
+            whatsapp["Accounts"] = accountsDict;
+            channels["WhatsApp"] = whatsapp;
+            root["Channels"] = JsonSerializer.SerializeToElement(channels);
+
+            // Write
             var options = new JsonSerializerOptions { WriteIndented = true };
             var newJson = JsonSerializer.Serialize(root, options);
             await File.WriteAllTextAsync(configPath, newJson);
 
             successMessage = $"Account '{newAccountId}' erfolgreich hinzugefügt! Bitte Server neu starten.";
             CloseAddModal();
-            LoadData();
         }
         catch (Exception ex)
         {
@@ -336,19 +330,36 @@
         {
             var configPath = "/app/appsettings.Development.json";
             var json = await File.ReadAllTextAsync(configPath);
-            var root = JsonSerializer.Deserialize<Dictionary<string, object>>(json);
-
-            if (root == null) return;
-
-            var channels = JsonSerializer.Deserialize<Dictionary<string, object>>(root["Channels"].ToString()!);
-            var whatsapp = JsonSerializer.Deserialize<Dictionary<string, object>>(channels!["WhatsApp"].ToString()!);
-            var accounts = JsonSerializer.Deserialize<Dictionary<string, object>>(whatsapp!["Accounts"].ToString()!);
             
-            accounts!.Remove(accountToDelete);
+            using var doc = JsonDocument.Parse(json);
+            var root = new Dictionary<string, JsonElement>();
+            
+            foreach (var prop in doc.RootElement.EnumerateObject())
+            {
+                root[prop.Name] = prop.Value;
+            }
 
-            whatsapp["Accounts"] = accounts;
+            var section = Configuration.GetSection(WhatsAppConfigs.Section);
+            
+            var accountsDict = new Dictionary<string, object>();
+            foreach (var child in section.GetChildren())
+            {
+                if (child.Key != accountToDelete)
+                {
+                    accountsDict[child.Key] = new Dictionary<string, object>
+                    {
+                        ["Enabled"] = child.GetValue<bool>("Enabled", true),
+                        ["PushName"] = child["PushName"] ?? "BlazorClaw",
+                        ["AuthDir"] = child["AuthDir"] ?? $"./whatsapp_auth/{child.Key}"
+                    };
+                }
+            }
+
+            var channels = JsonSerializer.Deserialize<Dictionary<string, object>>(root["Channels"].GetRawText())!;
+            var whatsapp = JsonSerializer.Deserialize<Dictionary<string, object>>(channels["WhatsApp"].ToString()!)!;
+            whatsapp["Accounts"] = accountsDict;
             channels["WhatsApp"] = whatsapp;
-            root["Channels"] = channels;
+            root["Channels"] = JsonSerializer.SerializeToElement(channels);
 
             var options = new JsonSerializerOptions { WriteIndented = true };
             var newJson = JsonSerializer.Serialize(root, options);
@@ -356,7 +367,6 @@
 
             successMessage = $"Account '{accountToDelete}' erfolgreich gelöscht! Bitte Server neu starten.";
             CloseDeleteModal();
-            LoadData();
         }
         catch (Exception ex)
         {
@@ -375,12 +385,5 @@
         using var qrCodeData = qrGenerator.CreateQrCode(data, QRCoder.QRCodeGenerator.ECCLevel.Q);
         using var qrCode = new QRCoder.SvgQRCode(qrCodeData);
         return qrCode.GetGraphic(20);
-    }
-
-    public class WhatsAppAccountInfo
-    {
-        public string Id { get; set; } = string.Empty;
-        public string PushName { get; set; } = string.Empty;
-        public bool Enabled { get; set; } = true;
     }
 }
