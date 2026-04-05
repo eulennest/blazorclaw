@@ -482,7 +482,7 @@ namespace BlazorClaw.WhatsApp
     /// </summary>
     public class WhatsAppConfig
     {
-        public string WebSocketUrl { get; set; } = "wss://web.whatsapp.com/ws";
+        public string WebSocketUrl { get; set; } = "wss://web.whatsapp.com/ws/chat";
         public string AuthDir { get; set; } = "./whatsapp_auth";
         public string? PhoneNumber { get; set; }
         public string? PushName { get; set; }
