@@ -70,7 +70,11 @@ namespace BlazorClaw.WhatsApp
                 _logger?.LogInformation("WebSocket connected");
                 _isConnected = true;
 
-                // 7. Perform Noise handshake
+                // 7. Send intro header FIRST (separate frame!)
+                await SendRawAsync(_noise.IntroHeader.ToArray(), cancellationToken);
+                _logger?.LogDebug("Sent intro header");
+
+                // 8. Perform Noise handshake
                 await PerformNoiseHandshakeAsync(ephemeralPub, ephemeralPriv, cancellationToken);
 
                 // 8. Start receive loop
@@ -112,7 +116,7 @@ namespace BlazorClaw.WhatsApp
                 };
 
                 var helloBytes = clientHello.ToByteArray();
-                var framedHello = EncodeFrame(helloBytes, sendIntro: true);
+                var framedHello = EncodeFrame(helloBytes, sendIntro: false);
                 
                 await SendRawAsync(framedHello, cancellationToken);
                 _logger?.LogDebug("Sent ClientHello ({Length} bytes)", framedHello.Length);
