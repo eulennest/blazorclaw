@@ -114,15 +114,20 @@ namespace BlazorClaw.WhatsApp
                     }
                 };
 
-                // 2. Send ClientHello
+                // 2. Encode ClientHello with Noise frame
                 var helloBytes = clientHello.ToByteArray();
-                await SendRawAsync(helloBytes, cancellationToken);
+                var framedHello = NoiseFrameEncoder.EncodeFrame(helloBytes, isHandshake: true);
+                await SendRawAsync(framedHello, cancellationToken);
                 _logger?.LogWarning("Sending ClientHello: {Length} bytes, Ephemeral Length: {EphLen}, Hex: {Hex}", helloBytes.Length, ephemeralPub.Length, BitConverter.ToString(helloBytes.Take(64).ToArray()));
                 _logger?.LogDebug("Sent ClientHello ({Length} bytes)", helloBytes.Length);
 
-                // 3. Receive ServerHello
-                var serverHelloData = await ReceiveRawAsync(cancellationToken);
-                _logger?.LogWarning("Received ServerHello: {Length} bytes, Hex: {Hex}", serverHelloData.Length, BitConverter.ToString(serverHelloData.Take(64).ToArray()));
+                // 3. Receive ServerHello (decode frame)
+                var serverHelloFrame = await ReceiveRawAsync(cancellationToken);
+                _logger?.LogWarning("Received ServerHello Frame: {Length} bytes, Hex: {Hex}", serverHelloFrame.Length, BitConverter.ToString(serverHelloFrame.Take(64).ToArray()));
+                
+                var (frameLength, serverHelloData) = NoiseFrameEncoder.DecodeFrame(serverHelloFrame);
+                _logger?.LogDebug("Decoded ServerHello: {FrameLen} bytes payload", frameLength);
+                
                 var serverHello = Proto.HandshakeMessage.Parser.ParseFrom(serverHelloData);
 
                 if (serverHello.ServerHello == null)
