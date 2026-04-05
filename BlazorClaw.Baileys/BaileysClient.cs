@@ -13,7 +13,7 @@ namespace Baileys;
 /// High-level client for interacting with WhatsApp Web.
 /// This class orchestrates the session initiation, authentication, and event emission.
 /// </summary>
-public sealed class BaileysClient : IAsyncDisposable
+public class BaileysClient : IAsyncDisposable
 {
     private readonly IAuthStateProvider _authStateProvider;
     private readonly IBaileysEventEmitter _ev;
@@ -45,7 +45,7 @@ public sealed class BaileysClient : IAsyncDisposable
     /// <summary>
     /// Initiates a connection to WhatsApp.
     /// </summary>
-    public async Task ConnectAsync(CancellationToken cancellationToken = default)
+    public virtual async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         var authState = await _authStateProvider.LoadAuthStateAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
         
@@ -54,7 +54,7 @@ public sealed class BaileysClient : IAsyncDisposable
         await _socket.ConnectAsync(BaileysDefaults.WaWebSocketUrl, cancellationToken).ConfigureAwait(false);
     }
 
-    private void OnConnectionUpdate(ConnectionUpdateEvent update)
+    protected virtual void OnConnectionUpdate(ConnectionUpdateEvent update)
     {
         if (_options.PrintQrInTerminal && update.Qr is string qr)
         {
@@ -71,7 +71,7 @@ public sealed class BaileysClient : IAsyncDisposable
         }
     }
 
-    public async ValueTask DisposeAsync()
+    public virtual async ValueTask DisposeAsync()
     {
         if (_socket != null)
         {

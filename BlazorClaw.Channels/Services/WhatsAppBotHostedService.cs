@@ -128,7 +128,7 @@ namespace BlazorClaw.Channels.Services
                 messageDispatcher.Unregister(bot);
                 await bot.DisconnectAsync();
                 _bots.Remove(accountId);
-                
+
                 lock (_qrLock)
                 {
                     _qrCodes.Remove(accountId);
@@ -154,47 +154,41 @@ namespace BlazorClaw.Channels.Services
 
             var whatsappConfig = new WhatsAppConfig
             {
-                AuthDir = authDir,
                 PushName = pushName
             };
 
-            var client = new WhatsAppClient(whatsappConfig, logger);
+            var client = new WhatsAppClient(whatsappConfig, logger, null);
             var bot = new WhatsAppChannelBot(accountId, client, logger);
 
-            // Register event handlers
-            client.OnMessage += (jid, text, timestamp) =>
+            client.OnQRCode += (sender ,e) =>
             {
-                _ = bot.OnMessageReceivedAsync(
-                    new ChannelSession(bot, jid),
-                    text);
-            };
-
-            client.OnQRCode += (qr, accId, pushName) =>
-            {
-                logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", accId, qr);
+                if (sender is not WhatsAppChannelBot bot) return;
+                logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", bot.AccountId, e.QrData);
 
                 // Store QR code
                 lock (_qrLock)
                 {
-                    _qrCodes[accId] = new WhatsAppQRCodeData
+                    _qrCodes[bot.AccountId] = new WhatsAppQRCodeData
                     {
-                        AccountId = accId,
-                        QRCode = qr,
+                        AccountId = bot.AccountId,
+                        QRCode = e.QrData,
                         GeneratedAt = DateTime.UtcNow
                     };
                 }
             };
 
-            client.OnConnectionUpdate += (accId, status) =>
+            client.OnConnectionUpdate += (sender, e) =>
             {
-                logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", accId, status);
+                if (sender is not WhatsAppChannelBot bot) return;
+                var status = e.Status;
+                logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", bot.AccountId, status);
 
                 // Clear QR code when connected
                 if (status == "open" || status == "paired")
                 {
                     lock (_qrLock)
                     {
-                        _qrCodes.Remove(accId);
+                        _qrCodes.Remove(bot.AccountId);
                     }
                 }
             };
@@ -286,6 +280,15 @@ namespace BlazorClaw.Channels.Services
             _accountId = accountId;
             _client = client;
             _logger = logger;
+
+
+            // Register event handlers
+            client.OnMessage += Client_OnMessage;
+        }
+
+        private async void Client_OnMessage(object? sender, MessageReceiveEventArgs e)
+        {
+            await OnMessageReceivedAsync(new ChannelSession(this, e.From), e.Message);
         }
 
         public override async Task SendChannelAsync(
@@ -325,7 +328,7 @@ namespace BlazorClaw.Channels.Services
             return _client.ConnectAsync(cancellationToken);
         }
 
-        public Task DisconnectAsync(CancellationToken cancellationToken = default)
+        public ValueTask DisconnectAsync(CancellationToken cancellationToken = default)
         {
             return _client.DisconnectAsync();
         }

@@ -21,7 +21,7 @@ namespace BlazorClaw.Channels.Services
         /// <summary>
         /// Disconnect from WhatsApp servers
         /// </summary>
-        Task DisconnectAsync(CancellationToken cancellationToken = default);
+        ValueTask DisconnectAsync(CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Send a message to a JID (user or group)

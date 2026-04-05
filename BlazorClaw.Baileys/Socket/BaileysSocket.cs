@@ -1,8 +1,9 @@
-using System.Net.WebSockets;
+using Baileys.Defaults;
 using Baileys.Types;
 using Baileys.Utils;
 using Baileys.WABinary;
-using Baileys.Defaults;
+using System.Net.WebSockets;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Baileys.Socket;
 
@@ -43,7 +44,7 @@ public sealed class BaileysSocket : IAsyncDisposable
     private async Task SendIntroHeaderAsync(CancellationToken cancellationToken)
     {
         var header = _noise.IntroHeader.ToArray();
-        await _ws.SendAsync(header, WebSocketMessageType.Binary, true, cancellationToken).ConfigureAwait(false);
+        await SendRawAsync(header, cancellationToken).ConfigureAwait(false);
         _logger.Debug("Sent intro header.");
     }
 
@@ -51,7 +52,7 @@ public sealed class BaileysSocket : IAsyncDisposable
     {
         var encoded = WaBinaryEncoder.EncodeBinaryNode(node);
         var encrypted = _noise.Encrypt(encoded);
-        
+
         // Frame it: 3 bytes for length (big-endian)
         var frame = new byte[encrypted.Length + 3];
         frame[0] = (byte)((encrypted.Length >> 16) & 0xFF);
@@ -59,9 +60,15 @@ public sealed class BaileysSocket : IAsyncDisposable
         frame[2] = (byte)(encrypted.Length & 0xFF);
         encrypted.CopyTo(frame.AsSpan(3));
 
-        await _ws.SendAsync(frame, WebSocketMessageType.Binary, true, cancellationToken).ConfigureAwait(false);
-        _logger.Trace($"Sent node: {node.Tag}");
+        await SendRawAsync(frame, cancellationToken).ConfigureAwait(false);
     }
+    public Task SendRawAsync(byte[] data, CancellationToken cancellationToken = default)
+    {
+        var hex = BitConverter.ToString(data).Replace("-", string.Empty);
+        _logger.Trace($"[SEND] {hex}");
+        return _ws.SendAsync(data, WebSocketMessageType.Binary, true, cancellationToken);
+    }
+
 
     private async Task ReceiveLoopAsync(CancellationToken cancellationToken)
     {
@@ -80,6 +87,8 @@ public sealed class BaileysSocket : IAsyncDisposable
 
                 if (result.MessageType == WebSocketMessageType.Binary)
                 {
+                    var hex = BitConverter.ToString(buffer[..result.Count]).Replace("-", string.Empty);
+                    _logger.Trace($"[RECV] {hex}");
                     await HandleMessageAsync(buffer[..result.Count]).ConfigureAwait(false);
                 }
             }
@@ -88,8 +97,8 @@ public sealed class BaileysSocket : IAsyncDisposable
         catch (Exception ex)
         {
             _logger.Error($"Receive loop error: {ex.Message}");
-            _ev.Emit("connection.update", new ConnectionUpdateEvent 
-            { 
+            _ev.Emit("connection.update", new ConnectionUpdateEvent
+            {
                 Connection = WaConnectionState.Close,
                 LastDisconnect = new LastDisconnectInfo { Error = ex, Date = DateTimeOffset.UtcNow }
             });
@@ -102,14 +111,14 @@ public sealed class BaileysSocket : IAsyncDisposable
         {
             // First message from server is the handshake response
             _noise.Decrypt(data); // This updates the internal state
-            
+
             // In a real implementation, we'd process the handshake more carefully.
             // For now, we assume the next step is to send our finish.
             // In Baileys, the handshake is 3 messages:
             // 1. Client -> Server (Intro + Noise Message 1)
             // 2. Server -> Client (Noise Message 2)
             // 3. Client -> Server (Noise Message 3)
-            
+
             // Simplified: we'll just emit that we're connecting.
             _handshakeComplete = true;
             _noise.Finish();
@@ -120,11 +129,11 @@ public sealed class BaileysSocket : IAsyncDisposable
 
         // After handshake, messages are framed with a 3-byte length
         if (data.Length < 3) return;
-        
+
         var encrypted = data[3..];
         var decrypted = _noise.Decrypt(encrypted);
         var node = await WaBinaryDecoder.DecodeBinaryNodeAsync(decrypted).ConfigureAwait(false);
-        
+
         _logger.Trace($"Received node: {node.Tag}");
         // Here we would dispatch the node to the right handler.
         // For the QR code, it usually comes in a specific node or triggered by a success node.
