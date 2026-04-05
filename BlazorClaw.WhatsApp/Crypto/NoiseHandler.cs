@@ -68,7 +68,7 @@ namespace BlazorClaw.WhatsApp.Crypto
             {
                 Authenticate(plaintext);
                 var iv = GenerateIv(_writeCounter++);
-                var ciphertext = CryptoUtils.AesGcmEncrypt(plaintext.ToArray(), _encKey, iv, _hash);
+                var ciphertext = CryptoUtils.AesGcmEncrypt(plaintext.ToArray(), _encKey, iv);
                 Authenticate(ciphertext);
                 return ciphertext;
             }
@@ -93,7 +93,7 @@ namespace BlazorClaw.WhatsApp.Crypto
                 Console.WriteLine($"[Decrypt] Hash (AAD): {BitConverter.ToString(_hash).Replace("-", "")}");
                 Console.WriteLine($"[Decrypt] Ciphertext (first 64): {BitConverter.ToString(ciphertext.ToArray().Take(64).ToArray()).Replace("-", "")}");
                 
-                var plaintext = CryptoUtils.AesGcmDecrypt(ciphertext.ToArray(), _decKey, iv, _hash);
+                var plaintext = CryptoUtils.AesGcmDecrypt(ciphertext.ToArray(), _decKey, iv);
                 Authenticate(plaintext);
                 return plaintext;
             }
