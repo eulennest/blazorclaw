@@ -8,6 +8,16 @@ using Microsoft.Extensions.Logging;
 namespace BlazorClaw.Channels.Services
 {
     /// <summary>
+    /// WhatsApp QR Code Data
+    /// </summary>
+    public record WhatsAppQRCodeData
+    {
+        public string AccountId { get; init; } = string.Empty;
+        public string QRCode { get; init; } = string.Empty;
+        public DateTime GeneratedAt { get; init; }
+    }
+
+    /// <summary>
     /// WhatsApp Channel - Multi-Account Hosted Service
     /// Manages multiple WhatsApp accounts via WhatsAppClient
     /// </summary>
@@ -17,6 +27,8 @@ namespace BlazorClaw.Channels.Services
         ILogger<WhatsAppBotHostedService> logger) : IHostedService
     {
         private readonly Dictionary<string, WhatsAppChannelBot> _bots = [];
+        private readonly Dictionary<string, WhatsAppQRCodeData> _qrCodes = [];
+        private readonly object _qrLock = new();
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
@@ -79,12 +91,32 @@ namespace BlazorClaw.Channels.Services
             client.OnQRCode += (sender, qr) =>
             {
                 logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", accountId, qr);
-                // TODO: Display QR in frontend
+                
+                // Store QR code
+                lock (_qrLock)
+                {
+                    _qrCodes[accountId] = new WhatsAppQRCodeData
+                    {
+                        AccountId = accountId,
+                        QRCode = qr,
+                        GeneratedAt = DateTime.UtcNow
+                    };
+                }
             };
 
             client.OnConnectionUpdate += (sender, evt) =>
             {
                 logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", accountId, evt.Status);
+                
+                // Clear QR code when connected
+                if (evt.Status == "open" || evt.Status == "paired")
+                {
+                    lock (_qrLock)
+                    {
+                        _qrCodes.Remove(accountId);
+                    }
+                }
+
                 if (!string.IsNullOrEmpty(evt.Error))
                 {
                     logger.LogError("WhatsApp '{AccountId}' error: {Error}", accountId, evt.Error);
@@ -98,6 +130,28 @@ namespace BlazorClaw.Channels.Services
             messageDispatcher.Register(bot);
 
             logger.LogInformation("WhatsApp account '{AccountId}' registered", accountId);
+        }
+
+        /// <summary>
+        /// Get all current QR codes for all accounts
+        /// </summary>
+        public List<WhatsAppQRCodeData> GetCurrentQRCodes()
+        {
+            lock (_qrLock)
+            {
+                return _qrCodes.Values.ToList();
+            }
+        }
+
+        /// <summary>
+        /// Get QR code for specific account
+        /// </summary>
+        public WhatsAppQRCodeData? GetQRCode(string accountId)
+        {
+            lock (_qrLock)
+            {
+                return _qrCodes.GetValueOrDefault(accountId);
+            }
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
@@ -119,6 +173,12 @@ namespace BlazorClaw.Channels.Services
             }
 
             _bots.Clear();
+            
+            lock (_qrLock)
+            {
+                _qrCodes.Clear();
+            }
+
             logger.LogInformation("WhatsApp Channel Service stopped");
         }
     }
