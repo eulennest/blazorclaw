@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.Json;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -9,46 +9,80 @@ namespace BlazorClaw.Core.Utils
     public class SaveableJsonConfigurationProvider(SaveableJsonConfigurationSource configurationSource) : JsonConfigurationProvider(configurationSource)
     {
         protected string FileName => Source.Path ?? string.Empty;
+        
+        private Timer? _saveTimer;
+        private readonly object _saveLock = new();
+        private const int SaveDelayMs = 100;
+
         public override void Set(string key, string? value)
         {
             base.Set(key, value);
-            SaveToFile(FileName, key, value);
+            DebouncedSave();
         }
 
-        private static bool SaveToFile(string filepath, string key, object? val)
+        private void DebouncedSave()
         {
-            string? sJson = File.Exists(filepath)
-              ? File.ReadAllText(filepath)
-              : null;
+            lock (_saveLock)
+            {
+                _saveTimer?.Dispose();
+                _saveTimer = new Timer(_ => SaveAllToFile(), null, SaveDelayMs, Timeout.Infinite);
+            }
+        }
 
-            var rootNode = sJson != null
-              ? JsonConvert.DeserializeObject<JObject>(sJson)
-              : [];
+        private void SaveAllToFile()
+        {
+            lock (_saveLock)
+            {
+                string? sJson = File.Exists(FileName)
+                  ? File.ReadAllText(FileName)
+                  : null;
 
+                var rootNode = sJson != null
+                  ? JsonConvert.DeserializeObject<JObject>(sJson)
+                  : [];
+
+                // Rebuild entire config from Data dictionary
+                foreach (var kvp in Data)
+                {
+                    SetValueInJson(rootNode ?? [], kvp.Key, kvp.Value);
+                }
+
+                // Save
+                sJson = JsonConvert.SerializeObject(rootNode, Newtonsoft.Json.Formatting.Indented);
+                File.WriteAllText(FileName, sJson, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true));
+            }
+        }
+
+        private static void SetValueInJson(JObject rootNode, string key, string? value)
+        {
             var cols = key.Split(ConfigurationPath.KeyDelimiter);
             var pathCols = cols.Take(cols.Length - 1).ToArray();
 
-            JObject curObj = rootNode ?? [];
+            JObject curObj = rootNode;
             foreach (var item in pathCols)
             {
                 if (!curObj.ContainsKey(item))
                     curObj[item] = new JObject();
                 if (curObj[item] is JObject jo) curObj = jo;
             }
-            if (val == null)
+
+            if (value == null)
             {
                 curObj.Remove(cols.Last());
             }
             else
             {
-                curObj[cols.Last()] = JToken.FromObject(val);
+                curObj[cols.Last()] = JToken.FromObject(value);
             }
+        }
 
-
-            //save the json to file
-            sJson = JsonConvert.SerializeObject(rootNode, Newtonsoft.Json.Formatting.Indented);
-            File.WriteAllText(filepath, sJson, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true));
-            return true;
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _saveTimer?.Dispose();
+            }
+            base.Dispose(disposing);
         }
     }
 }
