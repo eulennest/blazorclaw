@@ -141,16 +141,21 @@
                     <div class="mb-3">
                         <label class="form-label">Account ID</label>
                         <input type="text" class="form-control" placeholder="z.B. default, kaspar, daniel" disabled />
+                    <div class="mb-3">
+                        <label class="form-label">Account ID</label>
+                        <input type="text" class="form-control" placeholder="z.B. default, kaspar, daniel" disabled />
+                        <small class="form-text text-muted">Eindeutige ID für diesen Account</small>
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Push Name</label>
                         <input type="text" class="form-control" placeholder="z.B. BlazorClaw Bot" disabled />
+                        <small class="form-text text-muted">Anzeigename für WhatsApp-Nutzer</small>
                     </div>
                     
-                    <div class="mb-3">
-                        <label class="form-label">Auth Directory</label>
-                        <input type="text" class="form-control" placeholder="z.B. ./whatsapp_auth/default" disabled />
+                    <div class="alert alert-info small">
+                        <strong>Auth Directory:</strong> Wird automatisch als <code>./whatsapp_auth/{accountId}</code> gesetzt.
+                    </div>
                     </div>
                 </div>
                 <div class="modal-footer">
