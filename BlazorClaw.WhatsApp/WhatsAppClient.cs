@@ -109,6 +109,7 @@ namespace BlazorClaw.WhatsApp
                 // 2. Send ClientHello
                 var helloBytes = clientHello.ToByteArray();
                 await SendRawAsync(helloBytes, cancellationToken);
+                _logger?.LogWarning("Sending ClientHello: {Length} bytes, Ephemeral Length: {EphLen}, Hex: {Hex}", helloBytes.Length, ephemeralPub.Length, BitConverter.ToString(helloBytes.Take(64).ToArray()));
                 _logger?.LogDebug("Sent ClientHello ({Length} bytes)", helloBytes.Length);
 
                 // 3. Receive ServerHello
@@ -150,13 +151,13 @@ namespace BlazorClaw.WhatsApp
                         {
                             Primary = 2,
                             Secondary = 3000,
-                            Tertiary = 1029496320
+                            Tertiary = 1035194821
                         }
                     },
                     WebInfo = new Proto.ClientPayload.Types.WebInfo
                     {
                         RefToken = "",
-                        Version = "2.3000.1029496320",
+                        Version = "2.3000.1035194821",
                         WebSubPlatform = Proto.ClientPayload.Types.WebInfo.Types.WebSubPlatform.WebBrowser
                     },
                     PushName = _config.PushName ?? "BlazorClaw",
