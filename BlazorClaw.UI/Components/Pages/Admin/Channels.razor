@@ -1,4 +1,6 @@
 @page "/admin/channels"
+@using BlazorClaw.Channels.Services
+@inject WhatsAppBotHostedService WhatsAppService
 
 <PageTitle>Admin - Kanäle</PageTitle>
 
@@ -12,7 +14,7 @@
             <tr>
                 <th>Kanal</th>
                 <th>Status</th>
-                <th>ID</th>
+                <th>Accounts</th>
                 <th>Aktionen</th>
             </tr>
         </thead>
@@ -25,8 +27,26 @@
             </tr>
             <tr>
                 <td><i class="bi bi-whatsapp"></i> WhatsApp</td>
-                <td><span class="badge bg-warning">Pairing</span></td>
-                <td><code>default</code></td>
+                <td>
+                    @if (whatsappQRCount > 0)
+                    {
+                        <span class="badge bg-warning">Pairing (@whatsappQRCount)</span>
+                    }
+                    else if (whatsappQRCount == 0)
+                    {
+                        <span class="badge bg-secondary">Inaktiv</span>
+                    }
+                </td>
+                <td>
+                    @if (whatsappQRCount > 0)
+                    {
+                        <span class="text-warning">@whatsappQRCount nicht verbunden</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">Keine Accounts konfiguriert</span>
+                    }
+                </td>
                 <td>
                     <a href="/admin/channels/whatsapp" class="btn btn-sm btn-outline-primary">
                         <i class="bi bi-qr-code"></i> QR-Codes
@@ -36,3 +56,13 @@
         </tbody>
     </table>
 </div>
+
+@code {
+    private int whatsappQRCount = 0;
+
+    protected override void OnInitialized()
+    {
+        var qrCodes = WhatsAppService.GetCurrentQRCodes();
+        whatsappQRCount = qrCodes.Count;
+    }
+}
