@@ -1,6 +1,6 @@
 @page "/admin/channels/whatsapp"
-@using System.Net.Http.Json
-@inject HttpClient Http
+@using BlazorClaw.Channels.Services
+@inject WhatsAppBotHostedService WhatsAppService
 
 <PageTitle>Admin - WhatsApp</PageTitle>
 
@@ -8,21 +8,7 @@
 <p class="text-muted">Verwaltung von WhatsApp-Accounts und QR-Code-Pairing.</p>
 
 <div class="mt-4">
-    @if (loading)
-    {
-        <div class="text-center">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
-            </div>
-        </div>
-    }
-    else if (error != null)
-    {
-        <div class="alert alert-danger">
-            <i class="bi bi-exclamation-triangle"></i> Fehler: @error
-        </div>
-    }
-    else if (qrCodes == null || qrCodes.Count == 0)
+    @if (qrCodes == null || qrCodes.Count == 0)
     {
         <div class="alert alert-info">
             <i class="bi bi-info-circle"></i> Keine QR-Codes vorhanden. Alle WhatsApp-Accounts sind verbunden oder es sind keine Accounts konfiguriert.
@@ -41,10 +27,10 @@
                             </h5>
                         </div>
                         <div class="card-body text-center">
-                            <img src="/api/admin/whatsapp/qrcode/@qr.AccountId" 
-                                 alt="QR Code" 
-                                 class="img-fluid mb-3"
-                                 style="max-width: 300px;" />
+                            @* QR-Code als Base64 SVG *@
+                            <div class="mb-3">
+                                @((MarkupString)GenerateQRCodeSvg(qr.QRCode))
+                            </div>
                             
                             <p class="text-muted small">
                                 <i class="bi bi-clock"></i> Generiert: @qr.GeneratedAt.ToString("HH:mm:ss")
@@ -71,42 +57,28 @@
 
 @code {
     private List<WhatsAppQRCodeData>? qrCodes;
-    private bool loading = true;
-    private string? error;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        await LoadQRCodes();
+        LoadQRCodes();
     }
 
-    private async Task LoadQRCodes()
+    private void LoadQRCodes()
     {
-        loading = true;
-        error = null;
-        
-        try
-        {
-            qrCodes = await Http.GetFromJsonAsync<List<WhatsAppQRCodeData>>("/api/admin/whatsapp/qrcodes");
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
-        }
-        finally
-        {
-            loading = false;
-        }
+        qrCodes = WhatsAppService.GetCurrentQRCodes();
     }
 
-    private async Task RefreshQRCodes()
+    private void RefreshQRCodes()
     {
-        await LoadQRCodes();
+        LoadQRCodes();
+        StateHasChanged();
     }
 
-    public class WhatsAppQRCodeData
+    private string GenerateQRCodeSvg(string data)
     {
-        public string AccountId { get; set; } = string.Empty;
-        public string QRCode { get; set; } = string.Empty;
-        public DateTime GeneratedAt { get; set; }
+        using var qrGenerator = new QRCoder.QRCodeGenerator();
+        using var qrCodeData = qrGenerator.CreateQrCode(data, QRCoder.QRCodeGenerator.ECCLevel.Q);
+        using var qrCode = new QRCoder.SvgQRCode(qrCodeData);
+        return qrCode.GetGraphic(20);
     }
 }

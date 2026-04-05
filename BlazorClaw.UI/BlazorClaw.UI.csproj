@@ -22,10 +22,12 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity" Version="2.3.9" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.24" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.24" />
+    <PackageReference Include="QRCoder" Version="1.8.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BlazorClaw.Core\BlazorClaw.Core.csproj" />
+    <ProjectReference Include="..\BlazorClaw.Channels\BlazorClaw.Channels.csproj" />
   </ItemGroup>
 
 </Project>
