@@ -109,6 +109,7 @@ namespace BlazorClaw.WhatsApp
 
                 // 3. Receive ServerHello
                 var serverHelloData = await ReceiveRawAsync(cancellationToken);
+                _logger?.LogWarning("Received ServerHello: {Length} bytes, Hex: {Hex}", serverHelloData.Length, BitConverter.ToString(serverHelloData.Take(64).ToArray()));
                 var serverHello = Proto.HandshakeMessage.Parser.ParseFrom(serverHelloData);
 
                 if (serverHello.ServerHello == null)
