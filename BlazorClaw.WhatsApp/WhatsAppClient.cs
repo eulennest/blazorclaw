@@ -16,7 +16,7 @@ namespace BlazorClaw.WhatsApp
     {
         private readonly ClientWebSocket _webSocket = new();
         private readonly WhatsAppConfig _config;
-        private readonly ILogger<WhatsAppClient>? _logger;
+        private readonly ILogger? _logger;
 
         // State
         private WhatsAppAuthState? _authState;
@@ -30,7 +30,7 @@ namespace BlazorClaw.WhatsApp
         public event EventHandler<ConnectionEvent>? OnConnectionUpdate;
         public event EventHandler<string>? OnQRCode;
 
-        public WhatsAppClient(WhatsAppConfig config, ILogger<WhatsAppClient>? logger = null)
+        public WhatsAppClient(WhatsAppConfig config, ILogger? logger = null)
         {
             _config = config;
             _logger = logger;

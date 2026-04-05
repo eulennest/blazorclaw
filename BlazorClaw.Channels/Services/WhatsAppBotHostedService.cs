@@ -158,7 +158,7 @@ namespace BlazorClaw.Channels.Services
                 PushName = pushName
             };
 
-            var client = new WhatsAppClient(whatsappConfig);
+            var client = new WhatsAppClient(whatsappConfig, logger);
             var bot = new WhatsAppChannelBot(accountId, client, logger);
 
             // Register event handlers
