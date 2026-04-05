@@ -161,11 +161,14 @@ namespace BlazorClaw.WhatsApp.Crypto
         }
 
         /// <summary>
-        /// Curve25519 ECDH shared secret (via curve25519-dotnet)
+        /// Curve25519 ECDH shared secret (Signal Protocol compatible)
+        /// Prepends 0x05 prefix if needed (Signal public key format)
         /// </summary>
         public static byte[] Curve25519SharedSecret(byte[] privateKey, byte[] publicKey)
         {
-            return Curve25519Utils.CalculateAgreement(privateKey, publicKey);
+            // Signal Protocol requires public keys to be 33 bytes with 0x05 prefix
+            var signalPubKey = publicKey.Length == 33 ? publicKey : new byte[] { 0x05 }.Concat(publicKey).ToArray();
+            return Curve25519Utils.CalculateAgreement(privateKey, signalPubKey);
         }
     }
 }
