@@ -1,5 +1,6 @@
 using System.Net.WebSockets;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using BlazorClaw.WhatsApp.Protocol;
 using BlazorClaw.WhatsApp.Events;
 
@@ -13,7 +14,7 @@ namespace BlazorClaw.WhatsApp
     {
         private readonly ClientWebSocket _webSocket = new();
         private readonly WhatsAppConfig _config;
-        private readonly ILogger<WhatsAppClient> _logger;
+        private readonly ILogger<WhatsAppClient>? _logger;
 
         // State
         private WhatsAppAuthState? _authState;
@@ -26,7 +27,7 @@ namespace BlazorClaw.WhatsApp
         public event EventHandler<ConnectionEvent>? OnConnectionUpdate;
         public event EventHandler<string>? OnQRCode;
 
-        public WhatsAppClient(WhatsAppConfig config, ILogger<WhatsAppClient> logger)
+        public WhatsAppClient(WhatsAppConfig config, ILogger<WhatsAppClient>? logger = null)
         {
             _config = config;
             _logger = logger;
@@ -39,7 +40,7 @@ namespace BlazorClaw.WhatsApp
         {
             try
             {
-                _logger.LogInformation("Connecting to WhatsApp Web servers...");
+                _logger?.LogInformation("Connecting to WhatsApp Web servers...");
 
                 // 1. Load or initialize auth state
                 _authState = await WhatsAppAuthState.LoadAsync(_config.AuthDir);
@@ -58,11 +59,11 @@ namespace BlazorClaw.WhatsApp
                 // 4. Start message receiving loop
                 _ = ReceiveLoopAsync(cancellationToken);
 
-                _logger.LogInformation("Connected to WhatsApp!");
+                _logger?.LogInformation("Connected to WhatsApp!");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Connection failed");
+                _logger?.LogError(ex, "Connection failed");
                 _isConnected = false;
                 OnConnectionUpdate?.Invoke(this, new ConnectionEvent { Status = "closed", Error = ex.Message });
                 throw;
@@ -119,7 +120,7 @@ namespace BlazorClaw.WhatsApp
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error in receive loop");
+                    _logger?.LogError(ex, "Error in receive loop");
                 }
             }
         }
@@ -154,7 +155,7 @@ namespace BlazorClaw.WhatsApp
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error handling incoming message");
+                _logger?.LogError(ex, "Error handling incoming message");
             }
         }
 

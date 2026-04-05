@@ -12,7 +12,6 @@ namespace BlazorClaw.WhatsApp.Crypto
         private const int NONCE_LENGTH = 12;       // 96-bit for GCM
         private const int TAG_LENGTH = 16;         // 128-bit auth tag
         private const int KEY_LENGTH = 32;         // 256-bit keys
-        private const int HKDF_EXPANSION = 112;    // Total output for HKDF-expand
 
         /// <summary>
         /// AES-256-GCM Encryption
@@ -130,17 +129,6 @@ namespace BlazorClaw.WhatsApp.Crypto
         }
 
         /// <summary>
-        /// Curve25519 ECDH (using libsignal-dotnet when available)
-        /// TODO: Implement or use NaCl binding
-        /// </summary>
-        public static byte[] Curve25519SharedSecret(byte[] privateKey, byte[] publicKey)
-        {
-            // TODO: Implement Curve25519 ECDH
-            // For now: placeholder
-            throw new NotImplementedException("Curve25519 ECDH - requires libsignal-dotnet or NaCl binding");
-        }
-
-        /// <summary>
         /// Generate random bytes
         /// </summary>
         public static byte[] RandomBytes(int length)
@@ -151,6 +139,24 @@ namespace BlazorClaw.WhatsApp.Crypto
                 rng.GetBytes(bytes);
                 return bytes;
             }
+        }
+
+        /// <summary>
+        /// Generate Curve25519 keypair (TODO: implement with libsignal)
+        /// </summary>
+        public static (byte[] publicKey, byte[] privateKey) GenerateCurve25519Keypair()
+        {
+            // TODO: Use libsignal when API is stable
+            throw new NotImplementedException("Curve25519 keypair generation - requires libsignal-protocol-dotnet integration");
+        }
+
+        /// <summary>
+        /// Curve25519 ECDH shared secret (TODO: implement with libsignal)
+        /// </summary>
+        public static byte[] Curve25519SharedSecret(byte[] privateKey, byte[] publicKey)
+        {
+            // TODO: Use libsignal when API is stable
+            throw new NotImplementedException("Curve25519 shared secret - requires libsignal-protocol-dotnet integration");
         }
     }
 }
