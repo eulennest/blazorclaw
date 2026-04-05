@@ -162,45 +162,40 @@ namespace BlazorClaw.Channels.Services
             var bot = new WhatsAppChannelBot(accountId, client, logger);
 
             // Register event handlers
-            client.OnMessage += (sender, evt) =>
+            client.OnMessage += (jid, text, timestamp) =>
             {
                 _ = bot.OnMessageReceivedAsync(
-                    new ChannelSession(bot, evt.RemoteJid),
-                    evt.Text);
+                    new ChannelSession(bot, jid),
+                    text);
             };
 
-            client.OnQRCode += (sender, qr) =>
+            client.OnQRCode += (qr, accId, pushName) =>
             {
-                logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", accountId, qr);
+                logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", accId, qr);
 
                 // Store QR code
                 lock (_qrLock)
                 {
-                    _qrCodes[accountId] = new WhatsAppQRCodeData
+                    _qrCodes[accId] = new WhatsAppQRCodeData
                     {
-                        AccountId = accountId,
+                        AccountId = accId,
                         QRCode = qr,
                         GeneratedAt = DateTime.UtcNow
                     };
                 }
             };
 
-            client.OnConnectionUpdate += (sender, evt) =>
+            client.OnConnectionUpdate += (accId, status) =>
             {
-                logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", accountId, evt.Status);
+                logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", accId, status);
 
                 // Clear QR code when connected
-                if (evt.Status == "open" || evt.Status == "paired")
+                if (status == "open" || status == "paired")
                 {
                     lock (_qrLock)
                     {
-                        _qrCodes.Remove(accountId);
+                        _qrCodes.Remove(accId);
                     }
-                }
-
-                if (!string.IsNullOrEmpty(evt.Error))
-                {
-                    logger.LogError("WhatsApp '{AccountId}' error: {Error}", accountId, evt.Error);
                 }
             };
 

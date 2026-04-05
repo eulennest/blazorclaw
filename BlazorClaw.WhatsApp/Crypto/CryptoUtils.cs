@@ -15,6 +15,16 @@ namespace BlazorClaw.WhatsApp.Crypto
         private const int KEY_LENGTH = 32;         // 256-bit keys
 
         /// <summary>
+        /// HKDF-SHA256 key derivation (RFC 5869)
+        /// </summary>
+        public static byte[] HkdfSha256(byte[] inputKeyMaterial, int outputLength, byte[] salt, byte[] info)
+        {
+            var output = new byte[outputLength];
+            HKDF.DeriveKey(HashAlgorithmName.SHA256, inputKeyMaterial, output, salt, info);
+            return output;
+        }
+
+        /// <summary>
         /// AES-256-GCM Encryption
         /// </summary>
         public static byte[] AesGcmEncrypt(byte[] plaintext, byte[] key, byte[] nonce)
