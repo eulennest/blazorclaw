@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorClaw.UI", "BlazorClaw
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazorClaw.WhatsApp", "BlazorClaw.WhatsApp\BlazorClaw.WhatsApp.csproj", "{89E6AC9A-C36C-4D6F-BDB7-7F73E6647D00}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Baileys", "BlazorClaw.Baileys\Baileys.csproj", "{806D5715-BBF4-4C1C-86AE-AE2ED7D1E51E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{89E6AC9A-C36C-4D6F-BDB7-7F73E6647D00}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{89E6AC9A-C36C-4D6F-BDB7-7F73E6647D00}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{89E6AC9A-C36C-4D6F-BDB7-7F73E6647D00}.Release|Any CPU.Build.0 = Release|Any CPU
+		{806D5715-BBF4-4C1C-86AE-AE2ED7D1E51E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{806D5715-BBF4-4C1C-86AE-AE2ED7D1E51E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{806D5715-BBF4-4C1C-86AE-AE2ED7D1E51E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{806D5715-BBF4-4C1C-86AE-AE2ED7D1E51E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

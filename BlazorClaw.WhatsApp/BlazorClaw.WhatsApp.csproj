@@ -21,4 +21,9 @@
     <Protobuf Include="Proto\WAProto.proto" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\BlazorClaw.Baileys\BlazorClaw.Baileys.csproj" />
+    <ProjectReference Include="..\BlazorClaw.Baileys\Baileys.csproj" />
+  </ItemGroup>
+
 </Project>

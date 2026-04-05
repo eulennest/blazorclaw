@@ -2,8 +2,13 @@ using System.Net.WebSockets;
 using System.Security.Cryptography;
 using BlazorClaw.WhatsApp.Crypto;
 using BlazorClaw.WhatsApp.Protocol;
+using Baileys.Utils;
+using Baileys.Types;
 using Google.Protobuf;
 using Microsoft.Extensions.Logging;
+using NoiseHandler = Baileys.Utils.NoiseHandler;
+using MsILogger = Microsoft.Extensions.Logging.ILogger;
+using BinaryNode = Baileys.Types.BinaryNode;
 
 namespace BlazorClaw.WhatsApp
 {
@@ -15,7 +20,7 @@ namespace BlazorClaw.WhatsApp
     {
         private readonly ClientWebSocket _webSocket = new();
         private readonly WhatsAppConfig _config;
-        private readonly ILogger? _logger;
+        private readonly MsILogger? _logger;
         
         private WhatsAppAuthState? _authState;
         private NoiseHandler? _noise;
@@ -27,7 +32,7 @@ namespace BlazorClaw.WhatsApp
         public event Action<string, string, string>? OnQRCode;
         public event Action<string, string, string>? OnMessage;
 
-        public WhatsAppClient(WhatsAppConfig config, ILogger? logger = null)
+        public WhatsAppClient(WhatsAppConfig config, MsILogger? logger = null)
         {
             _config = config;
             _logger = logger;
@@ -50,9 +55,10 @@ namespace BlazorClaw.WhatsApp
 
                 // 3. Get or generate noise keypair (long-term identity)
                 var (noisePub, noisePriv) = GetOrGenerateNoiseKey();
+                var keyPair = new KeyPair(noisePub, noisePriv);
                 
-                // 4. Initialize Noise handler
-                _noise = new NoiseHandler(noisePriv, noisePub);
+                // 4. Initialize Noise handler (Baileys .NET!)
+                _noise = new NoiseHandler(keyPair);
 
                 // 5. Set WebSocket headers (matching real browser)
                 _webSocket.Options.SetRequestHeader("Origin", "https://web.whatsapp.com");
