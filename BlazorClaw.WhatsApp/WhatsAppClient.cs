@@ -266,6 +266,7 @@ namespace BlazorClaw.WhatsApp
                 try
                 {
                     var frameRaw = await ReceiveRawAsync(cancellationToken);
+                    _logger?.LogWarning("Received RAW frame: {Length} bytes, Hex: {Hex}", frameRaw.Length, BitConverter.ToString(frameRaw.Take(32).ToArray()));
 
                     // 1. Decode frame (extract data from 3-byte length prefix)
                     var (frameLength, frameData) = NoiseFrameEncoder.DecodeFrame(frameRaw);
