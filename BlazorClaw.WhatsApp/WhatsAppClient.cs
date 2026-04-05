@@ -212,7 +212,9 @@ namespace BlazorClaw.WhatsApp
                     }
                 };
 
-                await SendRawAsync(clientFinish.ToByteArray(), cancellationToken);
+                var finishBytes = clientFinish.ToByteArray();
+                var framedFinish = NoiseFrameEncoder.EncodeFrame(finishBytes, isHandshake: false);
+                await SendRawAsync(framedFinish, cancellationToken);
                 _logger?.LogInformation("✅ Noise handshake complete");
             }
             catch (Exception ex)
