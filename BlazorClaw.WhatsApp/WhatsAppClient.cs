@@ -48,9 +48,17 @@ namespace BlazorClaw.WhatsApp
                 // 1. Load auth state
                 _authState = await WhatsAppAuthState.LoadAsync(_config.AuthDir);
 
-                // 2. Set WebSocket headers (WhatsApp requires Origin + User-Agent)
+                // 2. Set WebSocket headers (matching real browser)
                 _webSocket.Options.SetRequestHeader("Origin", "https://web.whatsapp.com");
-                _webSocket.Options.SetRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                _webSocket.Options.SetRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36");
+                _webSocket.Options.SetRequestHeader("Accept-Encoding", "gzip, deflate, br, zstd");
+                _webSocket.Options.SetRequestHeader("Accept-Language", "de-DE,de;q=0.9");
+                _webSocket.Options.SetRequestHeader("Cache-Control", "no-cache");
+                _webSocket.Options.SetRequestHeader("Pragma", "no-cache");
+                
+                // Generate session cookie
+                var sessionId = Guid.NewGuid().ToString();
+                _webSocket.Options.SetRequestHeader("Cookie", $"wa_ul={sessionId}; wa_web_lang_pref=de_DE");
 
                 // 3. Connect WebSocket
                 await _webSocket.ConnectAsync(new Uri(_config.WebSocketUrl), cancellationToken);
@@ -497,7 +505,7 @@ namespace BlazorClaw.WhatsApp
     /// </summary>
     public class WhatsAppConfig
     {
-        public string WebSocketUrl { get; set; } = "wss://web.whatsapp.com/ws/chat";
+        public string WebSocketUrl { get; set; } = "wss://web.whatsapp.com:5222/ws/chat";
         public string AuthDir { get; set; } = "./whatsapp_auth";
         public string? PhoneNumber { get; set; }
         public string? PushName { get; set; }
