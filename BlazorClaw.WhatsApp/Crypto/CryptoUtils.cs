@@ -5,8 +5,8 @@ namespace BlazorClaw.WhatsApp.Crypto
 {
     /// <summary>
     /// Cryptographic utilities for WhatsApp protocol
-    /// Uses System.Security.Cryptography
-    /// Curve25519 TODO: see Crypto/Curve25519TODO.md
+    /// - AES-GCM: System.Security.Cryptography
+    /// - Curve25519: curve25519-dotnet
     /// </summary>
     public static class CryptoUtils
     {
@@ -143,25 +143,19 @@ namespace BlazorClaw.WhatsApp.Crypto
         }
 
         /// <summary>
-        /// Generate Curve25519 keypair
-        /// TODO: Implement with libsodium-core or equivalent
+        /// Generate Curve25519 keypair (via curve25519-dotnet)
         /// </summary>
         public static (byte[] publicKey, byte[] privateKey) GenerateCurve25519Keypair()
         {
-            // Placeholder: generate random keys
-            // In production: use Curve25519.GenerateKeyPair()
-            throw new NotImplementedException("Curve25519 keypair generation - see Crypto/Curve25519TODO.md");
+            return Curve25519Utils.GenerateKeyPair();
         }
 
         /// <summary>
-        /// Curve25519 ECDH shared secret
-        /// TODO: Implement with libsodium-core or equivalent
+        /// Curve25519 ECDH shared secret (via curve25519-dotnet)
         /// </summary>
         public static byte[] Curve25519SharedSecret(byte[] privateKey, byte[] publicKey)
         {
-            // Placeholder
-            // In production: use Curve25519.CalculateAgreement()
-            throw new NotImplementedException("Curve25519 ECDH - see Crypto/Curve25519TODO.md");
+            return Curve25519Utils.CalculateAgreement(privateKey, publicKey);
         }
     }
 }
