@@ -232,6 +232,7 @@ namespace BlazorClaw.WhatsApp
             if (!_webSocket.State.HasFlag(WebSocketState.Open))
                 throw new InvalidOperationException("WebSocket not open");
 
+            _logger?.LogWarning("[SEND] {Length} bytes, Hex: {Hex}", data.Length, BitConverter.ToString(data.Take(64).ToArray()));
             await _webSocket.SendAsync(data, WebSocketMessageType.Binary, true, cancellationToken);
         }
 
@@ -255,7 +256,9 @@ namespace BlazorClaw.WhatsApp
             }
             while (!result.EndOfMessage);
 
-            return ms.ToArray();
+            var data = ms.ToArray();
+            _logger?.LogWarning("[RECV] {Length} bytes, Type: {Type}, Hex: {Hex}", data.Length, result.MessageType, BitConverter.ToString(data.Take(64).ToArray()));
+            return data;
         }
 
         /// <summary>
