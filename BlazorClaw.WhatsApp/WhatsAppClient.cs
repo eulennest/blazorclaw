@@ -130,8 +130,8 @@ namespace BlazorClaw.WhatsApp
                     System.Text.Encoding.UTF8.GetBytes("WhatsApp Noise Protocol"),
                     64);
 
-                _authState!.SendKey = keys.Take(32).ToArray();
-                _authState.ReceiveKey = keys.Skip(32).Take(32).ToArray();
+                _authState!.SendKey = [.. keys.Take(32)];
+                _authState.ReceiveKey = [.. keys.Skip(32).Take(32)];
 
                 // 7. Build ClientPayload
                 var clientPayload = new Proto.ClientPayload

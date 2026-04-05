@@ -1,11 +1,7 @@
 using BlazorClaw.Core.DTOs;
-using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
-using BlazorClaw.Core.Utils;
 using BlazorClaw.WhatsApp;
-using BlazorClaw.WhatsApp.Events;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -15,36 +11,19 @@ namespace BlazorClaw.Channels.Services
     /// WhatsApp Channel - Multi-Account Hosted Service
     /// Manages multiple WhatsApp accounts via WhatsAppClient
     /// </summary>
-    public class WhatsAppBotHostedService : IHostedService
+    public class WhatsAppBotHostedService(
+        IConfiguration configuration,
+        IMessageDispatcher messageDispatcher,
+        ILogger<WhatsAppBotHostedService> logger) : IHostedService
     {
-        private readonly IConfiguration _configuration;
-        private readonly IMessageDispatcher _messageDispatcher;
-        private readonly IServiceScopeFactory _scopeFactory;
-        private readonly ILogger<WhatsAppBotHostedService> _logger;
-        private readonly PathHelper _pathHelper;
-
-        private readonly Dictionary<string, WhatsAppChannelBot> _bots = new();
-
-        public WhatsAppBotHostedService(
-            IConfiguration configuration,
-            IMessageDispatcher messageDispatcher,
-            IServiceScopeFactory scopeFactory,
-            ILogger<WhatsAppBotHostedService> logger,
-            PathHelper pathHelper)
-        {
-            _configuration = configuration;
-            _messageDispatcher = messageDispatcher;
-            _scopeFactory = scopeFactory;
-            _logger = logger;
-            _pathHelper = pathHelper;
-        }
+        private readonly Dictionary<string, WhatsAppChannelBot> _bots = [];
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("WhatsApp Channel Service starting...");
+            logger.LogInformation("WhatsApp Channel Service starting...");
 
             // Read accounts from config
-            var accounts = _configuration.GetSection("Channels:WhatsApp:Accounts").GetChildren();
+            var accounts = configuration.GetSection("Channels:WhatsApp:Accounts").GetChildren();
 
             foreach (var accountConfig in accounts)
             {
@@ -53,7 +32,7 @@ namespace BlazorClaw.Channels.Services
 
                 if (!enabled)
                 {
-                    _logger.LogInformation("WhatsApp account '{AccountId}' is disabled", accountId);
+                    logger.LogInformation("WhatsApp account '{AccountId}' is disabled", accountId);
                     continue;
                 }
 
@@ -63,11 +42,11 @@ namespace BlazorClaw.Channels.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to initialize WhatsApp account '{AccountId}'", accountId);
+                    logger.LogError(ex, "Failed to initialize WhatsApp account '{AccountId}'", accountId);
                 }
             }
 
-            _logger.LogInformation("WhatsApp Channel Service started with {Count} accounts", _bots.Count);
+            logger.LogInformation("WhatsApp Channel Service started with {Count} accounts", _bots.Count);
         }
 
         private async Task AddAccountAsync(
@@ -75,7 +54,7 @@ namespace BlazorClaw.Channels.Services
             IConfigurationSection config,
             CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Initializing WhatsApp account '{AccountId}'...", accountId);
+            logger.LogInformation("Initializing WhatsApp account '{AccountId}'...", accountId);
 
             var authDir = config.GetValue<string>("AuthDir") ?? $"./whatsapp_auth/{accountId}";
             var pushName = config.GetValue<string>("PushName") ?? "BlazorClaw";
@@ -87,7 +66,7 @@ namespace BlazorClaw.Channels.Services
             };
 
             var client = new WhatsAppClient(whatsappConfig);
-            var bot = new WhatsAppChannelBot(accountId, client, _logger, _pathHelper);
+            var bot = new WhatsAppChannelBot(accountId, client, logger);
 
             // Register event handlers
             client.OnMessage += (sender, evt) =>
@@ -99,16 +78,16 @@ namespace BlazorClaw.Channels.Services
 
             client.OnQRCode += (sender, qr) =>
             {
-                _logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", accountId, qr);
+                logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", accountId, qr);
                 // TODO: Display QR in frontend
             };
 
             client.OnConnectionUpdate += (sender, evt) =>
             {
-                _logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", accountId, evt.Status);
+                logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", accountId, evt.Status);
                 if (!string.IsNullOrEmpty(evt.Error))
                 {
-                    _logger.LogError("WhatsApp '{AccountId}' error: {Error}", accountId, evt.Error);
+                    logger.LogError("WhatsApp '{AccountId}' error: {Error}", accountId, evt.Error);
                 }
             };
 
@@ -116,31 +95,31 @@ namespace BlazorClaw.Channels.Services
             await client.ConnectAsync(cancellationToken);
 
             _bots[accountId] = bot;
-            _messageDispatcher.Register(bot);
+            messageDispatcher.Register(bot);
 
-            _logger.LogInformation("WhatsApp account '{AccountId}' registered", accountId);
+            logger.LogInformation("WhatsApp account '{AccountId}' registered", accountId);
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("WhatsApp Channel Service stopping...");
+            logger.LogInformation("WhatsApp Channel Service stopping...");
 
             foreach (var (accountId, bot) in _bots)
             {
                 try
                 {
-                    _messageDispatcher.Unregister(bot);
+                    messageDispatcher.Unregister(bot);
                     await bot.DisconnectAsync();
-                    _logger.LogInformation("WhatsApp account '{AccountId}' stopped", accountId);
+                    logger.LogInformation("WhatsApp account '{AccountId}' stopped", accountId);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error stopping account '{AccountId}'", accountId);
+                    logger.LogError(ex, "Error stopping account '{AccountId}'", accountId);
                 }
             }
 
             _bots.Clear();
-            _logger.LogInformation("WhatsApp Channel Service stopped");
+            logger.LogInformation("WhatsApp Channel Service stopped");
         }
     }
 
@@ -151,22 +130,19 @@ namespace BlazorClaw.Channels.Services
     {
         private readonly string _accountId;
         private readonly WhatsAppClient _client;
-        private readonly ILogger<WhatsAppBotHostedService> _logger;
-        private readonly PathHelper _pathHelper;
+        private readonly ILogger _logger;
 
         public string AccountId => _accountId;
 
         public WhatsAppChannelBot(
             string accountId,
             WhatsAppClient client,
-            ILogger<WhatsAppBotHostedService> logger,
-            PathHelper pathHelper)
+            ILogger logger)
             : base("WhatsApp")
         {
             _accountId = accountId;
             _client = client;
             _logger = logger;
-            _pathHelper = pathHelper;
         }
 
         public override async Task SendChannelAsync(
