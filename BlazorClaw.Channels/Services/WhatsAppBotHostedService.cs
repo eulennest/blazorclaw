@@ -154,6 +154,13 @@ namespace BlazorClaw.Channels.Services
             }
         }
 
+        /// <summary>
+        /// Get total number of configured accounts
+        /// </summary>
+        public int GetAccountCount()
+        {
+            return _bots.Count;
+        }
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             logger.LogInformation("WhatsApp Channel Service stopping...");

@@ -28,23 +28,31 @@
             <tr>
                 <td><i class="bi bi-whatsapp"></i> WhatsApp</td>
                 <td>
-                    @if (whatsappQRCount > 0)
-                    {
-                        <span class="badge bg-warning">Pairing (@whatsappQRCount)</span>
-                    }
-                    else if (whatsappQRCount == 0)
+                    @if (whatsappAccountCount == 0)
                     {
                         <span class="badge bg-secondary">Inaktiv</span>
                     }
-                </td>
-                <td>
-                    @if (whatsappQRCount > 0)
+                    else if (whatsappQRCount > 0)
                     {
-                        <span class="text-warning">@whatsappQRCount nicht verbunden</span>
+                        <span class="badge bg-warning">Pairing (@whatsappQRCount/@whatsappAccountCount)</span>
                     }
                     else
                     {
+                        <span class="badge bg-success">Aktiv</span>
+                    }
+                </td>
+                <td>
+                    @if (whatsappAccountCount == 0)
+                    {
                         <span class="text-muted">Keine Accounts konfiguriert</span>
+                    }
+                    else if (whatsappQRCount > 0)
+                    {
+                        <span class="text-warning">@whatsappQRCount von @whatsappAccountCount nicht verbunden</span>
+                    }
+                    else
+                    {
+                        <span class="text-success">@whatsappAccountCount verbunden</span>
                     }
                 </td>
                 <td>
@@ -59,10 +67,11 @@
 
 @code {
     private int whatsappQRCount = 0;
+    private int whatsappAccountCount = 0;
 
     protected override void OnInitialized()
     {
-        var qrCodes = WhatsAppService.GetCurrentQRCodes();
-        whatsappQRCount = qrCodes.Count;
+        whatsappAccountCount = WhatsAppService.GetAccountCount();
+        whatsappQRCount = WhatsAppService.GetCurrentQRCodes().Count;
     }
 }
