@@ -266,36 +266,152 @@ namespace BlazorClaw.WhatsApp
         }
 
         /// <summary>
+        /// <summary>
         /// Handle incoming frame (protobuf or binary node)
         /// </summary>
         private async Task HandleIncomingFrameAsync(byte[] data, CancellationToken cancellationToken)
         {
             try
             {
-                // Try parsing as WebMessageInfo
-                var msgInfo = Proto.WebMessageInfo.Parser.ParseFrom(data);
+                // Try Binary Node first (most common)
+                var node = BinaryNodeCodec.Decode(data);
+                _logger?.LogDebug("Node: <{Tag}>", node.Tag);
 
-                if (msgInfo?.Message != null)
+                switch (node.Tag)
                 {
-                    var evt = new MessageEvent
-                    {
-                        MessageId = msgInfo.Key?.Id ?? string.Empty,
-                        RemoteJid = msgInfo.Key?.RemoteJid ?? string.Empty,
-                        Text = msgInfo.Message.Conversation ?? string.Empty,
-                        Timestamp = (long)(msgInfo.MessageTimestamp)
-                    };
+                    case "iq" when node.Attrs.GetValueOrDefault("type") == "set" 
+                                && node.GetChild("pair-device") != null:
+                        await HandlePairDeviceNodeAsync(node, cancellationToken);
+                        break;
 
-                    OnMessage?.Invoke(this, evt);
+                    case "success":
+                        await HandleSuccessNodeAsync(node, cancellationToken);
+                        break;
+
+                    case "message":
+                        HandleMessageBinaryNode(node);
+                        break;
+
+                    case "presence":
+                        HandlePresenceBinaryNode(node);
+                        break;
+
+                    case "stream:error":
+                    case "failure":
+                        _logger?.LogError("Error node: {Node}", node);
+                        OnConnectionUpdate?.Invoke(this, new ConnectionEvent
+                        {
+                            Status = "closed",
+                            Error = node.Content?.ToString() ?? "Unknown"
+                        });
+                        break;
+
+                    default:
+                        _logger?.LogDebug("Unhandled: {Node}", node);
+                        break;
                 }
             }
             catch
             {
-                // Not a WebMessageInfo — might be binary node or other message type
-                _logger?.LogDebug("Received non-message frame ({Length} bytes)", data.Length);
+                // Fallback: Try Protobuf
+                try
+                {
+                    var msg = Proto.WebMessageInfo.Parser.ParseFrom(data);
+                    if (msg?.Message != null)
+                    {
+                        OnMessage?.Invoke(this, new MessageEvent
+                        {
+                            MessageId = msg.Key?.Id ?? "",
+                            RemoteJid = msg.Key?.RemoteJid ?? "",
+                            Text = msg.Message.Conversation ?? "",
+                            Timestamp = (long)msg.MessageTimestamp
+                        });
+                    }
+                }
+                catch
+                {
+                    _logger?.LogDebug("Unknown frame ({Length}b)", data.Length);
+                }
             }
         }
 
-        /// <summary>
+        // ========== Binary Node Handlers ==========
+
+        private async Task HandlePairDeviceNodeAsync(BinaryNode node, CancellationToken ct)
+        {
+            _logger?.LogInformation("📱 Received pair-device request");
+
+            // Send ACK
+            await SendBinaryNodeAsync(new BinaryNode("iq", new Dictionary<string, string>
+            {
+                ["to"] = "s.whatsapp.net",
+                ["type"] = "result",
+                ["id"] = node.Attrs.GetValueOrDefault("id", "")
+            }), ct);
+
+            // Extract QR refs
+            var pairNode = node.GetChild("pair-device");
+            var refs = pairNode?.GetChildren("ref") ?? new();
+
+            if (refs.Count == 0 || _authState?.NoiseKeyPublic == null) return;
+
+            var noiseB64 = Convert.ToBase64String(_authState.NoiseKeyPublic);
+            var identB64 = Convert.ToBase64String(_authState.IdentityPublicKey ?? new byte[32]);
+            var advB64 = Convert.ToBase64String(new byte[32]);
+
+            foreach (var r in refs)
+            {
+                if (r.Content is byte[] refBytes)
+                {
+                    var refStr = System.Text.Encoding.UTF8.GetString(refBytes);
+                    var qr = $"{refStr},{noiseB64},{identB64},{advB64}";
+                    _logger?.LogWarning("📱 QR: {QR}", qr);
+                    OnQRCode?.Invoke(this, qr);
+                    break;
+                }
+            }
+        }
+
+        private async Task HandleSuccessNodeAsync(BinaryNode node, CancellationToken ct)
+        {
+            _logger?.LogInformation("✅ Login successful!");
+            OnConnectionUpdate?.Invoke(this, new ConnectionEvent { Status = "open" });
+            await Task.CompletedTask;
+        }
+
+        private void HandleMessageBinaryNode(BinaryNode node)
+        {
+            OnMessage?.Invoke(this, new MessageEvent
+            {
+                MessageId = node.Attrs.GetValueOrDefault("id", ""),
+                RemoteJid = node.Attrs.GetValueOrDefault("from", ""),
+                Text = node.Content?.ToString() ?? ""
+            });
+        }
+
+        private void HandlePresenceBinaryNode(BinaryNode node)
+        {
+            OnPresence?.Invoke(this, new PresenceEvent
+            {
+                Jid = node.Attrs.GetValueOrDefault("from", ""),
+                Status = node.Attrs.GetValueOrDefault("type", "unavailable")
+            });
+        }
+
+        private async Task SendBinaryNodeAsync(BinaryNode node, CancellationToken ct)
+        {
+            var nodeBytes = BinaryNodeCodec.Encode(node);
+            if (_authState?.SendKey != null)
+            {
+                var nonce = CryptoUtils.DeriveNonce(_epoch++);
+                var encrypted = CryptoUtils.AesGcmEncrypt(nodeBytes, _authState.SendKey, nonce);
+                await SendRawAsync(encrypted, ct);
+            }
+            else
+            {
+                await SendRawAsync(nodeBytes, ct);
+            }
+        }
         /// Send a text message
         /// </summary>
         public async Task SendMessageAsync(
