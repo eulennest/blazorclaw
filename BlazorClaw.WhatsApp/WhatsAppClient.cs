@@ -219,13 +219,22 @@ namespace BlazorClaw.WhatsApp
         /// </summary>
         private async Task<byte[]> ReceiveRawAsync(CancellationToken cancellationToken)
         {
+            using var ms = new MemoryStream();
             var buffer = new byte[8192];
-            var result = await _webSocket.ReceiveAsync(buffer, cancellationToken);
+            WebSocketReceiveResult result;
 
-            if (result.MessageType == WebSocketMessageType.Close)
-                throw new InvalidOperationException("WebSocket closed during receive");
+            do
+            {
+                result = await _webSocket.ReceiveAsync(buffer, cancellationToken);
 
-            return buffer.Take(result.Count).ToArray();
+                if (result.MessageType == WebSocketMessageType.Close)
+                    throw new InvalidOperationException("WebSocket closed during receive");
+
+                ms.Write(buffer, 0, result.Count);
+            }
+            while (!result.EndOfMessage);
+
+            return ms.ToArray();
         }
 
         /// <summary>
