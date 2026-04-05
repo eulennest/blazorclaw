@@ -48,7 +48,11 @@ namespace BlazorClaw.WhatsApp
                 // 1. Load auth state
                 _authState = await WhatsAppAuthState.LoadAsync(_config.AuthDir);
 
-                // 2. Connect WebSocket
+                // 2. Set WebSocket headers (WhatsApp requires Origin + User-Agent)
+                _webSocket.Options.SetRequestHeader("Origin", "https://web.whatsapp.com");
+                _webSocket.Options.SetRequestHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
+                // 3. Connect WebSocket
                 await _webSocket.ConnectAsync(new Uri(_config.WebSocketUrl), cancellationToken);
                 _logger?.LogInformation("WebSocket connected");
 
