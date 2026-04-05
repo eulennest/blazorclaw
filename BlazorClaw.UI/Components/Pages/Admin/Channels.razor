@@ -3,13 +3,9 @@
 <PageTitle>Admin - Kanäle</PageTitle>
 
 <h2>Kanal-Konfiguration</h2>
-<p class="text-muted">Verwaltung der Messaging-Kanäle (Telegram, Matrix, Web).</p>
+<p class="text-muted">Verwaltung der Messaging-Kanäle (Telegram, Matrix, WhatsApp, Web).</p>
 
 <div class="mt-4">
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> Diese Seite ist ein Platzhalter. Implementierung folgt...
-    </div>
-    
     <h5 class="mt-4">Aktive Kanäle</h5>
     <table class="table table-striped">
         <thead>
@@ -26,6 +22,16 @@
                 <td><span class="badge bg-success">Aktiv</span></td>
                 <td><code>default</code></td>
                 <td><button class="btn btn-sm btn-outline-secondary">Bearbeiten</button></td>
+            </tr>
+            <tr>
+                <td><i class="bi bi-whatsapp"></i> WhatsApp</td>
+                <td><span class="badge bg-warning">Pairing</span></td>
+                <td><code>default</code></td>
+                <td>
+                    <a href="/admin/channels/whatsapp" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-qr-code"></i> QR-Codes
+                    </a>
+                </td>
             </tr>
         </tbody>
     </table>

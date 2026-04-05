@@ -17,6 +17,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.23" />
+    <PackageReference Include="QRCoder" Version="1.8.0" />
     <PackageReference Include="ReverseMarkdown" Version="5.2.0" />
   </ItemGroup>
 

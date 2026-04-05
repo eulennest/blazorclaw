@@ -152,7 +152,8 @@ builder.Services.AddSingleton<ICronJobService>(sp => sp.GetRequiredService<CronJ
 builder.Services.AddHostedService(sp => sp.GetRequiredService<CronJobService>());
 builder.Services.AddHostedService<BlazorClaw.Channels.Services.TelegramBotHostedService>();
 builder.Services.AddHostedService<BlazorClaw.Channels.Services.MatrixBotHostedService>();
-builder.Services.AddHostedService<BlazorClaw.Channels.Services.WhatsAppBotHostedService>();
+builder.Services.AddSingleton<BlazorClaw.Channels.Services.WhatsAppBotHostedService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<BlazorClaw.Channels.Services.WhatsAppBotHostedService>());
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

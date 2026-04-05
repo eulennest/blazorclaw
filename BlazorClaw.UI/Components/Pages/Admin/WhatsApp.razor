@@ -1,0 +1,112 @@
+@page "/admin/channels/whatsapp"
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<PageTitle>Admin - WhatsApp</PageTitle>
+
+<h2>WhatsApp Kanal-Verwaltung</h2>
+<p class="text-muted">Verwaltung von WhatsApp-Accounts und QR-Code-Pairing.</p>
+
+<div class="mt-4">
+    @if (loading)
+    {
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (error != null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle"></i> Fehler: @error
+        </div>
+    }
+    else if (qrCodes == null || qrCodes.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Keine QR-Codes vorhanden. Alle WhatsApp-Accounts sind verbunden oder es sind keine Accounts konfiguriert.
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var qr in qrCodes)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-whatsapp"></i> @qr.AccountId
+                            </h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <img src="/api/admin/whatsapp/qrcode/@qr.AccountId" 
+                                 alt="QR Code" 
+                                 class="img-fluid mb-3"
+                                 style="max-width: 300px;" />
+                            
+                            <p class="text-muted small">
+                                <i class="bi bi-clock"></i> Generiert: @qr.GeneratedAt.ToString("HH:mm:ss")
+                            </p>
+                            
+                            <div class="alert alert-info small">
+                                <i class="bi bi-phone"></i> Scanne diesen QR-Code mit WhatsApp auf deinem Handy:
+                                <br/>
+                                <strong>WhatsApp → Verknüpfte Geräte → Gerät verknüpfen</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<div class="mt-4">
+    <button class="btn btn-primary" @onclick="RefreshQRCodes">
+        <i class="bi bi-arrow-clockwise"></i> Aktualisieren
+    </button>
+</div>
+
+@code {
+    private List<WhatsAppQRCodeData>? qrCodes;
+    private bool loading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadQRCodes();
+    }
+
+    private async Task LoadQRCodes()
+    {
+        loading = true;
+        error = null;
+        
+        try
+        {
+            qrCodes = await Http.GetFromJsonAsync<List<WhatsAppQRCodeData>>("/api/admin/whatsapp/qrcodes");
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task RefreshQRCodes()
+    {
+        await LoadQRCodes();
+    }
+
+    public class WhatsAppQRCodeData
+    {
+        public string AccountId { get; set; } = string.Empty;
+        public string QRCode { get; set; } = string.Empty;
+        public DateTime GeneratedAt { get; set; }
+    }
+}
