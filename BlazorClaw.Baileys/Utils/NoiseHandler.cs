@@ -85,7 +85,7 @@ public sealed class NoiseHandler
         if (!_transportEstablished)
         {
             var iv = GenerateIv(_Counter++);
-            var ciphertext = Crypto.AesEncryptGcm(plaintext, _encKey, iv, ReadOnlySpan<byte>.Empty);
+            var ciphertext = Crypto.AesEncryptGcm(plaintext, _encKey, iv, _hash); // TypeScript: aesEncryptGCM(..., hash)!
             Authenticate(ciphertext); // TypeScript: authenticate(result) aka ciphertext!
             return ciphertext;
         }
@@ -104,7 +104,6 @@ public sealed class NoiseHandler
         {
             // TypeScript Baileys: decrypt first, THEN authenticate(ciphertext)!
             var iv = GenerateIv(_Counter++);
-            Console.WriteLine($"[Decrypt] iv={BitConverter.ToString(iv.ToArray()).Replace("-", "")} (counter={_Counter-1})");
             var plaintext = Crypto.AesDecryptGcm(ciphertext, _decKey, iv, _hash);
             Authenticate(ciphertext);
             return plaintext;
