@@ -51,6 +51,11 @@ public static class Crypto
 
         var ciphertext = ciphertextWithTag[..^GcmTagLengthBytes];
         var tag = ciphertextWithTag[^GcmTagLengthBytes..];
+        Console.WriteLine($"[AesDecryptGcm] ciphertext={BitConverter.ToString(ciphertext.ToArray()).Replace("-", "")}");
+        Console.WriteLine($"[AesDecryptGcm] tag={BitConverter.ToString(tag.ToArray()).Replace("-", "")}");
+        Console.WriteLine($"[AesDecryptGcm] key={BitConverter.ToString(key.ToArray()).Replace("-", "")}");
+        Console.WriteLine($"[AesDecryptGcm] iv={BitConverter.ToString(iv.ToArray()).Replace("-", "")}");
+        Console.WriteLine($"[AesDecryptGcm] aad={BitConverter.ToString(additionalData.ToArray()).Replace("-", "")}");
 
         using var aesGcm = new AesGcm(key, GcmTagLengthBytes);
         var plaintext = new byte[ciphertext.Length];

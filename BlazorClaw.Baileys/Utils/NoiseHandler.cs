@@ -3,6 +3,8 @@ using Baileys.Defaults;
 using Baileys.Types;
 using System.Security.Cryptography;
 using static Proto.HandshakeMessage.Types;
+using System;
+using System.Text;
 
 namespace Baileys.Utils;
 
@@ -83,10 +85,9 @@ public sealed class NoiseHandler
     {
         if (!_transportEstablished)
         {
-            Authenticate(plaintext);
             var iv = GenerateIv(_writeCounter++);
             var ciphertext = Crypto.AesEncryptGcm(plaintext, _encKey, iv, ReadOnlySpan<byte>.Empty);
-            Authenticate(ciphertext);
+            Authenticate(ciphertext); // TypeScript: authenticate(result) aka ciphertext!
             return ciphertext;
         }
         else
@@ -102,10 +103,11 @@ public sealed class NoiseHandler
     {
         if (!_transportEstablished)
         {
-            Authenticate(ciphertext);
+            // TypeScript Baileys: decrypt first, THEN authenticate(ciphertext)!
             var iv = GenerateIv(_readCounter++);
-            var plaintext = Crypto.AesDecryptGcm(ciphertext, _decKey, iv, ReadOnlySpan<byte>.Empty);
-            Authenticate(plaintext);
+            Console.WriteLine($"[Decrypt] iv={BitConverter.ToString(iv.ToArray()).Replace("-", "")} (counter={_readCounter-1})");
+            var plaintext = Crypto.AesDecryptGcm(ciphertext, _decKey, iv, _hash);
+            Authenticate(ciphertext);
             return plaintext;
         }
         else
@@ -117,10 +119,23 @@ public sealed class NoiseHandler
     public byte[] ProcessHandshake(Proto.HandshakeMessage serverHello)
     {
         var empBytes = serverHello.ServerHello.Ephemeral.ToByteArray();
+        Console.WriteLine($"[ProcessHandshake] Ephemeral: {BitConverter.ToString(empBytes).Replace("-", "")}");
+        Console.WriteLine($"[ProcessHandshake] Hash before Authenticate: {BitConverter.ToString(_hash).Replace("-", "")}");
+        // TypeScript Baileys: FIRST authenticate(ephemeral), THEN mixIntoKey!
         Authenticate(empBytes);
+        Console.WriteLine($"[ProcessHandshake] Hash after Authenticate(ephemeral): {BitConverter.ToString(_hash).Replace("-", "")}");
+        var sharedSecret = Curve25519Utils.CalculateAgreement(_keyPair.Private, empBytes);
+        Console.WriteLine($"[ProcessHandshake] SharedSecret: {BitConverter.ToString(sharedSecret).Replace("-", "")}");
+        var expanded = MixIntoKey(sharedSecret);
+        // TypeScript Baileys: mixIntoKey does NOT update hash! We must do it manually!
+        Authenticate(expanded);
+        Console.WriteLine($"[ProcessHandshake] After MixIntoKey: decKey={BitConverter.ToString(_decKey).Replace("-", "")}");
+        Console.WriteLine($"[ProcessHandshake] Hash after MixIntoKey: {BitConverter.ToString(_hash).Replace("-", "")}");
 
-        MixIntoKey(Curve25519Utils.CalculateAgreement(_keyPair.Private, empBytes));
-
+        Console.WriteLine($"[ProcessHandshake] Decrypt: ciphertext={BitConverter.ToString(serverHello!.ServerHello.Static.Span.ToArray()).Replace("-", "")}");
+        Console.WriteLine($"[ProcessHandshake] Decrypt: ciphertext.Length={serverHello!.ServerHello.Static.Span.Length}");
+        Console.WriteLine($"[ProcessHandshake] Decrypt: decKey={BitConverter.ToString(_decKey).Replace("-", "")}");
+        Console.WriteLine($"[ProcessHandshake] Decrypt: AAD={BitConverter.ToString(_hash).Replace("-", "")}");
         var decStaticContent = Decrypt(serverHello!.ServerHello.Static.Span);
         MixIntoKey(Curve25519Utils.CalculateAgreement(_keyPair.Private, decStaticContent));
 
@@ -210,13 +225,21 @@ public sealed class NoiseHandler
 
     private byte[] MixIntoKey(ReadOnlySpan<byte> data)
     {
-        var hmac1 = Crypto.HmacSha256(data, _salt);
-        var hmac2 = Crypto.HmacSha256([1], hmac1);
-        _salt = hmac1;
-        _encKey = Crypto.HmacSha256([2], hmac1);
+        // TypeScript Baileys uses HKDF, NOT HMAC!
+        // const [write, read] = localHKDF(data)
+        // salt = write
+        // encKey = read
+        // decKey = read
+        var expanded = Crypto.Hkdf(data.ToArray(), 64, _salt, Array.Empty<byte>());
+        _salt = expanded[..32];
+        _encKey = expanded[32..];
         _decKey = _encKey; // Same as encKey during handshake!
         _writeCounter = 0;
         _readCounter = 0;
-        return [.. hmac2, .. Crypto.HmacSha256([3], hmac1)];
+        
+        // TypeScript Baileys: mixIntoKey does NOT update hash! Only salt and keys!
+        
+        // Return the expanded key for compatibility
+        return expanded;
     }
 }
