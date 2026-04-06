@@ -67,6 +67,8 @@ public sealed class NoiseHandler
         {
             _introHeader = [.. noiseHeader];
         }
+        Authenticate(noiseHeader);
+        Authenticate(_keyPair.Public);
     }
 
     // ──────────────────────────────────────────────────────────
@@ -86,7 +88,7 @@ public sealed class NoiseHandler
         if (!_transportEstablished)
         {
             var iv = GenerateIv(_Counter++);
-            var ciphertext = Crypto.AesEncryptGcm(plaintext, _encKey, iv, ReadOnlySpan<byte>.Empty); // AAD = Empty (wie Transport-Modus)
+            var ciphertext = Crypto.AesEncryptGcm(plaintext, _encKey, iv, _hash);
             Authenticate(ciphertext);
             return ciphertext;
         }
@@ -105,7 +107,7 @@ public sealed class NoiseHandler
         {
             // TypeScript Baileys: decrypt first, THEN authenticate(ciphertext)!
             var iv = GenerateIv(_Counter++);
-            var plaintext = Crypto.AesDecryptGcm(ciphertext, _decKey, iv, ReadOnlySpan<byte>.Empty); // AAD = Empty (wie Transport-Modus)
+            var plaintext = Crypto.AesDecryptGcm(ciphertext, _decKey, iv, _hash);
             Authenticate(ciphertext);
             return plaintext;
         }
@@ -118,28 +120,15 @@ public sealed class NoiseHandler
     public byte[] ProcessHandshake(Proto.HandshakeMessage serverHello)
     {
         var empBytes = serverHello.ServerHello.Ephemeral.ToByteArray();
-        Console.WriteLine($"[ProcessHandshake] Ephemeral: {BitConverter.ToString(empBytes).Replace("-", "")}");
-        Console.WriteLine($"[ProcessHandshake] Hash before Authenticate: {BitConverter.ToString(_hash).Replace("-", "")}");
         // TypeScript Baileys: FIRST authenticate(ephemeral), THEN mixIntoKey!
         Authenticate(empBytes);
-        Console.WriteLine($"[ProcessHandshake] Hash after Authenticate(ephemeral): {BitConverter.ToString(_hash).Replace("-", "")}");
         var sharedSecret = Curve25519Utils.CalculateAgreement(_keyPair.Private, empBytes);
-        Console.WriteLine($"[ProcessHandshake] SharedSecret: {BitConverter.ToString(sharedSecret).Replace("-", "")}");
         MixIntoKey(sharedSecret);
-        // TypeScript Baileys: mixIntoKey does NOT update hash! We must do it manually!
-        Console.WriteLine($"[ProcessHandshake] After MixIntoKey: decKey={BitConverter.ToString(_decKey).Replace("-", "")}");
-        Console.WriteLine($"[ProcessHandshake] Hash after MixIntoKey: {BitConverter.ToString(_hash).Replace("-", "")}");
-
-        Console.WriteLine($"[ProcessHandshake] Decrypt: ciphertext={BitConverter.ToString(serverHello!.ServerHello.Static.Span.ToArray()).Replace("-", "")}");
-        Console.WriteLine($"[ProcessHandshake] Decrypt: ciphertext.Length={serverHello!.ServerHello.Static.Span.Length}");
-        Console.WriteLine($"[ProcessHandshake] Decrypt: decKey={BitConverter.ToString(_decKey).Replace("-", "")}");
-        Console.WriteLine($"[ProcessHandshake] Decrypt: AAD={BitConverter.ToString(_hash).Replace("-", "")}");
         var decStaticContent = Decrypt(serverHello!.ServerHello.Static.Span);
         MixIntoKey(Curve25519Utils.CalculateAgreement(_keyPair.Private, decStaticContent));
 
         var keyEnc = Encrypt(_keyPair.Public);
         MixIntoKey(Curve25519Utils.CalculateAgreement(_keyPair.Private, empBytes));
-
         return keyEnc;
     }
 
