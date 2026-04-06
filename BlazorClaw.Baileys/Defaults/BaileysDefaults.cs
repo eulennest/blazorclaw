@@ -16,7 +16,7 @@ public static class BaileysDefaults
     //  HTTP / WebSocket URLs
     // ──────────────────────────────────────────────────────────
 
-    public const string WaWebSocketUrl = "wss://web.whatsapp.com/ws/chat";
+    public const string WaWebSocketUrl = "wss://web.whatsapp.com:5222/ws/chat";
     public const string DefaultOrigin = "https://web.whatsapp.com";
     public const string CallVideoPrefix = "https://call.whatsapp.com/video/";
     public const string CallAudioPrefix = "https://call.whatsapp.com/voice/";

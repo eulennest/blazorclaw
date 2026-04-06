@@ -25,8 +25,7 @@ public sealed class NoiseHandler
     private byte[] _salt;
     private byte[] _encKey;
     private byte[] _decKey;
-    private int _writeCounter;
-    private int _readCounter;
+    private int _Counter;
     private bool _transportEstablished;
 
     private readonly KeyPair _keyPair;
@@ -85,7 +84,7 @@ public sealed class NoiseHandler
     {
         if (!_transportEstablished)
         {
-            var iv = GenerateIv(_writeCounter++);
+            var iv = GenerateIv(_Counter++);
             var ciphertext = Crypto.AesEncryptGcm(plaintext, _encKey, iv, ReadOnlySpan<byte>.Empty);
             Authenticate(ciphertext); // TypeScript: authenticate(result) aka ciphertext!
             return ciphertext;
@@ -104,8 +103,8 @@ public sealed class NoiseHandler
         if (!_transportEstablished)
         {
             // TypeScript Baileys: decrypt first, THEN authenticate(ciphertext)!
-            var iv = GenerateIv(_readCounter++);
-            Console.WriteLine($"[Decrypt] iv={BitConverter.ToString(iv.ToArray()).Replace("-", "")} (counter={_readCounter-1})");
+            var iv = GenerateIv(_Counter++);
+            Console.WriteLine($"[Decrypt] iv={BitConverter.ToString(iv.ToArray()).Replace("-", "")} (counter={_Counter-1})");
             var plaintext = Crypto.AesDecryptGcm(ciphertext, _decKey, iv, _hash);
             Authenticate(ciphertext);
             return plaintext;
@@ -126,9 +125,8 @@ public sealed class NoiseHandler
         Console.WriteLine($"[ProcessHandshake] Hash after Authenticate(ephemeral): {BitConverter.ToString(_hash).Replace("-", "")}");
         var sharedSecret = Curve25519Utils.CalculateAgreement(_keyPair.Private, empBytes);
         Console.WriteLine($"[ProcessHandshake] SharedSecret: {BitConverter.ToString(sharedSecret).Replace("-", "")}");
-        var expanded = MixIntoKey(sharedSecret);
+        MixIntoKey(sharedSecret);
         // TypeScript Baileys: mixIntoKey does NOT update hash! We must do it manually!
-        Authenticate(expanded);
         Console.WriteLine($"[ProcessHandshake] After MixIntoKey: decKey={BitConverter.ToString(_decKey).Replace("-", "")}");
         Console.WriteLine($"[ProcessHandshake] Hash after MixIntoKey: {BitConverter.ToString(_hash).Replace("-", "")}");
 
@@ -160,8 +158,8 @@ public sealed class NoiseHandler
         var expanded = Crypto.Hkdf(Array.Empty<byte>(), 64, _salt, Array.Empty<byte>());
         _encKey = expanded[..32];
         _decKey = expanded[32..];
-        _writeCounter = 0;
-        _readCounter = 0;
+        _Counter = 0;
+        _Counter = 0;
         _transportEstablished = true;
         _logger.Trace("noise handshake complete");
     }
@@ -176,7 +174,7 @@ public sealed class NoiseHandler
     /// </summary>
     public byte[] DecryptWithEncKey(ReadOnlySpan<byte> ciphertext)
     {
-        var iv = BuildTransportIv(_readCounter++);
+        var iv = BuildTransportIv(_Counter++);
         return Crypto.AesDecryptGcm(ciphertext, _encKey, iv, ReadOnlySpan<byte>.Empty);
     }
 
@@ -190,18 +188,20 @@ public sealed class NoiseHandler
         var combined = new byte[_hash.Length + data.Length];
         _hash.CopyTo(combined, 0);
         data.CopyTo(combined.AsSpan(_hash.Length));
+        _logger.Debug($"[Authenticate] oldHash = {ToHex(_hash)}");
         _hash = Crypto.Sha256(combined);
+        _logger.Debug($"[Authenticate] newHash = {ToHex(_hash)}");
     }
 
     private byte[] EncryptTransport(ReadOnlySpan<byte> plaintext)
     {
-        var iv = BuildTransportIv(_writeCounter++);
+        var iv = BuildTransportIv(_Counter++);
         return Crypto.AesEncryptGcm(plaintext, _encKey, iv, ReadOnlySpan<byte>.Empty);
     }
 
     private byte[] DecryptTransport(ReadOnlySpan<byte> ciphertext)
     {
-        var iv = BuildTransportIv(_readCounter++);
+        var iv = BuildTransportIv(_Counter++);
         return Crypto.AesDecryptGcm(ciphertext, _decKey, iv, ReadOnlySpan<byte>.Empty);
     }
 
@@ -223,7 +223,7 @@ public sealed class NoiseHandler
         return iv;
     }
 
-    private byte[] MixIntoKey(ReadOnlySpan<byte> data)
+    private void MixIntoKey(ReadOnlySpan<byte> data)
     {
         // TypeScript Baileys uses HKDF, NOT HMAC!
         // const [write, read] = localHKDF(data)
@@ -234,12 +234,11 @@ public sealed class NoiseHandler
         _salt = expanded[..32];
         _encKey = expanded[32..];
         _decKey = _encKey; // Same as encKey during handshake!
-        _writeCounter = 0;
-        _readCounter = 0;
-        
-        // TypeScript Baileys: mixIntoKey does NOT update hash! Only salt and keys!
-        
-        // Return the expanded key for compatibility
-        return expanded;
+        _Counter = 0;        
+    }
+
+    private static string ToHex(byte[] data)
+    {
+        return BitConverter.ToString(data).Replace("-", "");
     }
 }

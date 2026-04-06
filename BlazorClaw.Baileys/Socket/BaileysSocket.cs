@@ -1,3 +1,4 @@
+using Baileys.Crypto;
 using Baileys.Defaults;
 using Baileys.Types;
 using Baileys.Utils;
@@ -10,6 +11,7 @@ using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
 using static Org.BouncyCastle.Math.EC.ECCurve;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using ILogger = Baileys.Utils.ILogger;
 
 namespace Baileys.Socket;
@@ -36,8 +38,8 @@ public sealed class BaileysSocket : IAsyncDisposable
     {
         _creds = creds;
         _signalKeys = new SignalCreds(creds.Creds.SignedIdentityKey, creds.Creds.SignedPreKey, creds.Creds.RegistrationId);
-        _emperalKey = AuthUtils.GenerateKeyPair();
-        _noise = new NoiseHandler(creds.Creds.NoiseKey, logger);
+        _emperalKey = Curve25519Utils.GenerateKeyPair();
+        _noise = new NoiseHandler(_emperalKey, logger);
         _ev = ev;
         _logger = logger.Child(new Dictionary<string, object> { ["class"] = "socket" });
     }
@@ -58,7 +60,7 @@ public sealed class BaileysSocket : IAsyncDisposable
     private async Task SendIntroHeaderAsync(CancellationToken cancellationToken)
     {
         var header = _noise.IntroHeader.ToArray();
-        await SendRawAsync(header, cancellationToken).ConfigureAwait(false);
+        await _ws.SendAsync(header, WebSocketMessageType.Binary, true, cancellationToken).ConfigureAwait(false);
         _logger.Debug("Sent intro header.");
     }
 
@@ -73,12 +75,9 @@ public sealed class BaileysSocket : IAsyncDisposable
             }
         };
 
-        // Encode and frame
         var helloBytes = clientHello.ToByteArray();
-        var frame = EncodeFrame(helloBytes);
-
-        await SendRawAsync(frame, cancellationToken).ConfigureAwait(false);
-        _logger.Debug($"Sent ClientHello ({frame.Length} bytes)");
+        await SendRawAsync(helloBytes, cancellationToken).ConfigureAwait(false);
+        _logger.Debug($"Sent ClientHello ({helloBytes.Length} bytes)");
     }
 
     private static byte[] EncodeFrame(byte[] payload)
@@ -95,20 +94,13 @@ public sealed class BaileysSocket : IAsyncDisposable
     {
         var encoded = WaBinaryEncoder.EncodeBinaryNode(node);
         var encrypted = _noise.Encrypt(encoded);
-
-        // Frame it: 3 bytes for length (big-endian)
-        var frame = new byte[encrypted.Length + 3];
-        frame[0] = (byte)((encrypted.Length >> 16) & 0xFF);
-        frame[1] = (byte)((encrypted.Length >> 8) & 0xFF);
-        frame[2] = (byte)(encrypted.Length & 0xFF);
-        encrypted.CopyTo(frame.AsSpan(3));
-
-        await SendRawAsync(frame, cancellationToken).ConfigureAwait(false);
+        await SendRawAsync(encrypted, cancellationToken).ConfigureAwait(false);
     }
     public Task SendRawAsync(byte[] data, CancellationToken cancellationToken = default)
     {
+        data = EncodeFrame(data);
         var hex = BitConverter.ToString(data).Replace("-", string.Empty);
-        _logger.Trace($"[SEND] {hex}");
+        _logger.Trace($"[SEND] ({data.Length} bytes) {hex}");
         return _ws.SendAsync(data, WebSocketMessageType.Binary, true, cancellationToken);
     }
 
@@ -132,7 +124,7 @@ public sealed class BaileysSocket : IAsyncDisposable
                 {
                     var hex = BitConverter.ToString(buffer[..result.Count]).Replace("-", string.Empty);
                     _logger.Trace($"[RECV] {hex}");
-                    await HandleMessageAsync(buffer[..result.Count]).ConfigureAwait(false);
+                    await HandleMessageAsync(buffer[..result.Count][3..]).ConfigureAwait(false);
                 }
             }
         }
@@ -152,7 +144,6 @@ public sealed class BaileysSocket : IAsyncDisposable
     {
         if (!_handshakeComplete)
         {
-            data = data[3..];
             var key = _noise.ProcessHandshake(Proto.HandshakeMessage.Parser.ParseFrom(data));
 
             Proto.ClientPayload? cpNode;
