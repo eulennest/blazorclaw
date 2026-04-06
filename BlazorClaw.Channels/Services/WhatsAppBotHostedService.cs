@@ -1,3 +1,4 @@
+using Baileys.Types;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.WhatsApp;
@@ -157,20 +158,20 @@ namespace BlazorClaw.Channels.Services
                 PushName = pushName
             };
 
-            var client = new WhatsAppClient(whatsappConfig, logger, null);
+            var client = new WhatsAppClient(whatsappConfig, logger);
             var bot = new WhatsAppChannelBot(accountId, client, logger);
 
-            client.OnQRCode += (sender ,e) =>
+            bot.OnQRCode += (sender, e) =>
             {
-                if (sender is not WhatsAppChannelBot bot) return;
-                logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", bot.AccountId, e.QrData);
+                if (sender is not WhatsAppChannelBot wbot) return;
+                logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", wbot.AccountId, e.QrData);
 
                 // Store QR code
                 lock (_qrLock)
                 {
-                    _qrCodes[bot.AccountId] = new WhatsAppQRCodeData
+                    _qrCodes[wbot.AccountId] = new WhatsAppQRCodeData
                     {
-                        AccountId = bot.AccountId,
+                        AccountId = wbot.AccountId,
                         QRCode = e.QrData,
                         GeneratedAt = DateTime.UtcNow
                     };
@@ -180,7 +181,7 @@ namespace BlazorClaw.Channels.Services
             client.OnConnectionUpdate += (sender, e) =>
             {
                 if (sender is not WhatsAppChannelBot bot) return;
-                var status = e.Status;
+                var status = e.Connection?.ToString().ToLower();
                 logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", bot.AccountId, status);
 
                 // Clear QR code when connected
@@ -271,6 +272,8 @@ namespace BlazorClaw.Channels.Services
 
         public string AccountId => _accountId;
 
+        public event EventHandler<QrCodeEventArgs>? OnQRCode;
+
         public WhatsAppChannelBot(
             string accountId,
             WhatsAppClient client,
@@ -284,6 +287,12 @@ namespace BlazorClaw.Channels.Services
 
             // Register event handlers
             client.OnMessage += Client_OnMessage;
+            client.OnQRCode += Client_OnQRCode;
+        }
+
+        private void Client_OnQRCode(object? sender, QrCodeEventArgs e)
+        {
+            OnQRCode?.Invoke(this, e);
         }
 
         private async void Client_OnMessage(object? sender, MessageReceiveEventArgs e)

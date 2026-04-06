@@ -4,14 +4,11 @@ using Baileys.Types;
 using Baileys.Utils;
 using Baileys.WABinary;
 using Google.Protobuf;
-using Microsoft.Extensions.Logging;
-using org.whispersystems.curve25519.csharp;
 using Proto;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
-using static Org.BouncyCastle.Math.EC.ECCurve;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Timers;
 using ILogger = Baileys.Utils.ILogger;
 
 namespace Baileys.Socket;
@@ -20,7 +17,7 @@ namespace Baileys.Socket;
 /// Low-level WebSocket client for Baileys that handles the Noise handshake
 /// and binary node encoding/decoding.
 /// </summary>
-public sealed class BaileysSocket : IAsyncDisposable
+public class BaileysSocket : IAsyncDisposable
 {
     private readonly ClientWebSocket _ws = new();
     private readonly AuthenticationState _creds;
@@ -28,19 +25,21 @@ public sealed class BaileysSocket : IAsyncDisposable
     private readonly KeyPair _emperalKey;
     private readonly NoiseHandler _noise;
     private readonly ILogger _logger;
-    private readonly IBaileysEventEmitter _ev;
     private readonly CancellationTokenSource _cts = new();
+
+    public event EventHandler<ConnectionUpdateEventArgs>? ConnectionUpdate;
+    public event EventHandler<MessageRecieveEventArgs>? MessageRecieved;
 
     private bool _handshakeComplete;
     private Task? _receiveTask;
+    private System.Timers.Timer? timer;
 
-    public BaileysSocket(AuthenticationState creds, IBaileysEventEmitter ev, ILogger logger)
+    public BaileysSocket(AuthenticationState creds, ILogger logger)
     {
         _creds = creds;
         _signalKeys = new SignalCreds(creds.Creds.SignedIdentityKey, creds.Creds.SignedPreKey, creds.Creds.RegistrationId);
         _emperalKey = Curve25519Utils.GenerateKeyPair();
         _noise = new NoiseHandler(_emperalKey, logger);
-        _ev = ev;
         _logger = logger.Child(new Dictionary<string, object> { ["class"] = "socket" });
     }
 
@@ -116,7 +115,7 @@ public sealed class BaileysSocket : IAsyncDisposable
                 if (result.MessageType == WebSocketMessageType.Close)
                 {
                     await _ws.CloseAsync(WebSocketCloseStatus.NormalClosure, string.Empty, cancellationToken).ConfigureAwait(false);
-                    _ev.Emit("connection.update", new ConnectionUpdateEvent { Connection = WaConnectionState.Close });
+                    OnConectionUpdate(WaConnectionState.Close);
                     break;
                 }
 
@@ -124,7 +123,7 @@ public sealed class BaileysSocket : IAsyncDisposable
                 {
                     var hex = BitConverter.ToString(buffer[..result.Count]).Replace("-", string.Empty);
                     _logger.Trace($"[RECV] {hex}");
-                    await HandleMessageAsync(buffer[..result.Count][3..]).ConfigureAwait(false);
+                    await HandleMessageAsync(buffer[..result.Count][3..], cancellationToken).ConfigureAwait(false);
                 }
             }
         }
@@ -132,11 +131,7 @@ public sealed class BaileysSocket : IAsyncDisposable
         catch (Exception ex)
         {
             _logger.Exception(ex);
-            _ev.Emit("connection.update", new ConnectionUpdateEvent
-            {
-                Connection = WaConnectionState.Close,
-                LastDisconnect = new LastDisconnectInfo { Error = ex, Date = DateTimeOffset.UtcNow }
-            });
+            OnConectionUpdate(new ConnectionUpdateEventArgs() { Connection = WaConnectionState.Close, LastDisconnect = new LastDisconnectInfo { Error = ex, Date = DateTimeOffset.UtcNow } });
         }
     }
 
@@ -189,30 +184,156 @@ public sealed class BaileysSocket : IAsyncDisposable
             // Simplified: we'll just emit that we're connecting.
             _noise.Finish();
             _logger.Info("Handshake complete.");
-            _ev.Emit("connection.update", new ConnectionUpdateEvent { Connection = WaConnectionState.Open });
+            OnConectionUpdate(WaConnectionState.Open);
+            StartKeepAliveTimer();
             return;
         }
 
         // After handshake, messages are framed with a 3-byte length
         if (data.Length < 3) return;
+        lastDateRecv = DateTimeOffset.UtcNow;
 
         var decrypted = _noise.Decrypt(data);
         var node = await WaBinaryDecoder.DecodeBinaryNodeAsync(decrypted).ConfigureAwait(false);
 
-        _logger.Trace($"Received node: {node.Tag}");
+        _logger.Trace($"Received node: {node}");
         // Here we would dispatch the node to the right handler.
         // For the QR code, it usually comes in a specific node or triggered by a success node.
+        if (!OnMessageRecieved(node))
+        {
+
+            if ("iq".Equals(node.Tag) && node.Content is BinaryNodeList nodeContent)
+            {
+
+                if (node.Attrs.TryGetValue("type", out var type) && "set".Equals(type))
+                {
+                    if (nodeContent.Count > 0 && nodeContent[0].Tag == "pair-device" && nodeContent[0].Content is BinaryNodeList pairContent)
+                    {
+                        var refNodes = pairContent.Where(n => n.Tag == "ref").Select(o => o.GetBytes()).ToList();
+
+                        var noiseKeyB64 = Convert.ToBase64String(_creds.Creds.NoiseKey.Public);
+                        var identityKeyB64 = Convert.ToBase64String(_signalKeys.SignedIdentityKey.Public);
+                        var advB64 = _creds.Creds.AdvSecretKey;
+
+                        var refNode = refNodes.FirstOrDefault();
+                        if (refNode == null)
+                        {
+                            _logger.Warn("No ref nodes found in pair-device node.");
+                            return;
+                        }
+                        var refStr = Encoding.UTF8.GetString(refNode);
+                        var qr = $"{refStr},{noiseKeyB64},{identityKeyB64},{advB64}";
+
+                        OnConectionUpdate(new ConnectionUpdateEventArgs() { Connection = WaConnectionState.Open, Qr = qr });
+
+                        var iq = new BinaryNode
+                        {
+                            Tag = "iq",
+                            Attrs = new Dictionary<string, string>
+                            {
+                                ["to"] = JidServer.SWhatsappNet.ServerToString(),
+                                ["type"] = "result",
+                                ["id"] = node.Attrs["id"]
+                            }
+                        };
+                        await SendNodeAsync(iq, cancellationToken).ConfigureAwait(false);
+
+
+                        /*
+                         		const iq: BinaryNode = {
+			tag: 'iq',
+			attrs: {
+				to: S_WHATSAPP_NET,
+				type: 'result',
+				id: stanza.attrs.id!
+			}
+		}
+		await sendNode(iq)
+
+		const pairDeviceNode = getBinaryNodeChild(stanza, 'pair-device')
+		const refNodes = getBinaryNodeChildren(pairDeviceNode, 'ref')
+		const noiseKeyB64 = Buffer.from(creds.noiseKey.public).toString('base64')
+		const identityKeyB64 = Buffer.from(creds.signedIdentityKey.public).toString('base64')
+		const advB64 = creds.advSecretKey
+
+		let qrMs = qrTimeout || 60_000 // time to let a QR live
+		const genPairQR = () => {
+			if (!ws.isOpen) {
+				return
+			}
+
+			const refNode = refNodes.shift()
+			if (!refNode) {
+				void end(new Boom('QR refs attempts ended', { statusCode: DisconnectReason.timedOut }))
+				return
+			}
+
+			const ref = (refNode.content as Buffer).toString('utf-8')
+			const qr = [ref, noiseKeyB64, identityKeyB64, advB64].join(',')
+
+			ev.emit('connection.update', { qr })
+
+			qrTimer = setTimeout(genPairQR, qrMs)
+			qrMs = qrTimeout || 20_000 // shorter subsequent qrs
+		}
+
+		genPairQR()
+                         */
+                    }
+                }
+            }
+
+        }
     }
 
+
+    DateTimeOffset lastDateRecv;
+    public void StartKeepAliveTimer()
+    {
+        timer?.Stop();
+        timer = new System.Timers.Timer(1000); // 1 seconds
+        lastDateRecv = DateTimeOffset.UtcNow;
+        timer.Elapsed += OnKeepAliveTimer;
+        timer.Start();
+    }
+
+    private ulong epoch = 1;
+    private string GenerateMessageTag() => $"{Generics.GenerateMdTagPrefix()}{epoch++}";
+
+    public void OnKeepAliveTimer(object? sender, ElapsedEventArgs e)
+    {
+        var diff = DateTimeOffset.UtcNow - lastDateRecv;
+        if (diff.TotalSeconds < 10) return;
+        var iq = new BinaryNode
+        {
+            Tag = "iq",
+            Attrs = new Dictionary<string, string>
+            {
+                ["to"] = JidServer.SWhatsappNet.ServerToString(),
+                ["type"] = "get",
+                ["id"] = GenerateMessageTag(),
+                ["xmlns"] = "w:p"
+            },
+            Content = new BinaryNodeList(new[]
+            {
+                new BinaryNode
+                {
+                    Tag = "ping"
+                }
+            })
+        };
+        _ = SendNodeAsync(iq).ConfigureAwait(false);
+    }
     public async ValueTask DisposeAsync()
     {
+        timer?.Stop();
+        timer?.Dispose();
+
         _cts.Cancel();
         if (_receiveTask != null) await _receiveTask.ConfigureAwait(false);
         _ws.Dispose();
         _cts.Dispose();
     }
-
-
 
     public static ClientPayload GenerateRegistrationNode(SignalCreds credentials)
     {
@@ -344,4 +465,24 @@ public sealed class BaileysSocket : IAsyncDisposable
 
     }
 
+    protected void OnConectionUpdate(WaConnectionState state)
+    {
+        OnConectionUpdate(new ConnectionUpdateEventArgs() { Connection = state });
+    }
+
+    protected void OnConectionUpdate(ConnectionUpdateEventArgs state)
+    {
+        ConnectionUpdate?.Invoke(this, state);
+    }
+    protected bool OnMessageRecieved(BinaryNode node)
+    {
+        var e = new MessageRecieveEventArgs(node);
+        MessageRecieved?.Invoke(this, e);
+        return e.Handled;
+    }
+}
+public class MessageRecieveEventArgs(BinaryNode node) : EventArgs
+{
+    public BinaryNode Node { get; } = node;
+    public bool Handled { get; set; }
 }

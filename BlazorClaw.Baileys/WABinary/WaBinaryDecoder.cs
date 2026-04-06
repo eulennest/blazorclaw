@@ -1,7 +1,7 @@
-using System.IO.Compression;
-using System.Text;
 using Baileys.Types;
 using Baileys.Utils;
+using System.IO.Compression;
+using System.Text;
 
 namespace Baileys.WABinary;
 
@@ -102,7 +102,7 @@ public static class WaBinaryDecoder
 
         int UnpackHex(int value)
         {
-            if (value is >= 0 and < 10)  return '0' + value;
+            if (value is >= 0 and < 10) return '0' + value;
             if (value is >= 10 and < 16) return 'A' + value - 10;
             throw new InvalidDataException($"Invalid hex nibble: {value}");
         }
@@ -115,7 +115,7 @@ public static class WaBinaryDecoder
                 10 => '-',
                 11 => '.',
                 15 => '\0',
-                _  => throw new InvalidDataException($"Invalid nibble: {value}")
+                _ => throw new InvalidDataException($"Invalid nibble: {value}")
             };
         }
 
@@ -149,9 +149,9 @@ public static class WaBinaryDecoder
         int ReadListSize(int tag) => tag switch
         {
             WaBinaryConstants.Tags.ListEmpty => 0,
-            WaBinaryConstants.Tags.List8     => ReadByte(),
-            WaBinaryConstants.Tags.List16    => ReadInt(2),
-            _                                => throw new InvalidDataException($"Invalid list tag: {tag}")
+            WaBinaryConstants.Tags.List8 => ReadByte(),
+            WaBinaryConstants.Tags.List16 => ReadInt(2),
+            _ => throw new InvalidDataException($"Invalid list tag: {tag}")
         };
 
         string ReadJidPair()
@@ -170,10 +170,10 @@ public static class WaBinaryDecoder
             string user = ReadString(ReadByte());
             var server = (WaJidDomains)rawDomain switch
             {
-                WaJidDomains.Lid       => JidServer.Lid,
-                WaJidDomains.Hosted    => JidServer.Hosted,
+                WaJidDomains.Lid => JidServer.Lid,
+                WaJidDomains.Hosted => JidServer.Hosted,
                 WaJidDomains.HostedLid => JidServer.HostedLid,
-                _                      => JidServer.SWhatsappNet
+                _ => JidServer.SWhatsappNet
             };
             return JidUtils.JidEncode(user, server, device);
         }
@@ -207,16 +207,16 @@ public static class WaBinaryDecoder
                 WaBinaryConstants.Tags.Dictionary1 => GetTokenDouble(1, ReadByte()),
                 WaBinaryConstants.Tags.Dictionary2 => GetTokenDouble(2, ReadByte()),
                 WaBinaryConstants.Tags.Dictionary3 => GetTokenDouble(3, ReadByte()),
-                WaBinaryConstants.Tags.ListEmpty    => "",
-                WaBinaryConstants.Tags.Binary8      => ReadStringFromChars(ReadByte()),
-                WaBinaryConstants.Tags.Binary20     => ReadStringFromChars(ReadInt20()),
-                WaBinaryConstants.Tags.Binary32     => ReadStringFromChars(ReadInt(4)),
-                WaBinaryConstants.Tags.JidPair      => ReadJidPair(),
-                WaBinaryConstants.Tags.FbJid        => ReadFbJid(),
-                WaBinaryConstants.Tags.AdJid        => ReadAdJid(),
-                WaBinaryConstants.Tags.Nibble8      => ReadPacked8(tag),
-                WaBinaryConstants.Tags.Hex8         => ReadPacked8(tag),
-                _                                   => throw new InvalidDataException($"Invalid string tag: {tag}")
+                WaBinaryConstants.Tags.ListEmpty => "",
+                WaBinaryConstants.Tags.Binary8 => ReadStringFromChars(ReadByte()),
+                WaBinaryConstants.Tags.Binary20 => ReadStringFromChars(ReadInt20()),
+                WaBinaryConstants.Tags.Binary32 => ReadStringFromChars(ReadInt(4)),
+                WaBinaryConstants.Tags.JidPair => ReadJidPair(),
+                WaBinaryConstants.Tags.FbJid => ReadFbJid(),
+                WaBinaryConstants.Tags.AdJid => ReadAdJid(),
+                WaBinaryConstants.Tags.Nibble8 => ReadPacked8(tag),
+                WaBinaryConstants.Tags.Hex8 => ReadPacked8(tag),
+                _ => throw new InvalidDataException($"Invalid string tag: {tag}")
             };
         }
 
@@ -257,10 +257,10 @@ public static class WaBinaryDecoder
             {
                 content = tag switch
                 {
-                    WaBinaryConstants.Tags.Binary8  => new BinaryNodeBytes(ReadBytes(ReadByte())),
+                    WaBinaryConstants.Tags.Binary8 => new BinaryNodeBytes(ReadBytes(ReadByte())),
                     WaBinaryConstants.Tags.Binary20 => new BinaryNodeBytes(ReadBytes(ReadInt20())),
                     WaBinaryConstants.Tags.Binary32 => new BinaryNodeBytes(ReadBytes(ReadInt(4))),
-                    _                               => new BinaryNodeString(ReadString(tag))
+                    _ => new BinaryNodeString(ReadString(tag))
                 };
             }
         }

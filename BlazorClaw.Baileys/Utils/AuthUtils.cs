@@ -22,20 +22,20 @@ public static class AuthUtils
         var identityKey = GenerateKeyPair();
         return new AuthenticationCreds
         {
-            NoiseKey               = GenerateKeyPair(),
+            NoiseKey = GenerateKeyPair(),
             PairingEphemeralKeyPair = GenerateKeyPair(),
-            SignedIdentityKey       = identityKey,
-            SignedPreKey            = GenerateSignedPreKey(identityKey, 1),
-            RegistrationId         = Crypto.GenerateRegistrationId(),
-            AdvSecretKey           = Convert.ToBase64String(Crypto.RandomBytes(32)),
-            NextPreKeyId           = 1,
+            SignedIdentityKey = identityKey,
+            SignedPreKey = GenerateSignedPreKey(identityKey, 1),
+            RegistrationId = Crypto.GenerateRegistrationId(),
+            AdvSecretKey = Convert.ToBase64String(Crypto.RandomBytes(32)),
+            NextPreKeyId = 1,
             FirstUnuploadedPreKeyId = 1,
-            AccountSyncCounter     = 0,
-            Registered             = false,
-            PairingCode            = null,
-            LastPropHash           = null,
-            RoutingInfo            = null,
-            AccountSettings        = new AccountSettings { UnarchiveChats = false }
+            AccountSyncCounter = 0,
+            Registered = false,
+            PairingCode = null,
+            LastPropHash = null,
+            RoutingInfo = null,
+            AccountSettings = new AccountSettings { UnarchiveChats = false }
         };
     }
 
@@ -53,7 +53,7 @@ public static class AuthUtils
         // Use NSec's X25519 key generation
         var privateKeyBytes = Crypto.RandomBytes(32);
         // Clamp the private key per RFC 7748 §5
-        privateKeyBytes[0]  &= 248;
+        privateKeyBytes[0] &= 248;
         privateKeyBytes[31] &= 127;
         privateKeyBytes[31] |= 64;
 
@@ -69,7 +69,7 @@ public static class AuthUtils
     {
         // Clamp the private key per RFC 7748 §5
         var priv = (byte[])privateKey.Clone();
-        priv[0]  &= 248;
+        priv[0] &= 248;
         priv[31] &= 127;
         priv[31] |= 64;
         return Curve25519(priv, publicKey);
@@ -168,10 +168,10 @@ public static class AuthUtils
             if (cls is null) return MontgomeryLadder(k, u);
             dynamic agreement = Activator.CreateInstance(cls)!;
             var privType = Type.GetType("Org.BouncyCastle.Crypto.Parameters.X25519PrivateKeyParameters, BouncyCastle.Cryptography");
-            var pubType  = Type.GetType("Org.BouncyCastle.Crypto.Parameters.X25519PublicKeyParameters, BouncyCastle.Cryptography");
+            var pubType = Type.GetType("Org.BouncyCastle.Crypto.Parameters.X25519PublicKeyParameters, BouncyCastle.Cryptography");
             if (privType is null || pubType is null) return MontgomeryLadder(k, u);
             var privParam = Activator.CreateInstance(privType, k, 0);
-            var pubParam  = Activator.CreateInstance(pubType, u, 0);
+            var pubParam = Activator.CreateInstance(pubType, u, 0);
             agreement.Init(privParam);
             var result = new byte[32];
             agreement.CalculateAgreement(pubParam, result, 0);
@@ -217,13 +217,13 @@ public static class AuthUtils
             swap = bit;
 
             // Montgomery double-and-add
-            var a  = FieldAdd(x2, z2);
+            var a = FieldAdd(x2, z2);
             var aa = FieldMul(a, a);
-            var b  = FieldSub(x2, z2);
+            var b = FieldSub(x2, z2);
             var bb = FieldMul(b, b);
-            var e  = FieldSub(aa, bb);
-            var c  = FieldAdd(x3, z3);
-            var d  = FieldSub(x3, z3);
+            var e = FieldSub(aa, bb);
+            var c = FieldAdd(x3, z3);
+            var d = FieldSub(x3, z3);
             var da = FieldMul(d, a);
             var cb = FieldMul(c, b);
             x3 = FieldMul(FieldAdd(da, cb), FieldAdd(da, cb));
@@ -244,7 +244,7 @@ public static class AuthUtils
     // ── GF(2^255-19) field arithmetic (10×26-bit limbs) ──────
 
     private const int Limbs = 10;
-    private static long[] FieldOne()  { var r = new long[Limbs]; r[0] = 1; return r; }
+    private static long[] FieldOne() { var r = new long[Limbs]; r[0] = 1; return r; }
     private static long[] FieldZero() { return new long[Limbs]; }
     private static long[] FieldCopy(long[] a) { return (long[])a.Clone(); }
 
@@ -252,17 +252,17 @@ public static class AuthUtils
     {
         var r = new long[Limbs];
         // Each limb holds 25 or 26 bits, little-endian
-        r[0] = ((long)(b[0])        | ((long)b[1] << 8) | ((long)b[2] << 16) | ((long)(b[3] & 0x03) << 24));
-        r[1] = (((long)b[3] >>  2) | ((long)b[4] << 6) | ((long)b[5] << 14) | ((long)(b[6] & 0x07) << 22));
-        r[2] = (((long)b[6] >>  3) | ((long)b[7] << 5) | ((long)b[8] << 13) | ((long)(b[9] & 0x1F) << 21));
-        r[3] = (((long)b[9] >>  5) | ((long)b[10]<< 3) | ((long)b[11]<< 11) | ((long)(b[12]& 0x3F) << 19));
-        r[4] = (((long)b[12]>>  6) | ((long)b[13]<< 2) | ((long)b[14]<< 10) | ((long)(b[15]& 0x01) << 18) | ((long)(b[15]>>1 & 0x7F) << 19));
+        r[0] = ((long)(b[0]) | ((long)b[1] << 8) | ((long)b[2] << 16) | ((long)(b[3] & 0x03) << 24));
+        r[1] = (((long)b[3] >> 2) | ((long)b[4] << 6) | ((long)b[5] << 14) | ((long)(b[6] & 0x07) << 22));
+        r[2] = (((long)b[6] >> 3) | ((long)b[7] << 5) | ((long)b[8] << 13) | ((long)(b[9] & 0x1F) << 21));
+        r[3] = (((long)b[9] >> 5) | ((long)b[10] << 3) | ((long)b[11] << 11) | ((long)(b[12] & 0x3F) << 19));
+        r[4] = (((long)b[12] >> 6) | ((long)b[13] << 2) | ((long)b[14] << 10) | ((long)(b[15] & 0x01) << 18) | ((long)(b[15] >> 1 & 0x7F) << 19));
         // Simplified — continue for remaining limbs
-        r[5] = ((long)b[16]         | ((long)b[17] << 8) | ((long)b[18] << 16) | ((long)(b[19] & 0x03) << 24));
-        r[6] = (((long)b[19] >>  2) | ((long)b[20] << 6) | ((long)b[21] << 14) | ((long)(b[22] & 0x07) << 22));
-        r[7] = (((long)b[22] >>  3) | ((long)b[23] << 5) | ((long)b[24] << 13) | ((long)(b[25] & 0x1F) << 21));
-        r[8] = (((long)b[25] >>  5) | ((long)b[26] << 3) | ((long)b[27] << 11) | ((long)(b[28] & 0x3F) << 19));
-        r[9] = (((long)b[28] >>  6) | ((long)b[29] << 2) | ((long)b[30] << 10) | ((long)(b[31] & 0x7F) << 17));
+        r[5] = ((long)b[16] | ((long)b[17] << 8) | ((long)b[18] << 16) | ((long)(b[19] & 0x03) << 24));
+        r[6] = (((long)b[19] >> 2) | ((long)b[20] << 6) | ((long)b[21] << 14) | ((long)(b[22] & 0x07) << 22));
+        r[7] = (((long)b[22] >> 3) | ((long)b[23] << 5) | ((long)b[24] << 13) | ((long)(b[25] & 0x1F) << 21));
+        r[8] = (((long)b[25] >> 5) | ((long)b[26] << 3) | ((long)b[27] << 11) | ((long)(b[28] & 0x3F) << 19));
+        r[9] = (((long)b[28] >> 6) | ((long)b[29] << 2) | ((long)b[30] << 10) | ((long)(b[31] & 0x7F) << 17));
         return r;
     }
 
@@ -270,36 +270,36 @@ public static class AuthUtils
     {
         // Reduce and pack
         long[] s = ReduceField(h);
-        out32[0]  = (byte)(s[0]);
-        out32[1]  = (byte)(s[0] >>  8);
-        out32[2]  = (byte)(s[0] >> 16);
-        out32[3]  = (byte)((s[0] >> 24) | (s[1] << 2));
-        out32[4]  = (byte)(s[1] >>  6);
-        out32[5]  = (byte)(s[1] >> 14);
-        out32[6]  = (byte)((s[1] >> 22) | (s[2] << 3));
-        out32[7]  = (byte)(s[2] >>  5);
-        out32[8]  = (byte)(s[2] >> 13);
-        out32[9]  = (byte)((s[2] >> 21) | (s[3] << 5));
-        out32[10] = (byte)(s[3] >>  3);
+        out32[0] = (byte)(s[0]);
+        out32[1] = (byte)(s[0] >> 8);
+        out32[2] = (byte)(s[0] >> 16);
+        out32[3] = (byte)((s[0] >> 24) | (s[1] << 2));
+        out32[4] = (byte)(s[1] >> 6);
+        out32[5] = (byte)(s[1] >> 14);
+        out32[6] = (byte)((s[1] >> 22) | (s[2] << 3));
+        out32[7] = (byte)(s[2] >> 5);
+        out32[8] = (byte)(s[2] >> 13);
+        out32[9] = (byte)((s[2] >> 21) | (s[3] << 5));
+        out32[10] = (byte)(s[3] >> 3);
         out32[11] = (byte)(s[3] >> 11);
         out32[12] = (byte)((s[3] >> 19) | (s[4] << 6));
-        out32[13] = (byte)(s[4] >>  2);
+        out32[13] = (byte)(s[4] >> 2);
         out32[14] = (byte)(s[4] >> 10);
         out32[15] = (byte)(s[4] >> 18);
         out32[16] = (byte)(s[5]);
-        out32[17] = (byte)(s[5] >>  8);
+        out32[17] = (byte)(s[5] >> 8);
         out32[18] = (byte)(s[5] >> 16);
         out32[19] = (byte)((s[5] >> 24) | (s[6] << 2));
-        out32[20] = (byte)(s[6] >>  6);
+        out32[20] = (byte)(s[6] >> 6);
         out32[21] = (byte)(s[6] >> 14);
         out32[22] = (byte)((s[6] >> 22) | (s[7] << 3));
-        out32[23] = (byte)(s[7] >>  5);
+        out32[23] = (byte)(s[7] >> 5);
         out32[24] = (byte)(s[7] >> 13);
         out32[25] = (byte)((s[7] >> 21) | (s[8] << 5));
-        out32[26] = (byte)(s[8] >>  3);
+        out32[26] = (byte)(s[8] >> 3);
         out32[27] = (byte)(s[8] >> 11);
         out32[28] = (byte)((s[8] >> 19) | (s[9] << 6));
-        out32[29] = (byte)(s[9] >>  2);
+        out32[29] = (byte)(s[9] >> 2);
         out32[30] = (byte)(s[9] >> 10);
         out32[31] = (byte)(s[9] >> 18);
     }
@@ -310,16 +310,16 @@ public static class AuthUtils
         // Standard reduction for 10-limb representation
         for (int i = 0; i < 2; i++)
         {
-            r[1]  += r[0]  >> 26; r[0]  &= 0x3FFFFFF;
-            r[2]  += r[1]  >> 25; r[1]  &= 0x1FFFFFF;
-            r[3]  += r[2]  >> 26; r[2]  &= 0x3FFFFFF;
-            r[4]  += r[3]  >> 25; r[3]  &= 0x1FFFFFF;
-            r[5]  += r[4]  >> 26; r[4]  &= 0x3FFFFFF;
-            r[6]  += r[5]  >> 25; r[5]  &= 0x1FFFFFF;
-            r[7]  += r[6]  >> 26; r[6]  &= 0x3FFFFFF;
-            r[8]  += r[7]  >> 25; r[7]  &= 0x1FFFFFF;
-            r[9]  += r[8]  >> 26; r[8]  &= 0x3FFFFFF;
-            r[0]  += 19 * (r[9] >> 25); r[9] &= 0x1FFFFFF;
+            r[1] += r[0] >> 26; r[0] &= 0x3FFFFFF;
+            r[2] += r[1] >> 25; r[1] &= 0x1FFFFFF;
+            r[3] += r[2] >> 26; r[2] &= 0x3FFFFFF;
+            r[4] += r[3] >> 25; r[3] &= 0x1FFFFFF;
+            r[5] += r[4] >> 26; r[4] &= 0x3FFFFFF;
+            r[6] += r[5] >> 25; r[5] &= 0x1FFFFFF;
+            r[7] += r[6] >> 26; r[6] &= 0x3FFFFFF;
+            r[8] += r[7] >> 25; r[7] &= 0x1FFFFFF;
+            r[9] += r[8] >> 26; r[8] &= 0x3FFFFFF;
+            r[0] += 19 * (r[9] >> 25); r[9] &= 0x1FFFFFF;
         }
         return r;
     }
@@ -346,13 +346,13 @@ public static class AuthUtils
     private static long[] FieldInvert(long[] z)
     {
         // z^(p-2) via repeated squaring
-        long[] z2  = FieldMul(z, z);
-        long[] z4  = FieldMul(z2, z2);
-        long[] z8  = FieldMul(z4, z4);
-        long[] z9  = FieldMul(z8, z);
+        long[] z2 = FieldMul(z, z);
+        long[] z4 = FieldMul(z2, z2);
+        long[] z8 = FieldMul(z4, z4);
+        long[] z9 = FieldMul(z8, z);
         long[] z11 = FieldMul(z9, z2);
         long[] z22 = FieldMul(z11, z11);
-        long[] z_5_0  = FieldMul(z22, z9);
+        long[] z_5_0 = FieldMul(z22, z9);
         long[] t = z_5_0;
         for (int i = 0; i < 5; i++) { t = FieldMul(t, t); }
         t = FieldMul(t, z_5_0);

@@ -288,13 +288,13 @@ public static class SignalKeyStoreExtensions
             if (Public is null || Private is null)
                 return null;
             return new KeyPair(
-                Public:  Convert.FromBase64String(Public),
+                Public: Convert.FromBase64String(Public),
                 Private: Convert.FromBase64String(Private));
         }
 
         public static KeyPairDto From(KeyPair kp) => new()
         {
-            Public  = Convert.ToBase64String(kp.Public),
+            Public = Convert.ToBase64String(kp.Public),
             Private = Convert.ToBase64String(kp.Private)
         };
     }

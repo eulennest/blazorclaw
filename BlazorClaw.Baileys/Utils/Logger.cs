@@ -41,7 +41,7 @@ public sealed class NullLogger : ILogger
     public void Warn(object _, string? __ = null) { }
     public void Error(object _, string? __ = null) { }
 
-    public void Exception(Exception ex) {  }
+    public void Exception(Exception ex) { }
 }
 
 /// <summary>
@@ -72,8 +72,8 @@ public sealed class ConsoleLogger : ILogger
 
     public void Trace(object msg, string? t = null) => Log("trace", msg, t);
     public void Debug(object msg, string? t = null) => Log("debug", msg, t);
-    public void Info(object msg, string? t = null)  => Log("info",  msg, t);
-    public void Warn(object msg, string? t = null)  => Log("warn",  msg, t);
+    public void Info(object msg, string? t = null) => Log("info", msg, t);
+    public void Warn(object msg, string? t = null) => Log("warn", msg, t);
     public void Error(object msg, string? t = null) => Log("error", msg, t);
 
     private void Log(string level, object message, string? template)

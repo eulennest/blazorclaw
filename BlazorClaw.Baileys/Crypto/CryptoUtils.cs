@@ -1,7 +1,6 @@
 using Baileys.Crypto;
 using Baileys.Types;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace BlazorClaw.WhatsApp.Crypto
 {
@@ -130,14 +129,14 @@ namespace BlazorClaw.WhatsApp.Crypto
         public static byte[] DeriveNonce(uint counter)
         {
             var nonce = new byte[NONCE_LENGTH];
-            
+
             // Write counter as big-endian 32-bit integer at offset 4
             var counterBytes = BitConverter.GetBytes(counter);
             if (BitConverter.IsLittleEndian)
                 Array.Reverse(counterBytes);
-            
+
             Array.Copy(counterBytes, 0, nonce, 0, 4);
-            
+
             return nonce;
         }
 
@@ -172,7 +171,7 @@ namespace BlazorClaw.WhatsApp.Crypto
             var rawPubKey = publicKey.Length == 33 && publicKey[0] == 0x05
                 ? publicKey[1..]
                 : publicKey;
-            
+
             return Curve25519Utils.CalculateAgreement(privateKey, rawPubKey);
         }
     }

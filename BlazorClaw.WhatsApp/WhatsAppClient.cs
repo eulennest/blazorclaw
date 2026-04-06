@@ -19,26 +19,17 @@ namespace BlazorClaw.WhatsApp
     {
         private readonly MsILogger? _logger;
         private readonly IAuthStateProvider _authStateProvider;
-        private readonly IBaileysEventEmitter _ev;
         private BaileysSocket? _socket;
 
         public event EventHandler<ConnectionUpdateEventArgs>? OnConnectionUpdate;
         public event EventHandler<QrCodeEventArgs>? OnQRCode;
         public event EventHandler<MessageReceiveEventArgs>? OnMessage;
 
-        public WhatsAppClient(WhatsAppConfig config, MsILogger logger, IBaileysEventEmitter ev)
+        public WhatsAppClient(WhatsAppConfig config, MsILogger logger)
         {
             _logger = logger;
             _authStateProvider = new DirectoryAuthStateProvider(Path.Combine("whatsapp_auth", config.AccountId));
-            _ev = ev ?? new BaileysEventEmitter();
-            // Subscribe to connection updates to automatically log the QR code if configured
-            _ev.On<ConnectionUpdateEvent>("connection.update", ConnectionUpdate);
         }
-
-        /// <summary>
-        /// Returns the event emitter for this client.
-        /// </summary>
-        public IBaileysEventEmitter Ev => _ev;
 
         /// <summary>
         /// Initiates a connection to WhatsApp.
@@ -47,27 +38,26 @@ namespace BlazorClaw.WhatsApp
         {
             var authState = await _authStateProvider.LoadAuthStateAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 
-            _socket = new BaileysSocket(authState, _ev, new MsLogger(_logger));
-
+            _socket = new BaileysSocket(authState, new MsLogger(_logger));
+            _socket.ConnectionUpdate += Socket_ConnectionUpdate;
             await _socket.ConnectAsync(BaileysDefaults.WaWebSocketUrl, cancellationToken).ConfigureAwait(false);
         }
 
-        protected virtual void ConnectionUpdate(ConnectionUpdateEvent update)
+        private void Socket_ConnectionUpdate(object? sender, Baileys.Types.ConnectionUpdateEventArgs update)
         {
-            OnConnectionUpdate?.Invoke(this, new(update.Connection?.ToString()?.ToLower() ?? string.Empty));
-
-            if (update.Connection == WaConnectionState.Open)
+            OnConnectionUpdate?.Invoke(this, update);
+            if (!string.IsNullOrWhiteSpace(update.Qr))
+            {
+                _logger?.LogInformation("📱 QR Code received: {Qr}", update.Qr);
+                OnQRCode?.Invoke(this, new(update.Qr));
+            }
+            else if (update.Connection == WaConnectionState.Open)
             {
                 _logger?.LogInformation("✅ Connected to WhatsApp!");
             }
             else if (update.Connection == WaConnectionState.Close)
             {
                 _logger?.LogWarning("❌ Disconnected from WhatsApp.");
-            }
-            else if (!string.IsNullOrWhiteSpace(update.Qr))
-            {
-                _logger?.LogInformation("📱 QR Code received: {Qr}", update.Qr);
-                OnQRCode?.Invoke(this, new(update.Qr));
             }
         }
 
@@ -116,14 +106,8 @@ public class QrCodeEventArgs : EventArgs
         QrData = qrData;
     }
 }
-public class ConnectionUpdateEventArgs : EventArgs
-{
-    public string Status { get; }
-    public ConnectionUpdateEventArgs(string status)
-    {
-        Status = status;
-    }
-}
+
+
 public class MessageReceiveEventArgs : EventArgs
 {
     public string From { get; }

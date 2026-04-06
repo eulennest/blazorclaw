@@ -58,7 +58,7 @@ public static class QrUtils
     /// </exception>
     public static bool[,] Generate(string text)
     {
-        var data    = Encoding.UTF8.GetBytes(text);
+        var data = Encoding.UTF8.GetBytes(text);
         int version = ChooseVersion(data.Length);
         if (version < 0)
             throw new ArgumentException(
@@ -66,8 +66,8 @@ public static class QrUtils
                 "is 271 UTF-8 bytes (version 10, L error correction).",
                 nameof(text));
 
-        int size     = QrSize(version);
-        var matrix   = new bool[size, size];
+        int size = QrSize(version);
+        var matrix = new bool[size, size];
         var reserved = new bool[size, size];
 
         PlaceFinderPatterns(matrix, reserved, size);
@@ -93,11 +93,11 @@ public static class QrUtils
     /// </summary>
     public static string RenderToAscii(bool[,] matrix)
     {
-        int size      = matrix.GetLength(0);
+        int size = matrix.GetLength(0);
         const int border = 4;
         int lineWidth = (size + border * 2) * 2;
-        var blank     = new string(' ', lineWidth);
-        var sb        = new StringBuilder();
+        var blank = new string(' ', lineWidth);
+        var sb = new StringBuilder();
 
         for (int i = 0; i < border; i++) sb.AppendLine(blank);
 
@@ -156,7 +156,7 @@ public static class QrUtils
     {
         var (ec, nb1, dc1, nb2, dc2) = EcParamsL[version - 1];
         int totalDataCw = nb1 * dc1 + nb2 * dc2;
-        int maxBits     = totalDataCw * 8;
+        int maxBits = totalDataCw * 8;
 
         // ── Encode data into a flat bit array ────────────────────────────────
         var bits = new List<int>(maxBits);
@@ -216,7 +216,7 @@ public static class QrUtils
         }
 
         // ── Interleave data then EC codewords ────────────────────────────────
-        int maxDc  = dc2 > dc1 ? dc2 : dc1;
+        int maxDc = dc2 > dc1 ? dc2 : dc1;
         var result = new List<byte>(totalDataCw + (nb1 + nb2) * ec);
 
         for (int i = 0; i < maxDc; i++)
@@ -304,22 +304,22 @@ public static class QrUtils
         void PlaceFinder(int row, int col)
         {
             for (int dr = -1; dr <= 7; dr++)
-            for (int dc = -1; dc <= 7; dc++)
-            {
-                int r = row + dr, c = col + dc;
-                if ((uint)r >= (uint)size || (uint)c >= (uint)size) continue;
-                res[r, c] = true;
-                if ((uint)dr <= 6u && (uint)dc <= 6u)
-                    // Outer ring (dr/dc == 0 or 6) or centre 3×3 are dark.
-                    m[r, c] = dr == 0 || dr == 6 || dc == 0 || dc == 6
-                           || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4);
-                else
-                    m[r, c] = false; // separator is always light
-            }
+                for (int dc = -1; dc <= 7; dc++)
+                {
+                    int r = row + dr, c = col + dc;
+                    if ((uint)r >= (uint)size || (uint)c >= (uint)size) continue;
+                    res[r, c] = true;
+                    if ((uint)dr <= 6u && (uint)dc <= 6u)
+                        // Outer ring (dr/dc == 0 or 6) or centre 3×3 are dark.
+                        m[r, c] = dr == 0 || dr == 6 || dc == 0 || dc == 6
+                               || (dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4);
+                    else
+                        m[r, c] = false; // separator is always light
+                }
         }
 
-        PlaceFinder(0,        0);         // top-left
-        PlaceFinder(0,        size - 7);  // top-right
+        PlaceFinder(0, 0);         // top-left
+        PlaceFinder(0, size - 7);  // top-right
         PlaceFinder(size - 7, 0);         // bottom-left
     }
 
@@ -339,28 +339,28 @@ public static class QrUtils
 
         int[] pos = AlignPos[version - 1];
         foreach (int ar in pos)
-        foreach (int ac in pos)
-        {
-            // Skip positions whose centre would overlap a finder pattern area.
-            if (ar <= 8 && ac <= 8)        continue; // top-left
-            if (ar <= 8 && ac >= size - 9) continue; // top-right
-            if (ar >= size - 9 && ac <= 8) continue; // bottom-left
-
-            // Place 5×5 alignment pattern centred at (ar, ac).
-            for (int dr = -2; dr <= 2; dr++)
-            for (int dc = -2; dc <= 2; dc++)
+            foreach (int ac in pos)
             {
-                bool dark = dr == -2 || dr == 2 || dc == -2 || dc == 2
-                         || (dr == 0 && dc == 0);
-                m[ar + dr, ac + dc]   = dark;
-                res[ar + dr, ac + dc] = true;
+                // Skip positions whose centre would overlap a finder pattern area.
+                if (ar <= 8 && ac <= 8) continue; // top-left
+                if (ar <= 8 && ac >= size - 9) continue; // top-right
+                if (ar >= size - 9 && ac <= 8) continue; // bottom-left
+
+                // Place 5×5 alignment pattern centred at (ar, ac).
+                for (int dr = -2; dr <= 2; dr++)
+                    for (int dc = -2; dc <= 2; dc++)
+                    {
+                        bool dark = dr == -2 || dr == 2 || dc == -2 || dc == 2
+                                 || (dr == 0 && dc == 0);
+                        m[ar + dr, ac + dc] = dark;
+                        res[ar + dr, ac + dc] = true;
+                    }
             }
-        }
     }
 
     private static void PlaceDarkModule(bool[,] m, bool[,] res, int size)
     {
-        m[size - 8, 8]   = true;
+        m[size - 8, 8] = true;
         res[size - 8, 8] = true;
     }
 
@@ -381,12 +381,12 @@ public static class QrUtils
     private static void PlaceDataBits(bool[,] m, bool[,] res, byte[] codewords, int size)
     {
         int totalBits = codewords.Length * 8;
-        var bits      = new bool[totalBits];
+        var bits = new bool[totalBits];
         for (int i = 0; i < codewords.Length; i++)
             for (int j = 0; j < 8; j++)
                 bits[i * 8 + j] = ((codewords[i] >> (7 - j)) & 1) == 1;
 
-        int  bitIdx = 0;
+        int bitIdx = 0;
         bool upward = true;
 
         // Traverse two columns at a time from right to left.
@@ -414,17 +414,17 @@ public static class QrUtils
 
     private static int ChooseBestMask(bool[,] m, bool[,] res, int size)
     {
-        int  bestMask  = 0;
-        int  bestScore = int.MaxValue;
-        var  temp      = new bool[size, size];
+        int bestMask = 0;
+        int bestScore = int.MaxValue;
+        var temp = new bool[size, size];
 
         for (int mask = 0; mask < 8; mask++)
         {
             Array.Copy(m, temp, m.Length);
             for (int r = 0; r < size; r++)
-            for (int c = 0; c < size; c++)
-                if (!res[r, c] && MaskCondition(mask, r, c))
-                    temp[r, c] = !temp[r, c];
+                for (int c = 0; c < size; c++)
+                    if (!res[r, c] && MaskCondition(mask, r, c))
+                        temp[r, c] = !temp[r, c];
 
             int score = PenaltyScore(temp, size);
             if (score < bestScore) { bestScore = score; bestMask = mask; }
@@ -435,9 +435,9 @@ public static class QrUtils
     private static void ApplyMask(bool[,] m, bool[,] res, int mask, int size)
     {
         for (int r = 0; r < size; r++)
-        for (int c = 0; c < size; c++)
-            if (!res[r, c] && MaskCondition(mask, r, c))
-                m[r, c] = !m[r, c];
+            for (int c = 0; c < size; c++)
+                if (!res[r, c] && MaskCondition(mask, r, c))
+                    m[r, c] = !m[r, c];
     }
 
     private static bool MaskCondition(int mask, int r, int c) => mask switch
@@ -461,14 +461,14 @@ public static class QrUtils
         for (int i = 0; i < size; i++)
         {
             score += RunPenalty(i, size, isCol: false, m);
-            score += RunPenalty(i, size, isCol: true,  m);
+            score += RunPenalty(i, size, isCol: true, m);
         }
 
         // Rule 2: 2×2 blocks of same colour (+3 each).
         for (int r = 0; r < size - 1; r++)
-        for (int c = 0; c < size - 1; c++)
-            if (m[r, c] == m[r, c + 1] && m[r, c] == m[r + 1, c] && m[r, c] == m[r + 1, c + 1])
-                score += 3;
+            for (int c = 0; c < size - 1; c++)
+                if (m[r, c] == m[r, c + 1] && m[r, c] == m[r + 1, c] && m[r, c] == m[r + 1, c + 1])
+                    score += 3;
 
         // Rule 3: 1:1:3:1:1 finder-like patterns (+40 each).
         bool[] fwdPat = [true, false, true, true, true, false, true, false, false, false, false];
@@ -477,15 +477,15 @@ public static class QrUtils
         {
             score += FinderPatternCount(i, size, isCol: false, m, fwdPat) * 40;
             score += FinderPatternCount(i, size, isCol: false, m, revPat) * 40;
-            score += FinderPatternCount(i, size, isCol: true,  m, fwdPat) * 40;
-            score += FinderPatternCount(i, size, isCol: true,  m, revPat) * 40;
+            score += FinderPatternCount(i, size, isCol: true, m, fwdPat) * 40;
+            score += FinderPatternCount(i, size, isCol: true, m, revPat) * 40;
         }
 
         // Rule 4: dark-module proportion penalty.
         int dark = 0;
         for (int r = 0; r < size; r++)
-        for (int c = 0; c < size; c++)
-            if (m[r, c]) dark++;
+            for (int c = 0; c < size; c++)
+                if (m[r, c]) dark++;
         int k = Math.Abs(dark * 20 / (size * size) - 10);
         score += k * 10;
 
@@ -494,8 +494,8 @@ public static class QrUtils
 
     private static int RunPenalty(int idx, int size, bool isCol, bool[,] m)
     {
-        int  score = 0, run = 1;
-        bool last  = isCol ? m[0, idx] : m[idx, 0];
+        int score = 0, run = 1;
+        bool last = isCol ? m[0, idx] : m[idx, 0];
         for (int i = 1; i < size; i++)
         {
             bool cur = isCol ? m[i, idx] : m[idx, i];
@@ -545,8 +545,8 @@ public static class QrUtils
         for (int i = 9; i <= 14; i++) m[14 - i, 8] = Bit(i); // bits 9–14 → rows 5..0, col 8
 
         // Second copy near the top-right and bottom-left finder patterns:
-        for (int i = 0;  i <= 7;  i++) m[size - 1 - i, 8] = Bit(i);  // bits 0–7  → col 8
-        for (int i = 8;  i <= 14; i++) m[8, size - 15 + i] = Bit(i);  // bits 8–14 → row 8
+        for (int i = 0; i <= 7; i++) m[size - 1 - i, 8] = Bit(i);  // bits 0–7  → col 8
+        for (int i = 8; i <= 14; i++) m[8, size - 15 + i] = Bit(i);  // bits 8–14 → row 8
         m[size - 8, 8] = true; // dark module is always dark (restores bit 7's overwrite)
     }
 

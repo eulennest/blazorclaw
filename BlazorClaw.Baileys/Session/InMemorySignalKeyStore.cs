@@ -1,5 +1,5 @@
-using System.Collections.Concurrent;
 using Baileys.Types;
+using System.Collections.Concurrent;
 
 namespace Baileys.Session;
 

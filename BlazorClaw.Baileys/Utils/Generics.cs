@@ -1,6 +1,4 @@
-using System.Security.Cryptography;
 using System.Text;
-using Baileys.Types;
 
 namespace Baileys.Utils;
 
@@ -204,4 +202,5 @@ public static class Generics
     /// </summary>
     public static bool IsWaBusinessPlatform(string platform)
         => platform is "smbi" or "smba";
+
 }

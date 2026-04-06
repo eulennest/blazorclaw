@@ -183,7 +183,7 @@ public sealed class DirectorySignalKeyStore : ISignalKeyStore
         sanitizedId = new string(chars);
 
         var candidate = Path.GetFullPath(Path.Combine(Directory, $"{type}-{sanitizedId}"));
-        var dirRoot   = Path.GetFullPath(Directory);
+        var dirRoot = Path.GetFullPath(Directory);
 
         // Guard against any residual path traversal: the candidate must be a
         // direct child of dirRoot, not equal to it and not outside it.

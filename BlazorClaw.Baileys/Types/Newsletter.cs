@@ -7,35 +7,35 @@ namespace Baileys.Types;
 /// <summary>GraphQL XWA path constants for newsletter operations.</summary>
 public static class XWaPaths
 {
-    public const string Create         = "xwa2_newsletter_create";
-    public const string Subscribers    = "xwa2_newsletter_subscribers";
-    public const string View           = "xwa2_newsletter_view";
-    public const string Metadata       = "xwa2_newsletter";
-    public const string AdminCount     = "xwa2_newsletter_admin";
-    public const string MuteV2         = "xwa2_newsletter_mute_v2";
-    public const string UnmuteV2       = "xwa2_newsletter_unmute_v2";
-    public const string Follow         = "xwa2_newsletter_follow";
-    public const string Unfollow       = "xwa2_newsletter_unfollow";
-    public const string ChangeOwner    = "xwa2_newsletter_change_owner";
-    public const string Demote         = "xwa2_newsletter_demote";
-    public const string DeleteV2       = "xwa2_newsletter_delete_v2";
+    public const string Create = "xwa2_newsletter_create";
+    public const string Subscribers = "xwa2_newsletter_subscribers";
+    public const string View = "xwa2_newsletter_view";
+    public const string Metadata = "xwa2_newsletter";
+    public const string AdminCount = "xwa2_newsletter_admin";
+    public const string MuteV2 = "xwa2_newsletter_mute_v2";
+    public const string UnmuteV2 = "xwa2_newsletter_unmute_v2";
+    public const string Follow = "xwa2_newsletter_follow";
+    public const string Unfollow = "xwa2_newsletter_unfollow";
+    public const string ChangeOwner = "xwa2_newsletter_change_owner";
+    public const string Demote = "xwa2_newsletter_demote";
+    public const string DeleteV2 = "xwa2_newsletter_delete_v2";
 }
 
 /// <summary>Internal GraphQL query IDs for newsletter operations.</summary>
 public static class NewsletterQueryIds
 {
-    public const string Create        = "8823471724422422";
+    public const string Create = "8823471724422422";
     public const string UpdateMetadata = "24250201037901610";
-    public const string Metadata      = "6563316087068696";
-    public const string Subscribers   = "9783111038412085";
-    public const string Follow        = "7871414976211147";
-    public const string Unfollow      = "7238632346214362";
-    public const string Mute          = "29766401636284406";
-    public const string Unmute        = "9864994326891137";
-    public const string AdminCount    = "7130823597031706";
-    public const string ChangeOwner   = "7341777602580933";
-    public const string Demote        = "6551828931592903";
-    public const string Delete        = "30062808666639665";
+    public const string Metadata = "6563316087068696";
+    public const string Subscribers = "9783111038412085";
+    public const string Follow = "7871414976211147";
+    public const string Unfollow = "7238632346214362";
+    public const string Mute = "29766401636284406";
+    public const string Unmute = "9864994326891137";
+    public const string AdminCount = "7130823597031706";
+    public const string ChangeOwner = "7341777602580933";
+    public const string Demote = "6551828931592903";
+    public const string Delete = "30062808666639665";
 }
 
 // ──────────────────────────────────────────────────────────────────────────────

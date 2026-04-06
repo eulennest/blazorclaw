@@ -1,11 +1,11 @@
-using Baileys.Session;
-using Baileys.Types;
-using Baileys.Utils;
-using Baileys.Options;
-using Baileys.Socket;
-using Microsoft.Extensions.Options;
 using Baileys.Defaults;
 using Baileys.Extensions;
+using Baileys.Options;
+using Baileys.Session;
+using Baileys.Socket;
+using Baileys.Types;
+using Baileys.Utils;
+using Microsoft.Extensions.Options;
 
 namespace Baileys;
 
@@ -33,8 +33,6 @@ public class BaileysClient : IAsyncDisposable
         _options = options.Value;
         _logger = logger.Child(new Dictionary<string, object> { ["class"] = "client" });
 
-        // Subscribe to connection updates to automatically log the QR code if configured
-        _ev.On<ConnectionUpdateEvent>("connection.update", OnConnectionUpdate);
     }
 
     /// <summary>
@@ -48,13 +46,13 @@ public class BaileysClient : IAsyncDisposable
     public virtual async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         var authState = await _authStateProvider.LoadAuthStateAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-        
-        _socket = new BaileysSocket(authState, _ev, _logger);
-        
+
+        _socket = new BaileysSocket(authState, _logger);
+
         await _socket.ConnectAsync(BaileysDefaults.WaWebSocketUrl, cancellationToken).ConfigureAwait(false);
     }
 
-    protected virtual void OnConnectionUpdate(ConnectionUpdateEvent update)
+    protected virtual void OnConnectionUpdate(ConnectionUpdateEventArgs update)
     {
         if (_options.PrintQrInTerminal && update.Qr is string qr)
         {

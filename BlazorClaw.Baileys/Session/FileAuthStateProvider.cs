@@ -1,7 +1,7 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Baileys.Types;
 using Baileys.Utils;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Baileys.Session;
 
@@ -128,42 +128,42 @@ public sealed class FileAuthStateProvider : IAuthStateProvider
 
         public AuthenticationCreds ToAuthenticationCreds() => new()
         {
-            NoiseKey                = NoiseKey?.ToKeyPair()                 ?? new KeyPair([], []),
-            PairingEphemeralKeyPair = PairingEphemeralKeyPair?.ToKeyPair()  ?? new KeyPair([], []),
-            AdvSecretKey            = AdvSecretKey                          ?? string.Empty,
-            SignedIdentityKey       = SignedIdentityKey?.ToKeyPair()        ?? new KeyPair([], []),
-            SignedPreKey            = SignedPreKey?.ToSignedKeyPair()       ?? new SignedKeyPair(new KeyPair([], []), [], 0),
-            RegistrationId          = RegistrationId,
+            NoiseKey = NoiseKey?.ToKeyPair() ?? new KeyPair([], []),
+            PairingEphemeralKeyPair = PairingEphemeralKeyPair?.ToKeyPair() ?? new KeyPair([], []),
+            AdvSecretKey = AdvSecretKey ?? string.Empty,
+            SignedIdentityKey = SignedIdentityKey?.ToKeyPair() ?? new KeyPair([], []),
+            SignedPreKey = SignedPreKey?.ToSignedKeyPair() ?? new SignedKeyPair(new KeyPair([], []), [], 0),
+            RegistrationId = RegistrationId,
             FirstUnuploadedPreKeyId = FirstUnuploadedPreKeyId,
-            NextPreKeyId            = NextPreKeyId,
-            AccountSyncCounter      = AccountSyncCounter,
-            Registered              = Registered,
-            PairingCode             = PairingCode,
-            LastPropHash            = LastPropHash,
-            RoutingInfo             = RoutingInfo is null ? null : Convert.FromBase64String(RoutingInfo),
+            NextPreKeyId = NextPreKeyId,
+            AccountSyncCounter = AccountSyncCounter,
+            Registered = Registered,
+            PairingCode = PairingCode,
+            LastPropHash = LastPropHash,
+            RoutingInfo = RoutingInfo is null ? null : Convert.FromBase64String(RoutingInfo),
             LastAccountSyncTimestamp = LastAccountSyncTimestamp,
-            Platform                = Platform,
-            AccountSettings         = AccountSettings?.ToAccountSettings() ?? new AccountSettings()
+            Platform = Platform,
+            AccountSettings = AccountSettings?.ToAccountSettings() ?? new AccountSettings()
         };
 
         public static AuthCredsDto FromAuthenticationCreds(AuthenticationCreds c) => new()
         {
-            NoiseKey                = KeyPairDto.FromKeyPair(c.NoiseKey),
+            NoiseKey = KeyPairDto.FromKeyPair(c.NoiseKey),
             PairingEphemeralKeyPair = KeyPairDto.FromKeyPair(c.PairingEphemeralKeyPair),
-            AdvSecretKey            = c.AdvSecretKey,
-            SignedIdentityKey       = KeyPairDto.FromKeyPair(c.SignedIdentityKey),
-            SignedPreKey            = SignedKeyPairDto.FromSignedKeyPair(c.SignedPreKey),
-            RegistrationId          = c.RegistrationId,
+            AdvSecretKey = c.AdvSecretKey,
+            SignedIdentityKey = KeyPairDto.FromKeyPair(c.SignedIdentityKey),
+            SignedPreKey = SignedKeyPairDto.FromSignedKeyPair(c.SignedPreKey),
+            RegistrationId = c.RegistrationId,
             FirstUnuploadedPreKeyId = c.FirstUnuploadedPreKeyId,
-            NextPreKeyId            = c.NextPreKeyId,
-            AccountSyncCounter      = c.AccountSyncCounter,
-            Registered              = c.Registered,
-            PairingCode             = c.PairingCode,
-            LastPropHash            = c.LastPropHash,
-            RoutingInfo             = c.RoutingInfo is null ? null : Convert.ToBase64String(c.RoutingInfo),
+            NextPreKeyId = c.NextPreKeyId,
+            AccountSyncCounter = c.AccountSyncCounter,
+            Registered = c.Registered,
+            PairingCode = c.PairingCode,
+            LastPropHash = c.LastPropHash,
+            RoutingInfo = c.RoutingInfo is null ? null : Convert.ToBase64String(c.RoutingInfo),
             LastAccountSyncTimestamp = c.LastAccountSyncTimestamp,
-            Platform                = c.Platform,
-            AccountSettings         = AccountSettingsDto.FromAccountSettings(c.AccountSettings)
+            Platform = c.Platform,
+            AccountSettings = AccountSettingsDto.FromAccountSettings(c.AccountSettings)
         };
     }
 
@@ -173,12 +173,12 @@ public sealed class FileAuthStateProvider : IAuthStateProvider
         public string? Private { get; set; }
 
         public KeyPair ToKeyPair() => new(
-            Public:  Public  is null ? [] : Convert.FromBase64String(Public),
+            Public: Public is null ? [] : Convert.FromBase64String(Public),
             Private: Private is null ? [] : Convert.FromBase64String(Private));
 
         public static KeyPairDto FromKeyPair(KeyPair kp) => new()
         {
-            Public  = Convert.ToBase64String(kp.Public),
+            Public = Convert.ToBase64String(kp.Public),
             Private = Convert.ToBase64String(kp.Private)
         };
     }
@@ -191,16 +191,16 @@ public sealed class FileAuthStateProvider : IAuthStateProvider
         public long? TimestampSeconds { get; set; }
 
         public SignedKeyPair ToSignedKeyPair() => new(
-            KeyPair:          KeyPair?.ToKeyPair() ?? new KeyPair([], []),
-            Signature:        Signature is null ? [] : Convert.FromBase64String(Signature),
-            KeyId:            KeyId,
+            KeyPair: KeyPair?.ToKeyPair() ?? new KeyPair([], []),
+            Signature: Signature is null ? [] : Convert.FromBase64String(Signature),
+            KeyId: KeyId,
             TimestampSeconds: TimestampSeconds);
 
         public static SignedKeyPairDto FromSignedKeyPair(SignedKeyPair skp) => new()
         {
-            KeyPair          = KeyPairDto.FromKeyPair(skp.KeyPair),
-            Signature        = Convert.ToBase64String(skp.Signature),
-            KeyId            = skp.KeyId,
+            KeyPair = KeyPairDto.FromKeyPair(skp.KeyPair),
+            Signature = Convert.ToBase64String(skp.Signature),
+            KeyId = skp.KeyId,
             TimestampSeconds = skp.TimestampSeconds
         };
     }

@@ -9,7 +9,7 @@ namespace Baileys.Types;
 // IBaileysEventEmitter interface (see Utils/EventEmitter.cs).
 
 /// <summary>Payload for <c>connection.update</c>.</summary>
-public sealed class ConnectionUpdateEvent
+public sealed class ConnectionUpdateEventArgs : EventArgs
 {
     public WaConnectionState? Connection { get; init; }
     public LastDisconnectInfo? LastDisconnect { get; init; }
@@ -33,14 +33,14 @@ public sealed class MessagingHistorySetEvent
 }
 
 /// <summary>Payload for <c>presence.update</c>.</summary>
-public sealed class PresenceUpdateEvent
+public sealed class PresenceUpdateEventArgs : EventArgs
 {
     public required string Id { get; init; }
     public required Dictionary<string, PresenceData> Presences { get; init; }
 }
 
 /// <summary>Payload for <c>messages.delete</c>.</summary>
-public sealed class MessagesDeleteEvent
+public sealed class MessagesDeleteEventArgs : EventArgs
 {
     /// <summary>Specific message keys to delete, or null when <see cref="All"/> is set.</summary>
     public IReadOnlyList<WaMessageKey>? Keys { get; init; }
@@ -53,7 +53,7 @@ public sealed class MessagesDeleteEvent
 }
 
 /// <summary>A single message update entry.</summary>
-public sealed class WaMessageUpdate
+public sealed class WaMessageUpdateEventArgs : EventArgs
 {
     public required WaMessageKey Key { get; init; }
     public required MessageUpdatePayload Update { get; init; }
@@ -67,7 +67,7 @@ public sealed class MessageUpdatePayload
 }
 
 /// <summary>Payload for a media update on a message.</summary>
-public sealed class MessageMediaUpdate
+public sealed class MessageMediaUpdateEventArgs : EventArgs
 {
     public required WaMessageKey Key { get; init; }
     public MessageMediaPayload? Media { get; init; }
@@ -82,7 +82,7 @@ public sealed class MessageMediaPayload
 }
 
 /// <summary>Payload for <c>messages.upsert</c>.</summary>
-public sealed class MessagesUpsertEvent
+public sealed class MessagesUpsertEventArgs : EventArgs
 {
     public IReadOnlyList<MinimalMessage> Messages { get; init; } = [];
     public MessageUpsertType Type { get; init; }
@@ -90,7 +90,7 @@ public sealed class MessagesUpsertEvent
 }
 
 /// <summary>A reaction on a message.</summary>
-public sealed class MessageReaction
+public sealed class MessageReactionEventArgs : EventArgs
 {
     public required WaMessageKey Key { get; init; }
     public string? ReactionText { get; init; }
@@ -98,7 +98,7 @@ public sealed class MessageReaction
 }
 
 /// <summary>Payload for <c>group-participants.update</c>.</summary>
-public sealed class GroupParticipantsUpdateEvent
+public sealed class GroupParticipantsUpdateEventArgs : EventArgs
 {
     public required string Id { get; init; }
     public required string Author { get; init; }
@@ -108,7 +108,7 @@ public sealed class GroupParticipantsUpdateEvent
 }
 
 /// <summary>Payload for <c>group.join-request</c>.</summary>
-public sealed class GroupJoinRequestEvent
+public sealed class GroupJoinRequestEventArgs : EventArgs
 {
     public required string Id { get; init; }
     public required string Author { get; init; }
@@ -120,7 +120,7 @@ public sealed class GroupJoinRequestEvent
 }
 
 /// <summary>Payload for <c>group.member-tag.update</c>.</summary>
-public sealed class GroupMemberTagUpdateEvent
+public sealed class GroupMemberTagUpdateEventArgs : EventArgs
 {
     public required string GroupId { get; init; }
     public required string Participant { get; init; }
@@ -130,7 +130,7 @@ public sealed class GroupMemberTagUpdateEvent
 }
 
 /// <summary>Payload for <c>blocklist.set</c> / <c>blocklist.update</c>.</summary>
-public sealed class BlocklistUpdateEvent
+public sealed class BlocklistUpdateEventArgs : EventArgs
 {
     public IReadOnlyList<string> Blocklist { get; init; } = [];
     /// <summary>"add" or "remove" — null for the full <c>blocklist.set</c> event.</summary>
@@ -138,14 +138,14 @@ public sealed class BlocklistUpdateEvent
 }
 
 /// <summary>Payload for a label association event.</summary>
-public sealed class LabelAssociationEvent
+public sealed class LabelAssociationEventArgs : EventArgs
 {
     public required object Association { get; init; }
     public required string Type { get; init; }
 }
 
 /// <summary>Newsletter reaction event payload.</summary>
-public sealed class NewsletterReactionEvent
+public sealed class NewsletterReactionEventArgs : EventArgs
 {
     public required string Id { get; init; }
     public required string ServerId { get; init; }
@@ -155,7 +155,7 @@ public sealed class NewsletterReactionEvent
 }
 
 /// <summary>Newsletter view event payload.</summary>
-public sealed class NewsletterViewEvent
+public sealed class NewsletterViewEventArgs : EventArgs
 {
     public required string Id { get; init; }
     public required string ServerId { get; init; }
@@ -163,7 +163,7 @@ public sealed class NewsletterViewEvent
 }
 
 /// <summary>Newsletter-participants update event payload.</summary>
-public sealed class NewsletterParticipantsUpdateEvent
+public sealed class NewsletterParticipantsUpdateEventArgs : EventArgs
 {
     public required string Id { get; init; }
     public required string Author { get; init; }
@@ -173,14 +173,14 @@ public sealed class NewsletterParticipantsUpdateEvent
 }
 
 /// <summary>Chat lock event payload.</summary>
-public sealed class ChatLockEvent
+public sealed class ChatLockEventArgs : EventArgs
 {
     public required string Id { get; init; }
     public bool Locked { get; init; }
 }
 
 /// <summary>LID mapping update event payload.</summary>
-public sealed class LidMappingUpdateEvent
+public sealed class LidMappingUpdateEventArgs : EventArgs
 {
     public required string PhoneNumber { get; init; }
     public required string Lid { get; init; }

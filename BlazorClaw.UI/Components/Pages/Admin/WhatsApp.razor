@@ -112,15 +112,16 @@
                                 </h6>
                             </div>
                             <div class="card-body text-center">
-                                @((MarkupString)GenerateQRCodeSvg(qr.QRCode))
-                                
+                                <span style="max-height:300px">
+                                    @((MarkupString)GenerateQRCodeSvg(qr.QRCode))
+                                </span>
                                 <p class="text-muted small mt-3">
                                     <i class="bi bi-clock"></i> Generiert: @qr.GeneratedAt.ToString("HH:mm:ss")
                                 </p>
                                 
                                 <div class="alert alert-info small mb-0">
                                     <i class="bi bi-phone"></i> Scanne diesen QR-Code mit WhatsApp:
-                                    <br/>
+                                    <br />
                                     <strong>WhatsApp → Verknüpfte Geräte → Gerät verknüpfen</strong>
                                 </div>
                             </div>

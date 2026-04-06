@@ -55,7 +55,7 @@ public static class AuthStateExtensions
         return new AuthenticationState
         {
             Creds = creds,
-            Keys  = keys ?? new InMemorySignalKeyStore()
+            Keys = keys ?? new InMemorySignalKeyStore()
         };
     }
 }

@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using Baileys.Types;
+using System.Text.RegularExpressions;
 
 namespace Baileys.Utils;
 
@@ -14,35 +14,35 @@ public static partial class JidUtils
     // ──────────────────────────────────────────────────────────
 
     /// <summary>Returns the canonical string for a <see cref="JidServer"/> value.</summary>
-    public static string ServerToString(JidServer server) => server switch
+    public static string ServerToString(this JidServer server) => server switch
     {
-        JidServer.ContactUs       => "c.us",
-        JidServer.GroupUs         => "g.us",
-        JidServer.Broadcast       => "broadcast",
-        JidServer.SWhatsappNet    => "s.whatsapp.net",
-        JidServer.Call            => "call",
-        JidServer.Lid             => "lid",
-        JidServer.Newsletter      => "newsletter",
-        JidServer.Bot             => "bot",
-        JidServer.Hosted          => "hosted",
-        JidServer.HostedLid       => "hosted.lid",
-        _                         => throw new ArgumentOutOfRangeException(nameof(server))
+        JidServer.ContactUs => "c.us",
+        JidServer.GroupUs => "g.us",
+        JidServer.Broadcast => "broadcast",
+        JidServer.SWhatsappNet => "s.whatsapp.net",
+        JidServer.Call => "call",
+        JidServer.Lid => "lid",
+        JidServer.Newsletter => "newsletter",
+        JidServer.Bot => "bot",
+        JidServer.Hosted => "hosted",
+        JidServer.HostedLid => "hosted.lid",
+        _ => throw new ArgumentOutOfRangeException(nameof(server))
     };
 
     /// <summary>Parses a raw server string into a <see cref="JidServer"/>.</summary>
     public static JidServer ServerFromString(string server) => server switch
     {
-        "c.us"           => JidServer.ContactUs,
-        "g.us"           => JidServer.GroupUs,
-        "broadcast"      => JidServer.Broadcast,
+        "c.us" => JidServer.ContactUs,
+        "g.us" => JidServer.GroupUs,
+        "broadcast" => JidServer.Broadcast,
         "s.whatsapp.net" => JidServer.SWhatsappNet,
-        "call"           => JidServer.Call,
-        "lid"            => JidServer.Lid,
-        "newsletter"     => JidServer.Newsletter,
-        "bot"            => JidServer.Bot,
-        "hosted"         => JidServer.Hosted,
-        "hosted.lid"     => JidServer.HostedLid,
-        _                => JidServer.ContactUs  // fallback
+        "call" => JidServer.Call,
+        "lid" => JidServer.Lid,
+        "newsletter" => JidServer.Newsletter,
+        "bot" => JidServer.Bot,
+        "hosted" => JidServer.Hosted,
+        "hosted.lid" => JidServer.HostedLid,
+        _ => JidServer.ContactUs  // fallback
     };
 
     // ──────────────────────────────────────────────────────────
@@ -109,10 +109,10 @@ public static partial class JidUtils
 
         var server = serverStr switch
         {
-            "lid"        => JidServer.Lid,
-            "hosted"     => JidServer.Hosted,
+            "lid" => JidServer.Lid,
+            "hosted" => JidServer.Hosted,
             "hosted.lid" => JidServer.HostedLid,
-            _            => ServerFromString(serverStr)
+            _ => ServerFromString(serverStr)
         };
 
         // Infer domainType from server when not encoded in the user part
@@ -120,10 +120,10 @@ public static partial class JidUtils
         {
             domainType = server switch
             {
-                JidServer.Lid       => (int)WaJidDomains.Lid,
-                JidServer.Hosted    => (int)WaJidDomains.Hosted,
+                JidServer.Lid => (int)WaJidDomains.Lid,
+                JidServer.Hosted => (int)WaJidDomains.Hosted,
                 JidServer.HostedLid => (int)WaJidDomains.HostedLid,
-                _                   => (int)WaJidDomains.WhatsApp
+                _ => (int)WaJidDomains.WhatsApp
             };
         }
 

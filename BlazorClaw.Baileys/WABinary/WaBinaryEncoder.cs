@@ -1,6 +1,6 @@
-using System.Text;
 using Baileys.Types;
 using Baileys.Utils;
+using System.Text;
 
 namespace Baileys.WABinary;
 
@@ -124,8 +124,8 @@ public static class WaBinaryEncoder
             return;
         }
 
-        if (IsNibble(str))  { WritePackedBytes(str, 'n', buf); return; }
-        if (IsHex(str))     { WritePackedBytes(str, 'h', buf); return; }
+        if (IsNibble(str)) { WritePackedBytes(str, 'n', buf); return; }
+        if (IsHex(str)) { WritePackedBytes(str, 'h', buf); return; }
 
         var decoded = JidUtils.JidDecode(str);
         if (decoded is not null)
@@ -227,10 +227,10 @@ public static class WaBinaryEncoder
 
     private static int PackNibble(char c) => c switch
     {
-        '-'  => 10,
-        '.'  => 11,
+        '-' => 10,
+        '.' => 11,
         '\0' => 15,
-        _    => c >= '0' && c <= '9' ? c - '0' : throw new ArgumentException($"Invalid nibble char: {c}")
+        _ => c >= '0' && c <= '9' ? c - '0' : throw new ArgumentException($"Invalid nibble char: {c}")
     };
 
     private static int PackHex(char c)
