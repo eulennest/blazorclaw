@@ -32,7 +32,18 @@ public class NoiseHandlerRoundtripTests
             }
         };
 
-        var enc  = clientNoise.ProcessHandshake(serverHello);
+        var enc = clientNoise.ProcessHandshake(serverHello);
+        
+        // Act: Counter zurücksetzen (für Roundtrip)
+        clientNoise.SetCounter(0);
+        serverNoise.SetCounter(0);
+        
+        var plaintext = new byte[] { 0x01, 0x02, 0x03 };
+        var ciphertext = clientNoise.Encrypt(plaintext);
+        var decrypted = serverNoise.Decrypt(ciphertext);
+
+        // Assert
+        Assert.Equal(plaintext, decrypted);
     }
 
     [Fact]

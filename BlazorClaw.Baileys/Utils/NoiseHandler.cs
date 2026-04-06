@@ -119,16 +119,27 @@ public sealed class NoiseHandler
 
     public byte[] ProcessHandshake(Proto.HandshakeMessage serverHello)
     {
+        if (serverHello?.ServerHello == null)
+            throw new ArgumentException("Invalid ServerHello message");
+
         var empBytes = serverHello.ServerHello.Ephemeral.ToByteArray();
         // TypeScript Baileys: FIRST authenticate(ephemeral), THEN mixIntoKey!
         Authenticate(empBytes);
         var sharedSecret = Curve25519Utils.CalculateAgreement(_keyPair.Private, empBytes);
         MixIntoKey(sharedSecret);
-        var decStaticContent = Decrypt(serverHello!.ServerHello.Static.Span);
+
+        // Static entschlüsseln
+        var decStaticContent = Decrypt(serverHello.ServerHello.Static.Span);
         MixIntoKey(Curve25519Utils.CalculateAgreement(_keyPair.Private, decStaticContent));
 
+        // Payload entschlüsseln (wie Static)
+        var decPayloadContent = Decrypt(serverHello.ServerHello.Payload.Span);
+        // Hash-Kette wird in Decrypt() automatisch aktualisiert (via Authenticate)
+
+        // ClientFinish vorbereiten
         var keyEnc = Encrypt(_keyPair.Public);
         MixIntoKey(Curve25519Utils.CalculateAgreement(_keyPair.Private, empBytes));
+
         return keyEnc;
     }
 
