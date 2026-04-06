@@ -144,7 +144,7 @@ public sealed class BaileysSocket : IAsyncDisposable
     {
         if (!_handshakeComplete)
         {
-            var key = _noise.ProcessHandshake(Proto.HandshakeMessage.Parser.ParseFrom(data));
+            var keyEnc = _noise.ProcessHandshake(Proto.HandshakeMessage.Parser.ParseFrom(data));
 
             Proto.ClientPayload? cpNode;
             if (!_creds.Creds.Registered)
@@ -167,17 +167,16 @@ public sealed class BaileysSocket : IAsyncDisposable
             {
                 ClientFinish = new()
                 {
-                    Static = ByteString.CopyFrom(key),
+                    Static = ByteString.CopyFrom(keyEnc),
                     Payload = ByteString.CopyFrom(payloadEnc)
                 }
             };
 
             // Encode and frame
             var frame = EncodeFrame(finish.ToByteArray());
+            _handshakeComplete = true;
+
             await SendRawAsync(frame, cancellationToken).ConfigureAwait(false);
-
-
-
 
             // First message from server is the handshake response
             //            _noise.Decrypt(data); // This updates the internal state
@@ -190,7 +189,6 @@ public sealed class BaileysSocket : IAsyncDisposable
             // 3. Client -> Server (Noise Message 3)
 
             // Simplified: we'll just emit that we're connecting.
-            _handshakeComplete = true;
             _noise.Finish();
             _logger.Info("Handshake complete.");
             _ev.Emit("connection.update", new ConnectionUpdateEvent { Connection = WaConnectionState.Open });
@@ -232,7 +230,7 @@ public sealed class BaileysSocket : IAsyncDisposable
 
         var companion = new DeviceProps
         {
-            Os = "win",
+            Os = "Windows",
             PlatformType = DeviceProps.Types.PlatformType.Chrome,
             //           RequireFullSync = config.SyncFullHistory,
             HistorySyncConfig = new()
@@ -284,11 +282,11 @@ public sealed class BaileysSocket : IAsyncDisposable
                 LocaleLanguageIso6391 = "en",
                 Mnc = "000",
                 Mcc = "000",
-                LocaleCountryIso31661Alpha2 = "de"
+                LocaleCountryIso31661Alpha2 = "US"
             },
             WebInfo = new()
             {
-                WebSubPlatform = ClientPayload.Types.WebInfo.Types.WebSubPlatform.WebBrowser
+                WebSubPlatform = ClientPayload.Types.WebInfo.Types.WebSubPlatform.Win32
             },
             Passive = false,
             Pull = false,

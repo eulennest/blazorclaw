@@ -1,11 +1,6 @@
 using Baileys.Crypto;
 using Baileys.Defaults;
 using Baileys.Types;
-using System.Security.Cryptography;
-using static Proto.HandshakeMessage.Types;
-using System;
-using System.Text;
-using Google.Protobuf;
 
 namespace Baileys.Utils;
 
@@ -31,6 +26,7 @@ public sealed class NoiseHandler
 
     private readonly KeyPair _keyPair;
     private readonly ILogger _logger;
+    private TransportState? _transport;
 
     // ── Intro header (prepended to the first frame sent) ──────
     private readonly byte[] _introHeader;
@@ -85,17 +81,13 @@ public sealed class NoiseHandler
     /// </summary>
     public byte[] Encrypt(ReadOnlySpan<byte> plaintext)
     {
-        if (!_transportEstablished)
-        {
-            var iv = GenerateIv(_Counter++);
-            var ciphertext = Crypto.AesEncryptGcm(plaintext, _encKey, iv, _hash);
-            Authenticate(ciphertext);
-            return ciphertext;
-        }
-        else
-        {
-            return EncryptTransport(plaintext);
-        }
+        if (_transport != null)
+            return _transport.Encrypt(plaintext);
+
+        var iv = GenerateIv(_Counter++);
+        var ciphertext = Crypto.AesEncryptGcm(plaintext, _encKey, iv, _hash);
+        Authenticate(ciphertext);
+        return ciphertext;
     }
 
     /// <summary>
@@ -103,18 +95,15 @@ public sealed class NoiseHandler
     /// </summary>
     public byte[] Decrypt(ReadOnlySpan<byte> ciphertext)
     {
-        if (!_transportEstablished)
-        {
-            // TypeScript Baileys: decrypt first, THEN authenticate(ciphertext)!
-            var iv = GenerateIv(_Counter++);
-            var plaintext = Crypto.AesDecryptGcm(ciphertext, _decKey, iv, _hash);
-            Authenticate(ciphertext);
-            return plaintext;
-        }
-        else
-        {
-            return DecryptTransport(ciphertext);
-        }
+        if (_transport != null)
+            return _transport.Decrypt(ciphertext);
+
+        // TypeScript Baileys: decrypt first, THEN authenticate(ciphertext)!
+        var iv = GenerateIv(_Counter++);
+        var plaintext = Crypto.AesDecryptGcm(ciphertext, _decKey, iv, _hash);
+        Authenticate(ciphertext);
+        return plaintext;
+
     }
 
     public byte[] ProcessHandshake(Proto.HandshakeMessage serverHello)
@@ -155,28 +144,14 @@ public sealed class NoiseHandler
     {
         // Expand the current salt into 64 bytes via HKDF.
         // bytes  0–31 → encKey,  bytes 32–63 → decKey
-        var expanded = Crypto.Hkdf(Array.Empty<byte>(), 64, _salt, Array.Empty<byte>());
-        _encKey = expanded[..32];
-        _decKey = expanded[32..];
-        _Counter = 0;
-        _Counter = 0;
-        _transportEstablished = true;
+        var expanded = Crypto.Hkdf([], 64, _salt, []);
+        _transport = new TransportState(expanded[..32], expanded[32..]);
         _logger.Trace("noise handshake complete");
     }
 
     /// <summary>Mixes the provided data into the handshake hash and key chain.</summary>
     public void MixHash(ReadOnlySpan<byte> data) => Authenticate(data);
 
-    /// <summary>
-    /// Decrypts using the enc key (same key used by <see cref="Encrypt"/> in
-    /// transport mode).  This enables symmetric loopback tests where send and
-    /// receive use the same key.
-    /// </summary>
-    public byte[] DecryptWithEncKey(ReadOnlySpan<byte> ciphertext)
-    {
-        var iv = BuildTransportIv(_Counter++);
-        return Crypto.AesDecryptGcm(ciphertext, _encKey, iv, ReadOnlySpan<byte>.Empty);
-    }
 
     // ──────────────────────────────────────────────────────────
     //  Internals
@@ -184,7 +159,7 @@ public sealed class NoiseHandler
 
     private void Authenticate(ReadOnlySpan<byte> data)
     {
-        if (_transportEstablished) return;
+        if (_transport != null) return;
         var combined = new byte[_hash.Length + data.Length];
         _hash.CopyTo(combined, 0);
         data.CopyTo(combined.AsSpan(_hash.Length));
@@ -193,28 +168,6 @@ public sealed class NoiseHandler
         _logger.Debug($"[Authenticate] newHash = {ToHex(_hash)}");
     }
 
-    private byte[] EncryptTransport(ReadOnlySpan<byte> plaintext)
-    {
-        var iv = BuildTransportIv(_Counter++);
-        return Crypto.AesEncryptGcm(plaintext, _encKey, iv, ReadOnlySpan<byte>.Empty);
-    }
-
-    private byte[] DecryptTransport(ReadOnlySpan<byte> ciphertext)
-    {
-        var iv = BuildTransportIv(_Counter++);
-        return Crypto.AesDecryptGcm(ciphertext, _decKey, iv, ReadOnlySpan<byte>.Empty);
-    }
-
-    private static byte[] BuildTransportIv(int counter)
-    {
-        var iv = new byte[IvLength];
-        // Use unsigned right-shift (C# 11+: >>>) to avoid sign-extension
-        iv[8] = (byte)((uint)counter >> 24);
-        iv[9] = (byte)((uint)counter >> 16);
-        iv[10] = (byte)((uint)counter >> 8);
-        iv[11] = (byte)counter;
-        return iv;
-    }
 
     private static byte[] GenerateIv(int counter)
     {
@@ -234,7 +187,7 @@ public sealed class NoiseHandler
         _salt = expanded[..32];
         _encKey = expanded[32..];
         _decKey = _encKey; // Same as encKey during handshake!
-        _Counter = 0;        
+        _Counter = 0;
     }
 
     public byte[] GetSalt() => (byte[])_salt.Clone();
@@ -250,9 +203,38 @@ public sealed class NoiseHandler
     {
         return BitConverter.ToString(data).Replace("-", "");
     }
+}
 
-    /// <summary>
-    /// Sets the transport mode (for testing).
-    /// </summary>
-    public void SetTransportEstablished(bool established) => _transportEstablished = established;
+public class TransportState(byte[] encKey, byte[] decKey)
+{
+    private const int IvLength = 12; // Standard für GCM
+
+    private long _readCounter;
+    private long _writeCounter;
+    private readonly byte[] _iv = new byte[IvLength];
+
+    public byte[] EncKey { get; } = encKey ?? throw new ArgumentNullException(nameof(encKey));
+    public byte[] DecKey { get; } = decKey ?? throw new ArgumentNullException(nameof(decKey));
+
+    public byte[] Encrypt(ReadOnlySpan<byte> plaintext)
+    {
+        var c = _writeCounter++;
+        UpdateIv(c);
+        return Crypto.AesEncryptGcm(plaintext, EncKey, _iv, []);
+    }
+
+    public byte[] Decrypt(ReadOnlySpan<byte> ciphertext)
+    {
+        var c = _readCounter++;
+        UpdateIv(c);
+        return Crypto.AesDecryptGcm(ciphertext, DecKey, _iv, []);
+    }
+
+    private void UpdateIv(long counter)
+    {
+        _iv[8] = (byte)((counter >> 24) & 0xFF);
+        _iv[9] = (byte)((counter >> 16) & 0xFF);
+        _iv[10] = (byte)((counter >> 8) & 0xFF);
+        _iv[11] = (byte)(counter & 0xFF);
+    }
 }
