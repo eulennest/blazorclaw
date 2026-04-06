@@ -196,8 +196,7 @@ public sealed class BaileysSocket : IAsyncDisposable
         // After handshake, messages are framed with a 3-byte length
         if (data.Length < 3) return;
 
-        var encrypted = data[3..];
-        var decrypted = _noise.Decrypt(encrypted);
+        var decrypted = _noise.Decrypt(data);
         var node = await WaBinaryDecoder.DecodeBinaryNodeAsync(decrypted).ConfigureAwait(false);
 
         _logger.Trace($"Received node: {node.Tag}");
