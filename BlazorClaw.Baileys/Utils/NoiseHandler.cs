@@ -214,6 +214,9 @@ public sealed class NoiseHandler
         var hmac2 = Crypto.HmacSha256([1], hmac1);
         _salt = hmac1;
         _encKey = Crypto.HmacSha256([2], hmac1);
+        _decKey = _encKey; // Same as encKey during handshake!
+        _writeCounter = 0;
+        _readCounter = 0;
         return [.. hmac2, .. Crypto.HmacSha256([3], hmac1)];
     }
 }
