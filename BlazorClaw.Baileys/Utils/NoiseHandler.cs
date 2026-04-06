@@ -208,8 +208,8 @@ public class TransportState(byte[] encKey, byte[] decKey)
 {
     private const int IvLength = 12; // Standard für GCM
 
-    private long _readCounter;
-    private long _writeCounter;
+    private ulong _readCounter;
+    private ulong _writeCounter;
     private readonly byte[] _iv = new byte[IvLength];
 
     public byte[] EncKey { get; } = encKey ?? throw new ArgumentNullException(nameof(encKey));
@@ -229,8 +229,11 @@ public class TransportState(byte[] encKey, byte[] decKey)
         return Crypto.AesDecryptGcm(ciphertext, DecKey, _iv, []);
     }
 
-    private void UpdateIv(long counter)
+    private void UpdateIv(ulong counter)
     {
+        // 12 Byte IV: Bytes 0-7 = 0, Bytes 8-11 = Counter (Big Endian 32-Bit)
+        _iv[0] = 0; _iv[1] = 0; _iv[2] = 0; _iv[3] = 0;
+        _iv[4] = 0; _iv[5] = 0; _iv[6] = 0; _iv[7] = 0;
         _iv[8] = (byte)((counter >> 24) & 0xFF);
         _iv[9] = (byte)((counter >> 16) & 0xFF);
         _iv[10] = (byte)((counter >> 8) & 0xFF);
