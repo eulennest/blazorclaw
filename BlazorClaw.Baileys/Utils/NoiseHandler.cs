@@ -85,8 +85,8 @@ public sealed class NoiseHandler
         if (!_transportEstablished)
         {
             var iv = GenerateIv(_Counter++);
-            var ciphertext = Crypto.AesEncryptGcm(plaintext, _encKey, iv, _hash); // TypeScript: aesEncryptGCM(..., hash)!
-            Authenticate(ciphertext); // TypeScript: authenticate(result) aka ciphertext!
+            var ciphertext = Crypto.AesEncryptGcm(plaintext, _encKey, iv, ReadOnlySpan<byte>.Empty); // AAD = Empty (wie Transport-Modus)
+            Authenticate(ciphertext);
             return ciphertext;
         }
         else
@@ -104,7 +104,7 @@ public sealed class NoiseHandler
         {
             // TypeScript Baileys: decrypt first, THEN authenticate(ciphertext)!
             var iv = GenerateIv(_Counter++);
-            var plaintext = Crypto.AesDecryptGcm(ciphertext, _decKey, iv, _hash);
+            var plaintext = Crypto.AesDecryptGcm(ciphertext, _decKey, iv, ReadOnlySpan<byte>.Empty); // AAD = Empty (wie Transport-Modus)
             Authenticate(ciphertext);
             return plaintext;
         }
@@ -222,7 +222,7 @@ public sealed class NoiseHandler
         return iv;
     }
 
-    private void MixIntoKey(ReadOnlySpan<byte> data)
+    public void MixIntoKey(ReadOnlySpan<byte> data)
     {
         // TypeScript Baileys uses HKDF, NOT HMAC!
         // const [write, read] = localHKDF(data)
@@ -235,6 +235,15 @@ public sealed class NoiseHandler
         _decKey = _encKey; // Same as encKey during handshake!
         _Counter = 0;        
     }
+
+    public byte[] GetSalt() => (byte[])_salt.Clone();
+    public byte[] GetEncKey() => (byte[])_encKey.Clone();
+    public byte[] GetDecKey() => (byte[])_decKey.Clone();
+    public byte[] GetHash() => (byte[])_hash.Clone();
+
+    public void SetEncKey(byte[] key) => _encKey = (byte[])key.Clone();
+    public void SetDecKey(byte[] key) => _decKey = (byte[])key.Clone();
+    public void SetCounter(int counter) => _Counter = counter;
 
     private static string ToHex(byte[] data)
     {
