@@ -49,17 +49,17 @@ public class NoiseHandlerTests
         Assert.Equal(plaintext, decrypted);
     }
 
-    [Fact(Skip = "Requires valid handshake mock data")]
+    [Fact(Skip = "Requires valid handshake mock data (integration test)")]
     public void ProcessHandshake_GeneratesClientFinish()
     {
         // Arrange
         var keyPair = new KeyPair(new byte[32], new byte[32]);
         var noiseHandler = new NoiseHandler(keyPair);
-        // Manuelle Mock-Daten (32 Byte Ciphertext + 16 Byte GCM-Tag)
+        // Manuelle Mock-Daten (wie in Rust/TypeScript: 32 Byte Ephemeral, 48 Byte Static/Payload)
         var staticCiphertext = new byte[48];
-        Array.Fill(staticCiphertext, (byte)0xAA); // Test-Daten
+        Array.Fill(staticCiphertext, (byte)0xAA); // Test-Daten (wie in Rust)
         var payloadCiphertext = new byte[48];
-        Array.Fill(payloadCiphertext, (byte)0xBB);
+        Array.Fill(payloadCiphertext, (byte)0xBB); // Test-Daten (wie in Rust)
 
         var serverHello = new Proto.HandshakeMessage
         {

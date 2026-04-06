@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using static Proto.HandshakeMessage.Types;
 using System;
 using System.Text;
+using Google.Protobuf;
 
 namespace Baileys.Utils;
 
@@ -249,4 +250,9 @@ public sealed class NoiseHandler
     {
         return BitConverter.ToString(data).Replace("-", "");
     }
+
+    /// <summary>
+    /// Sets the transport mode (for testing).
+    /// </summary>
+    public void SetTransportEstablished(bool established) => _transportEstablished = established;
 }
