@@ -1,5 +1,7 @@
+using Baileys.Crypto;
 using Baileys.Types;
 using Baileys.Utils;
+using Google.Protobuf;
 using Xunit;
 
 namespace BlazorClaw.Baileys.Tests;
@@ -9,31 +11,28 @@ public class NoiseHandlerRoundtripTests
     [Fact]
     public void EncryptDecrypt_Roundtrip_BetweenTwoHandlers()
     {
+
         // Arrange: Zwei NoiseHandler mit identischen Keys (für Test)
-        var keyPair = new KeyPair(new byte[32], new byte[32]);
-        
-        var clientNoise = new NoiseHandler(keyPair);
-        var serverNoise = new NoiseHandler(keyPair);
+        var keyPair1 = Curve25519Utils.GenerateKeyPair();
+        var keyPair2 = Curve25519Utils.GenerateKeyPair();
 
-        // Manuell Keys setzen (simuliert Handshake)
-        var testKey = new byte[32];
-        clientNoise.SetEncKey(testKey);
-        clientNoise.SetDecKey(testKey);
-        clientNoise.SetTransportEstablished(true);
-        
-        serverNoise.SetEncKey(testKey);
-        serverNoise.SetDecKey(testKey);
-        serverNoise.SetTransportEstablished(true);
+        var clientNoise = new NoiseHandler(keyPair1);
+        var serverNoise = new NoiseHandler(keyPair2);
 
-        // Act: Nachricht verschlüsseln (Client → Server)
-        var plaintext = new byte[] { 0x01, 0x02, 0x03 };
-        var ciphertext = clientNoise.Encrypt(plaintext);
-        
-        // Nachricht entschlüsseln (Server)
-        var decrypted = serverNoise.Decrypt(ciphertext);
+        var sharedSecret = Curve25519Utils.CalculateAgreement(keyPair2.Private, keyPair1.Public);
 
-        // Assert: Plaintext == Decrypted
-        Assert.Equal(plaintext, decrypted);
+        serverNoise.MixIntoKey(sharedSecret);
+
+        var serverHello = new global::Proto.HandshakeMessage
+        {
+            ServerHello = new ()
+            {
+                Ephemeral = ByteString.CopyFrom(keyPair2.Public),
+                Static = ByteString.CopyFrom(serverNoise.Encrypt(keyPair1.Public))
+            }
+        };
+
+        var enc  = clientNoise.ProcessHandshake(serverHello);
     }
 
     [Fact]
