@@ -56,7 +56,7 @@ namespace BlazorClaw.WhatsApp
             if (!string.IsNullOrWhiteSpace(update.Qr))
             {
                 _logger?.LogInformation("📱 QR Code received: {Qr}", update.Qr);
-                OnQRCode?.Invoke(this, new(update.Qr));
+                OnQRCode?.Invoke(this, new($"https://wa.me/settings/linked_devices#{update.Qr}"));
             }
             else if (update.Connection == WaConnectionState.Open)
             {
