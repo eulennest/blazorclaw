@@ -28,8 +28,8 @@ public sealed class BinaryNode
         sb.Append(string.Concat(Attrs.Select(kv => $" {kv.Key}=\"{kv.Value}\"")));
         sb.Append(Content == null ? " />" : ">");
         sb.Append(Content?.ToString());
-        sb.AppendLine(Content == null ? "" : $"</{Tag}>");
-        return sb.ToString();
+        sb.Append(Content == null ? "" : $"</{Tag}>");
+        return sb.ToString().Trim();
     }
 
 }

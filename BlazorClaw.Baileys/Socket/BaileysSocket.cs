@@ -4,11 +4,13 @@ using Baileys.Types;
 using Baileys.Utils;
 using Baileys.WABinary;
 using Google.Protobuf;
+using Org.BouncyCastle.Utilities.Encoders;
 using Proto;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
 using System.Timers;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 using ILogger = Baileys.Utils.ILogger;
 
 namespace Baileys.Socket;
@@ -40,7 +42,7 @@ public class BaileysSocket : IAsyncDisposable
         _signalKeys = new SignalCreds(creds.Creds.SignedIdentityKey, creds.Creds.SignedPreKey, creds.Creds.RegistrationId);
         _emperalKey = Curve25519Utils.GenerateKeyPair();
         _noise = new NoiseHandler(_emperalKey, logger);
-        _logger = logger.Child(new Dictionary<string, object> { ["class"] = "socket" });
+        _logger = logger.ChildFor(this);
     }
 
     public async Task ConnectAsync(string url, CancellationToken cancellationToken = default)
@@ -93,6 +95,7 @@ public class BaileysSocket : IAsyncDisposable
     {
         var encoded = WaBinaryEncoder.EncodeBinaryNode(node);
         var encrypted = _noise.Encrypt(encoded);
+        _logger.Debug($"Sending Node: {node}");
         await SendRawAsync(encrypted, cancellationToken).ConfigureAwait(false);
     }
     public Task SendRawAsync(byte[] data, CancellationToken cancellationToken = default)
@@ -133,6 +136,7 @@ public class BaileysSocket : IAsyncDisposable
             _logger.Exception(ex);
             OnConectionUpdate(new ConnectionUpdateEventArgs() { Connection = WaConnectionState.Close, LastDisconnect = new LastDisconnectInfo { Error = ex, Date = DateTimeOffset.UtcNow } });
         }
+        timer?.Stop();
     }
 
     private async Task HandleMessageAsync(byte[] data, CancellationToken cancellationToken = default)
@@ -196,7 +200,7 @@ public class BaileysSocket : IAsyncDisposable
         var decrypted = _noise.Decrypt(data);
         var node = await WaBinaryDecoder.DecodeBinaryNodeAsync(decrypted).ConfigureAwait(false);
 
-        _logger.Trace($"Received node: {node}");
+        _logger.Debug($"Received node: {node.ToString().Trim()}");
         // Here we would dispatch the node to the right handler.
         // For the QR code, it usually comes in a specific node or triggered by a success node.
         if (!OnMessageRecieved(node))
@@ -231,7 +235,7 @@ public class BaileysSocket : IAsyncDisposable
                             Tag = "iq",
                             Attrs = new Dictionary<string, string>
                             {
-                                ["to"] = JidServer.SWhatsappNet.ServerToString(),
+                                ["to"] = "@" + JidServer.SWhatsappNet.ServerToString(),
                                 ["type"] = "result",
                                 ["id"] = node.Attrs["id"]
                             }
@@ -303,7 +307,7 @@ public class BaileysSocket : IAsyncDisposable
     public void OnKeepAliveTimer(object? sender, ElapsedEventArgs e)
     {
         var diff = DateTimeOffset.UtcNow - lastDateRecv;
-        if (diff.TotalSeconds < 10) return;
+        if (diff.TotalSeconds < 15) return;
         var iq = new BinaryNode
         {
             Tag = "iq",

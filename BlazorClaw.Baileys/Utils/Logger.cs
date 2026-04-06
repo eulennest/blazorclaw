@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace Baileys.Utils;
 
 /// <summary>
@@ -14,6 +16,7 @@ public interface ILogger
 
     /// <summary>Creates a child logger that adds <paramref name="context"/> to every entry.</summary>
     ILogger Child(IReadOnlyDictionary<string, object> context);
+    ILogger ChildFor(object obj);
 
     void Trace(object message, string? template = null);
     void Debug(object message, string? template = null);
@@ -34,6 +37,7 @@ public sealed class NullLogger : ILogger
     public string Level => "silent";
 
     public ILogger Child(IReadOnlyDictionary<string, object> _) => this;
+    public ILogger ChildFor(object _) => this;
 
     public void Trace(object _, string? __ = null) { }
     public void Debug(object _, string? __ = null) { }
@@ -69,6 +73,8 @@ public sealed class ConsoleLogger : ILogger
         foreach (var (k, v) in context) merged[k] = v;
         return new ConsoleLogger(_level, merged);
     }
+    public ILogger ChildFor(object obj) => Child(new Dictionary<string, object> { ["class"] = obj.GetType().Name });
+
 
     public void Trace(object msg, string? t = null) => Log("trace", msg, t);
     public void Debug(object msg, string? t = null) => Log("debug", msg, t);
@@ -90,5 +96,51 @@ public sealed class ConsoleLogger : ILogger
     public void Exception(Exception ex)
     {
         Log("error", ex.ToString(), null);
+    }
+}
+
+public sealed class MsLogger(Microsoft.Extensions.Logging.ILogger? logger, IReadOnlyDictionary<string, object>? context = null) : Baileys.Utils.ILogger
+{
+    private readonly IReadOnlyDictionary<string, object> _context = context ?? new Dictionary<string, object>();
+
+    public string Level => "trace";
+
+    public Baileys.Utils.ILogger Child(IReadOnlyDictionary<string, object> context)
+    {
+        var merged = new Dictionary<string, object>(_context);
+        foreach (var (k, v) in context) merged[k] = v;
+        return new MsLogger(logger, merged);
+    }
+    public ILogger ChildFor(object obj) => Child(new Dictionary<string, object> { ["class"] = obj.GetType().Name });
+
+    public void Trace(object msg, string? t = null) => Log("trace", msg, t);
+    public void Debug(object msg, string? t = null) => Log("debug", msg, t);
+    public void Info(object msg, string? t = null) => Log("info", msg, t);
+    public void Warn(object msg, string? t = null) => Log("warn", msg, t);
+    public void Error(object msg, string? t = null) => Log("error", msg, t);
+
+    private void Log(string level, object message, string? template)
+    {
+        var ctx = _context.Count > 0
+            ? " " + string.Join(" ", _context.Select(kv => $"{kv.Key}={kv.Value}"))
+            : string.Empty;
+
+        logger?.Log(level switch
+        {
+            "trace" => Microsoft.Extensions.Logging.LogLevel.Trace,
+            "debug" => Microsoft.Extensions.Logging.LogLevel.Debug,
+            "info" => Microsoft.Extensions.Logging.LogLevel.Information,
+            "warn" => Microsoft.Extensions.Logging.LogLevel.Warning,
+            "error" => Microsoft.Extensions.Logging.LogLevel.Error,
+            _ => Microsoft.Extensions.Logging.LogLevel.Information
+        }, "{ctx}: {message}", ctx, template ?? message.ToString() ?? string.Empty);
+    }
+
+    public void Exception(Exception ex)
+    {
+        var ctx = _context.Count > 0
+            ? " " + string.Join(" ", _context.Select(kv => $"{kv.Key}={kv.Value}"))
+            : string.Empty;
+        logger?.LogError(ex, "{ctx}: {message}", ctx, ex.ToString());
     }
 }

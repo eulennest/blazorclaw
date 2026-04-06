@@ -31,7 +31,7 @@ public class BaileysClient : IAsyncDisposable
         _authStateProvider = authStateProvider;
         _ev = ev;
         _options = options.Value;
-        _logger = logger.Child(new Dictionary<string, object> { ["class"] = "client" });
+        _logger = logger.ChildFor(this);
 
     }
 

@@ -33,8 +33,7 @@ public sealed class NoiseHandler
     public NoiseHandler(KeyPair keyPair, ILogger? logger = null, byte[]? routingInfo = null)
     {
         _keyPair = keyPair;
-        _logger = (logger ?? NullLogger.Instance).Child(
-            new Dictionary<string, object> { ["class"] = "ns" });
+        _logger = (logger ?? NullLogger.Instance).ChildFor(this);
 
         // Initialise hash/salt/encKey/decKey from the noise mode string
         var modeBytes = System.Text.Encoding.ASCII.GetBytes(BaileysDefaults.NoiseMode);
@@ -162,12 +161,8 @@ public sealed class NoiseHandler
         var combined = new byte[_hash.Length + data.Length];
         _hash.CopyTo(combined, 0);
         data.CopyTo(combined.AsSpan(_hash.Length));
-        _logger.Debug($"[Authenticate] oldHash = {ToHex(_hash)}");
         _hash = Crypto.Sha256(combined);
-        _logger.Debug($"[Authenticate] newHash = {ToHex(_hash)}");
     }
-
-
     private static byte[] GenerateIv(int counter)
     {
         var iv = new byte[IvLength];
@@ -197,11 +192,6 @@ public sealed class NoiseHandler
     public void SetEncKey(byte[] key) => _encKey = (byte[])key.Clone();
     public void SetDecKey(byte[] key) => _decKey = (byte[])key.Clone();
     public void SetCounter(int counter) => _Counter = counter;
-
-    private static string ToHex(byte[] data)
-    {
-        return BitConverter.ToString(data).Replace("-", "");
-    }
 }
 
 public class TransportState(byte[] encKey, byte[] decKey)
