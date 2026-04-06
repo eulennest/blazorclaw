@@ -53,7 +53,7 @@ public class LsTool : BaseTool<LsParams>
         var sbCurrent = sbAll;
         if (details) sbCurrent.AppendLine("path\tedittime\tsize");
 
-        await foreach (var entry in entrys.Where(o => matcher.Match(o.EntityName).HasMatches || matcher.Match(o.ToString()).HasMatches))
+        await foreach (var entry in entrys.Where(o => matcher.Match(o.EntityName ?? string.Empty).HasMatches || matcher.Match(o.ToString()).HasMatches))
         {
             var f = await vfs.GetMetaInfoAsync(entry);
             c++;

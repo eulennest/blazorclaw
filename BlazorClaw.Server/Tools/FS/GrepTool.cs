@@ -64,7 +64,6 @@ public class GrepTool : BaseTool<GrepParams>
 
 
         var sb = new StringBuilder();
-        var c = 0;
 
         await foreach (var entry in entrys.Where(o => o.IsFile && matcher.Match(o.ToString()).HasMatches))
         {
@@ -73,7 +72,7 @@ public class GrepTool : BaseTool<GrepParams>
 
             using var stream = await f.OpenReadAsync();
             using var reader = new StreamReader(stream);
-            var lines = (await reader.ReadToEndAsync()).Split(new char[] { '\r', '\n' });
+            var lines = (await reader.ReadToEndAsync()).Split(['\r', '\n']);
 
             for (int i = 0; i < lines.Length; i++)
             {

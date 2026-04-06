@@ -41,7 +41,13 @@ namespace BlazorClaw.WhatsApp
 
             _socket = new BaileysSocket(authState, new MsLogger(_logger));
             _socket.ConnectionUpdate += Socket_ConnectionUpdate;
+            _socket.MessageRecieved += Socket_MessageRecieved;
             await _socket.ConnectAsync(BaileysDefaults.WaWebSocketUrl, cancellationToken).ConfigureAwait(false);
+        }
+
+        private void Socket_MessageRecieved(object? sender, MessageRecieveEventArgs e)
+        {
+            OnMessage?.Invoke(this, new("", e.Node.GetString() ?? string.Empty));
         }
 
         private void Socket_ConnectionUpdate(object? sender, Baileys.Types.ConnectionUpdateEventArgs update)

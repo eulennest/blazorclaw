@@ -21,7 +21,7 @@ namespace BlazorClaw.Core.Services
         /// <param name="mappings">Dictionary with VAR_NAME → source:item_name mappings</param>
         /// <param name="context">Message context for vault/environment access</param>
         /// <returns>Dictionary with VAR_NAME → resolved_value</returns>
-        Task<Dictionary<string, string>> ResolveMappingsAsync(Dictionary<string, string> mappings, MessageContext? context = null);
+        Task<Dictionary<string, string>> ResolveMappingsAsync(Dictionary<string, string> mappings, MessageContext context);
 
     }
 }

@@ -149,18 +149,18 @@
                                             }
                                             else
                                             {
-                                                <code class="small">@cron.SessionId.ToString().Substring(0, 8)...</code>
+                                                <code class="small">@cron.SessionId.ToString()?.Substring(0, 8)...</code>
                                             }
                                         </td>
                                         <td>
                                             <small>
                                                 @if (cron.LastExecution.HasValue)
                                                 {
-                                                    <div>Zuletzt: @cron.LastExecution.Value.ToString("dd.MM.yyyy HH:mm:ss")</div>
+                                                    <span>Zuletzt: @cron.LastExecution.Value.ToString("dd.MM.yyyy HH:mm:ss")</span>
                                                 }
                                                 @if (cron.NextExecution.HasValue)
                                                 {
-                                                    <div>Nächst: @cron.NextExecution.Value.ToString("dd.MM.yyyy HH:mm:ss")</div>
+                                                    <span>Nächst: @cron.NextExecution.Value.ToString("dd.MM.yyyy HH:mm:ss")</span>
                                                 }
                                             </small>
                                         </td>

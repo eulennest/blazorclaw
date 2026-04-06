@@ -95,10 +95,7 @@
                                         }
                                     </td>
                                     <td class="small text-muted">
-                                        @if (info != null)
-                                        {
-                                            @info.LastWriteTime.ToString("dd.MM.yyyy HH:mm")
-                                        }
+                                        @info.LastWriteTime.ToString("dd.MM.yyyy HH:mm")
                                     </td>
                                     <td class="small text-nowrap">
                                         @if (!info.Entry.Path.IsDirectory)

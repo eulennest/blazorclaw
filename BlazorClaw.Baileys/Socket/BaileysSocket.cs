@@ -460,7 +460,7 @@ public class BaileysSocket : IAsyncDisposable
             Passive = true,
             Pull = true,
             LidDbMigrated = false,
-            Username = ulong.Parse(jid.User),
+            Username = ulong.Parse(jid?.User ?? "0"),
             Device = (uint)jid.Device.GetValueOrDefault()
         };
 

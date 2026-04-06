@@ -1,27 +1,21 @@
 ﻿namespace BlazorClaw.Core.VFS
 {
-    public class VfsEntity : IEquatable<VfsEntity>
+    public class VfsEntity(IVfsSystem fileSystem, VfsPath path) : IEquatable<VfsEntity>
     {
-        public IVfsSystem VFS { get; private set; }
-        public VfsPath Path { get; private set; }
-        public string Name { get { return Path.EntityName; } }
+        public IVfsSystem VFS { get; private set; } = fileSystem;
+        public VfsPath Path { get; private set; } = path;
+        public string Name { get { return Path.EntityName ?? string.Empty; } }
 
-        public VfsEntity(IVfsSystem fileSystem, VfsPath path)
-        {
-            VFS = fileSystem;
-            Path = path;
-        }
-
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
             return obj is VfsEntity other && Equals(other);
         }
 
         public override int GetHashCode() => HashCode.Combine(VFS, Path);
 
-        bool IEquatable<VfsEntity>.Equals(VfsEntity other)
+        public virtual bool Equals(VfsEntity? other)
         {
-            return VFS.Equals(other.VFS) && Path.Equals(other.Path);
+            return VFS.Equals(other?.VFS) && Path.Equals(other.Path);
         }
 
         public static VfsEntity Create(IVfsSystem fileSystem, VfsPath path)

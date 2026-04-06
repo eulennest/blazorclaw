@@ -27,7 +27,7 @@ public class McpSetToolParams : BaseToolParams
     public bool? Enabled { get; set; } = true;
 }
 
-public class McpSetTool(IVfsSystem vfs, MessageContextAccessor mca, ILogger<McpSetTool> logger)
+public class McpSetTool(IVfsSystem vfs, ILogger<McpSetTool> logger)
     : BaseTool<McpSetToolParams>
 {
     public override string Name => "mcp_set";

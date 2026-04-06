@@ -300,7 +300,7 @@ namespace BlazorClaw.Core.VFS
         {
             if (!IsFile)
                 throw new ArgumentException("The specified FileSystemPath is not a file.");
-            string name = EntityName;
+            string name = EntityName ?? string.Empty;
             int extensionIndex = name.LastIndexOf('.');
             if (extensionIndex >= 0)
                 return ParentPath.AppendFile(name[..extensionIndex] + extension);
@@ -315,7 +315,7 @@ namespace BlazorClaw.Core.VFS
             var segments = new LinkedList<string>();
             while (!path.IsRoot)
             {
-                segments.AddFirst(path.EntityName);
+                segments.AddFirst(path.EntityName!);
                 path = path.ParentPath;
             }
             return [.. segments];

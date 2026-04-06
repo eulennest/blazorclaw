@@ -43,7 +43,7 @@ public class VariableResolverHelper
     /// <param name="mappings">Dictionary with VAR_NAME → source:item_name mappings</param>
     /// <param name="context">Message context for vault/environment access</param>
     /// <returns>Dictionary with VAR_NAME → resolved_value</returns>
-    public async Task<Dictionary<string, string>> ResolveMappingsAsync(Dictionary<string, string> mappings, MessageContext? context = null)
+    public async Task<Dictionary<string, string>> ResolveMappingsAsync(Dictionary<string, string> mappings, MessageContext context)
     {
         var result = new Dictionary<string, string>();
 
@@ -65,7 +65,7 @@ public class VariableResolverHelper
     /// <param name="source">Source specification (e.g., "vault:Home_Assistant_Token" or "env:HA_TOKEN")</param>
     /// <param name="context">Message context for vault/environment access</param>
     /// <returns>Resolved value or empty string if not found</returns>
-    public Task<string> ResolveAsync(string source, MessageContext? context = null)
+    public Task<string> ResolveAsync(string source, MessageContext context)
     {
         return _resolver.ResolveAsync(source, context);
     }
@@ -77,7 +77,7 @@ public class VariableResolverHelper
     /// <param name="mappings">Variable mappings to resolve</param>
     /// <param name="context">Message context</param>
     /// <returns>Processed text with variables replaced</returns>
-    public async Task<string> ProcessAsync(string text, Dictionary<string, string>? mappings, MessageContext? context = null)
+    public async Task<string> ProcessAsync(string text, Dictionary<string, string>? mappings, MessageContext context)
     {
         if (string.IsNullOrEmpty(text))
             return text;

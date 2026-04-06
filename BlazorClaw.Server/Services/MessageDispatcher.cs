@@ -83,7 +83,7 @@ namespace BlazorClaw.Server.Services
                     var file = await pathHelper.SaveMediaFileAsync(strm) ?? throw new Exception("Can't save media data");
                     var uri = pathHelper.GetMediaUrl(file);
                     var sst = cmdContext.Provider.GetRequiredService<ISpeechToTextProvider>();
-                    strm = await pathHelper.GetMediaFileAsync(file)!;
+                    strm = await pathHelper.GetMediaFileAsync(file);
                     var transText = await sst.SpeechToTextAsync(strm.Item1, strm.Item2);
 
                     var chatMsg = new ChatMessage

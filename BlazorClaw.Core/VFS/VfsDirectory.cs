@@ -8,9 +8,10 @@ namespace BlazorClaw.Core.VFS
                 throw new ArgumentException("The specified path is no directory.", nameof(path));
         }
 
-        public bool Equals(VfsDirectory other)
+        public bool Equals(VfsDirectory? other)
         {
-            return ((IEquatable<VfsEntity>)this).Equals(other);
+            if(other is VfsEntity entry) return base.Equals(entry);
+            return false;
         }
     }
 }

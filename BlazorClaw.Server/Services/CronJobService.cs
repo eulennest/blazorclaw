@@ -237,9 +237,12 @@ namespace BlazorClaw.Server.Services
 
                         try
                         {
-                            logger.LogInformation("Sending cron response to {ChannelProvider}:{ChannelId} (SessionId: {SessionId})",
+                            if (cmdContext.Channel != null)
+                            {
+                                logger.LogInformation("Sending cron response to {ChannelProvider}:{ChannelId} (SessionId: {SessionId})",
                                 cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, sessionId);
-                            await cmdContext.Channel.SendChannelAsync(msg);
+                                await cmdContext.Channel.SendChannelAsync(msg);
+                            }
                             responseCount++;
 
                         }

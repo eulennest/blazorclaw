@@ -48,7 +48,7 @@ public class VariableResolver : IVariableResolver
     /// <summary>
     /// Resolve all mappings
     /// </summary>
-    public async Task<Dictionary<string, string>> ResolveMappingsAsync(Dictionary<string, string> mappings, MessageContext? context = null)
+    public async Task<Dictionary<string, string>> ResolveMappingsAsync(Dictionary<string, string> mappings, MessageContext context)
     {
         var result = new Dictionary<string, string>();
 

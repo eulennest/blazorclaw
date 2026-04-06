@@ -110,7 +110,8 @@ public class ExecTool : BaseTool<ExecParams>
                 if (relpath == null)
                 {
                     var basep = await vfs.VfsToRealPathAsync(workingdir).ConfigureAwait(false);
-                    var fullPath = Path.Combine(basep!, item);
+                    if (basep == null) continue;
+                    var fullPath = Path.Combine(basep, item);
 
                     // Prüfe ob Path selbst existiert
                     if (fullPath != null)

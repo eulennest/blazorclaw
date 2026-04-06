@@ -79,7 +79,7 @@ namespace BlazorClaw.Core.Utils
                     if (u != null) userId = u.Id;
                 }
             }
-            u ??= await au.FindByIdAsync(userId).ConfigureAwait(false);
+            if (userId != null) u ??= await au.FindByIdAsync(userId).ConfigureAwait(false);
 
             if (!Guid.TryParse(userId, out var uuid)) uuid = sess?.Id ?? Guid.NewGuid();
 

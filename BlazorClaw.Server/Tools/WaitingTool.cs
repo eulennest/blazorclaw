@@ -12,7 +12,7 @@ public class WaitToolParams
     public int? Duration { get; set; } = 1;
 }
 
-public class WaitingTool(ILogger<ImageGenerationTool> logger) : BaseTool<WaitToolParams>
+public class WaitingTool() : BaseTool<WaitToolParams>
 {
     public override string Name => "sleep_sec";
     public override string Description => "Wartet eine bestimmte Anzahl an Sekunden. Kann z.B. verwendet werden um den User eine Nachricht zu senden und danach direkt weiter arbeiten zu können. (z.b. Erstelle dir nun ein schönes Bild.  [Wait_sec] -> [image_gen] -> output)";

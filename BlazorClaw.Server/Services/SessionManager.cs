@@ -276,7 +276,7 @@ namespace BlazorClaw.Server.Services
             var lastMsgText = lastMsg?.GetTextContent();
             if (!string.IsNullOrEmpty(lastMsgText) && tokenProz > warningThreshold)
             {
-                lastMsg.Content =
+                lastMsg!.Content =
                     $"[SYSTEM: ⚠️ WARNING: Token usage is at {tokenProz}% call session_compress IMEDIATELY]\r\n{lastMsgText}";
             }
 

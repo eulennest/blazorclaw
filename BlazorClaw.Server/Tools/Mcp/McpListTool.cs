@@ -11,7 +11,7 @@ public class McpListToolParams : BaseToolParams
     public bool OnlyEnabled { get; set; } = true;
 }
 
-public class McpListTool(IVfsSystem vfs, ILogger<McpListTool> logger)
+public class McpListTool(IVfsSystem vfs)
     : BaseTool<McpListToolParams>
 {
     public override string Name => "mcp_list";

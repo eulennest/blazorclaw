@@ -81,8 +81,8 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th style="width: 5%;">
-                                        <a href="#" @onclick:preventDefault @onclick="() => ToggleSort(nameof(AuditLog.Timestamp))" 
-                                           class="text-white text-decoration-none">
+                                        <a href="#" @onclick:preventDefault @onclick="() => ToggleSort(nameof(AuditLog.Timestamp))"
+                                               class="text-white text-decoration-none">
                                             Zeit @GetSortIcon(nameof(AuditLog.Timestamp))
                                         </a>
                                     </th>
@@ -109,7 +109,7 @@
                                         <td>
                                             @if (log.SessionId.HasValue)
                                             {
-                                                <code class="small">@log.SessionId.ToString().Substring(0, 8)...</code>
+                                                <code class="small">@log.SessionId.ToString()?.Substring(0, 8)...</code>
                                             }
                                             else
                                             {
@@ -256,7 +256,7 @@
             query = query.Where(l => l.Timestamp < filterDateTo.Value.AddDays(1));
 
         if (!string.IsNullOrEmpty(filterSessionId))
-            query = query.Where(l => l.SessionId.ToString().Contains(filterSessionId));
+            query = query.Where(l => l.SessionId.ToString()!.Contains(filterSessionId));
 
         totalCount = await query.CountAsync();
 

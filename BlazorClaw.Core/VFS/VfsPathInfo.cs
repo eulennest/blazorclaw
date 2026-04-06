@@ -9,7 +9,7 @@ namespace BlazorClaw.Core.VFS
         {
             Entry = entry;
             Path = entry.Path;
-            Name = Path.EntityName;
+            Name = Path.EntityName ?? string.Empty;
             IsReadOnly = readOnly;
             Length = length;
 
