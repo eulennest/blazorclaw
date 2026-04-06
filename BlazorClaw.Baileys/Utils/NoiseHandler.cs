@@ -22,7 +22,6 @@ public sealed class NoiseHandler
     private byte[] _encKey;
     private byte[] _decKey;
     private int _Counter;
-    private bool _transportEstablished;
 
     private readonly KeyPair _keyPair;
     private readonly ILogger _logger;

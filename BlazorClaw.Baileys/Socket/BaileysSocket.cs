@@ -172,11 +172,9 @@ public sealed class BaileysSocket : IAsyncDisposable
                 }
             };
 
-            // Encode and frame
-            var frame = EncodeFrame(finish.ToByteArray());
             _handshakeComplete = true;
 
-            await SendRawAsync(frame, cancellationToken).ConfigureAwait(false);
+            await SendRawAsync(finish.ToByteArray(), cancellationToken).ConfigureAwait(false);
 
             // First message from server is the handshake response
             //            _noise.Decrypt(data); // This updates the internal state
