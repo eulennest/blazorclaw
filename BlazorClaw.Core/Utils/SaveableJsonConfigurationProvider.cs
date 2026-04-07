@@ -17,6 +17,11 @@ namespace BlazorClaw.Core.Utils
         public override void Set(string key, string? value)
         {
             base.Set(key, value);
+            if (value == null)
+            {
+                Data.Select(kvp => kvp.Key).Where(k => k.StartsWith(key + ConfigurationPath.KeyDelimiter)).ToList()
+                    .ForEach(k => Data.Remove(k));
+            }
             DebouncedSave();
         }
 
@@ -63,7 +68,10 @@ namespace BlazorClaw.Core.Utils
             foreach (var item in pathCols)
             {
                 if (!curObj.ContainsKey(item))
+                {
+                    if (value == null) return; // No need to create path if we're just deleting a value
                     curObj[item] = new JObject();
+                }
                 if (curObj[item] is JObject jo) curObj = jo;
             }
 
