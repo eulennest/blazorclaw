@@ -2,6 +2,7 @@
 @using BlazorClaw.Channels.Services
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
+@inject IOptionsMonitor<BotConfigs<MatrixBotEntry>> MatrixOptions
 
 <PageTitle>Admin - Matrix</PageTitle>
 
@@ -9,6 +10,9 @@
     <h2>Matrix Kanal-Verwaltung</h2>
     <button class="btn btn-secondary" @onclick="GoBack"><i class="bi bi-arrow-left"></i> Zurück</button>
 </div>
+
+@if (!string.IsNullOrEmpty(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
+@if (!string.IsNullOrEmpty(successMessage)) { <div class="alert alert-success">@successMessage</div> }
 
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -46,6 +50,7 @@
                     <label><input type="checkbox" @bind="newEnabled" /> Enabled</label>
                 </div>
                 <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="()=>showAddModal=false">Abbrechen</button>
                     <button class="btn btn-success" @onclick="SaveBot">Speichern</button>
                 </div>
             </div>
@@ -58,38 +63,38 @@
     private bool showAddModal;
     private string newId = "", newHomeserver = "https://matrix.org", newUserId = "", newPassword = "";
     private bool newEnabled = true;
+    private string? errorMessage, successMessage;
 
     protected override void OnInitialized() => LoadBots();
 
     private void LoadBots()
     {
-        bots.Clear();
-        var section = Configuration.GetSection("Channels:Matrix:Accounts");
-        foreach(var item in section.GetChildren()) 
-            bots[item.Key] = item.Get<MatrixBotEntry>() ?? new MatrixBotEntry();
+        bots = MatrixOptions.CurrentValue.ToDictionary();
     }
 
     private void ShowAddModal() => showAddModal = true;
 
     private void ToggleEnabled(string id, bool enabled)
     {
-        Configuration[$"Channels:Matrix:Accounts:{id}:Enabled"] = enabled.ToString();
+        Configuration[$"{BotConfigs<MatrixBotEntry>.Section}:{id}:Enabled"] = enabled.ToString();
         LoadBots();
     }
 
     private void SaveBot()
     {
-        Configuration[$"Channels:Matrix:Accounts:{newId}:Homeserver"] = newHomeserver;
-        Configuration[$"Channels:Matrix:Accounts:{newId}:UserId"] = newUserId;
-        Configuration[$"Channels:Matrix:Accounts:{newId}:Password"] = newPassword;
-        Configuration[$"Channels:Matrix:Accounts:{newId}:Enabled"] = newEnabled.ToString();
+        var section = BotConfigs<MatrixBotEntry>.Section;
+        Configuration[$"{section}:{newId}:Homeserver"] = newHomeserver;
+        Configuration[$"{section}:{newId}:UserId"] = newUserId;
+        Configuration[$"{section}:{newId}:Password"] = newPassword;
+        Configuration[$"{section}:{newId}:Enabled"] = newEnabled.ToString();
         showAddModal = false;
         LoadBots();
     }
 
     private void DeleteBot(string id)
     {
-        Configuration[$"Channels:Matrix:Accounts:{id}"] = null;
+        var section = BotConfigs<MatrixBotEntry>.Section;
+        Configuration[$"{section}:{id}"] = null;
         LoadBots();
     }
 
