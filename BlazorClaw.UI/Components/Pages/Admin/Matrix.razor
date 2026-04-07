@@ -88,7 +88,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(formMode == CRUDMode.Edit ? "Bot bearbeiten" : "Neuer Matrix Bot")</h5>
+                    <h5 class="modal-title">@(formMode == CRUDMode.Edit ? "Account bearbeiten" : "Neuer Account")</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
@@ -173,7 +173,7 @@
     {
         if (editModel == null || string.IsNullOrWhiteSpace(editModelKey)) return;
         config.CurrentValue.Save(Configuration, editModelKey, editModel);
-        successMessage = $"Bot '{editModelKey}' erfolgreich {((formMode == CRUDMode.Edit) ? "aktualisiert" : "hinzugefügt")}!";
+        successMessage = $"Account '{editModelKey}' erfolgreich {((formMode == CRUDMode.Edit) ? "aktualisiert" : "hinzugefügt")}!";
         CloseModal();
         RefreshData();
     }
@@ -188,7 +188,7 @@
     {
         if (formMode != CRUDMode.Delete || string.IsNullOrEmpty(editModelKey)) return;
         config.CurrentValue.Delete(Configuration, editModelKey);
-        successMessage = "Bot gelöscht.";
+        successMessage = "Account gelöscht.";
         editModelKey = null;
         CloseModal();
         RefreshData();
