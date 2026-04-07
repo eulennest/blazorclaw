@@ -71,7 +71,7 @@
 
 @code {
     private Dictionary<string, TelegramBotEntry> bots = new();
-    private bool showAddModal;
+    private bool showAddModal, isEditMode;
     private string newId = "", newToken = "";
     private bool newEnabled = true;
     private string? errorMessage, successMessage;
@@ -91,7 +91,25 @@
         return parts.Length > 0 ? parts[0] : "Ungültig";
     }
 
-    private void ShowAddModal() => showAddModal = true;
+    private void ShowAddModal() => ConfirmAddModal();
+
+    private void ConfirmAddModal()
+    {
+        newId = string.Empty;
+        newToken = string.Empty;
+        newEnabled = true;
+        isEditMode = false;
+        showAddModal = true;
+    }
+
+    private void ConfirmEditModal(string id)
+    {
+        newId = id;
+        newToken = bots[id].Token;
+        newEnabled = bots[id].Enabled;
+        isEditMode = true;
+        showAddModal = true;
+    }
 
     private void ToggleEnabled(string id, bool enabled)
     {
