@@ -118,6 +118,28 @@
     </div>
 }
 
+@if (formMode == CRUDMode.Delete)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Löschen bestätigen</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Möchten Sie den Account <strong>"@editModelKey"</strong> wirklich löschen?</p>
+                    <p class="text-muted">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Abbrechen</button>
+                    <button class="btn btn-danger" @onclick="DeleteAccount">Löschen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<WhatsAppQRCodeData> qrCodes = new();
     private string SectionName => BotConfigs<WhatsAppBotEntry>.Section;
