@@ -36,7 +36,14 @@
                             <td><input type="checkbox" checked="@entry.Value.Enabled" @onchange="(e) => ToggleEnabled(entry.Key, (bool)e.Value!)" /></td>
                             <td><code>@ExtractUserId(entry.Value.Token)</code></td>
                             <td><code>@MaskToken(entry.Value.Token)</code></td>
-                            <td><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBot(entry.Key)">Löschen</button></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => ConfirmEditModal(entry.Key)">
+                                    <i class="bi bi-pencil"></i> Bearbeiten
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBot(entry.Key)">
+                                    <i class="bi bi-trash"></i> Löschen
+                                </button>
+                            </td>
                         </tr>
                     }
                 </tbody>
