@@ -152,6 +152,7 @@
 
     protected override void OnInitialized()
     {
+        LoadData();
         config.OnChange(_ => RefreshData());
     }
 
