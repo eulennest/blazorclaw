@@ -30,7 +30,6 @@
             <thead>
                 <tr>
                     <th>Identifier</th>
-                    <th>Enabled</th>
                     <th>Homeserver</th>
                     <th>User ID</th>
                     <th>Aktionen</th>
@@ -41,7 +40,6 @@
                     {
                         <tr>
                             <td><code>@entry.Key</code></td>
-                            <td><input type="checkbox" checked="@entry.Value.Enabled" @onchange="(e) => ToggleEnabled(entry.Key, (bool)e.Value!)" /></td>
                             <td>@entry.Value.Homeserver</td>
                             <td>@entry.Value.UserId</td>
                             <td>
@@ -85,7 +83,10 @@
                         <label class="form-label">Passwort</label>
                         <input class="form-control" @bind="newPassword" type="password" />
                     </div>
-                    <label><input type="checkbox" @bind="newEnabled" /> Enabled</label>
+                    <div class="mb-3 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="enabledSwitch" @bind="newEnabled" />
+                        <label class="form-check-label" for="enabledSwitch">Enabled</label>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseAddModal">Abbrechen</button>
@@ -134,12 +135,6 @@
     }
 
     private void CloseAddModal() => showAddModal = false;
-
-    private void ToggleEnabled(string id, bool enabled)
-    {
-        Configuration[$"{BotConfigs<MatrixBotEntry>.Section}:{id}:Enabled"] = enabled.ToString();
-        LoadBots();
-    }
 
     private void SaveBot()
     {

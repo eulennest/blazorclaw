@@ -33,7 +33,6 @@
                 <thead>
                     <tr>
                         <th>Identifier</th>
-                        <th>Enabled</th>
                         <th>Status</th>
                         <th>Push Name</th>
                         <th>Aktionen</th>
@@ -45,11 +44,6 @@
                         var hasQR = qrCodes.Any(q => q.AccountId == account.Key);
                         <tr>
                             <td><code>@account.Key</code></td>
-                            <td>
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" checked="@account.Value.Enabled" @onchange="(e) => ToggleEnabled(account.Key, (bool)e.Value!)" />
-                                </div>
-                            </td>
                             <td>
                                 @if (hasQR) { <span class="badge bg-warning">Wartet auf Pairing</span> }
                                 else { <span class="badge bg-success">Verbunden</span> }
@@ -142,12 +136,6 @@
     }
 
     private void CloseAddModal() => showAddModal = false;
-
-    private void ToggleEnabled(string id, bool enabled)
-    {
-        Configuration[$"{BotConfigs<WhatsAppBotEntry>.Section}:{id}:Enabled"] = enabled.ToString();
-        RefreshData();
-    }
 
     private void SaveNewAccount()
     {

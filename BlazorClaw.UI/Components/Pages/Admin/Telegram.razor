@@ -28,12 +28,11 @@
         @if (bots.Count == 0) { <p class="text-muted">Keine Bots konfiguriert.</p> }
         else {
             <table class="table table-hover">
-                <thead><tr><th>Identifier</th><th>Enabled</th><th>User ID</th><th>Token</th><th>Aktionen</th></tr></thead>
+                <thead><tr><th>Identifier</th><th>User ID</th><th>Token</th><th>Aktionen</th></tr></thead>
                 <tbody>
                     @foreach (var entry in bots) {
                         <tr>
                             <td><code>@entry.Key</code></td>
-                            <td><input type="checkbox" checked="@entry.Value.Enabled" @onchange="(e) => ToggleEnabled(entry.Key, (bool)e.Value!)" /></td>
                             <td><code>@ExtractUserId(entry.Value.Token)</code></td>
                             <td><code>@MaskToken(entry.Value.Token)</code></td>
                             <td>
@@ -56,15 +55,19 @@
     <div class="modal show d-block" style="background: rgba(0,0,0,0.5)">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header"><h5>Neuer Telegram Bot</h5></div>
+                <div class="modal-header"><h5>@(isEditMode ? "Bot bearbeiten" : "Neuer Telegram Bot")</h5></div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Identifier</label>
-                        <input class="form-control" @bind="newId" placeholder="Bot ID (z.B. default)" />
+                        <input class="form-control" @bind="newId" disabled="@isEditMode" placeholder="Bot ID (z.B. default)" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Bot Token</label>
                         <input class="form-control" @bind="newToken" placeholder="Bot Token" />
+                    </div>
+                    <div class="mb-3 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="enabledSwitch" @bind="newEnabled" />
+                        <label class="form-check-label" for="enabledSwitch">Enabled</label>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -116,13 +119,6 @@
         newEnabled = bots[id].Enabled;
         isEditMode = true;
         showAddModal = true;
-    }
-
-    private void ToggleEnabled(string id, bool enabled)
-    {
-        var section = BotConfigs<TelegramBotEntry>.Section;
-        Configuration[$"{section}:{id}:Enabled"] = enabled.ToString();
-        LoadBots();
     }
 
     private void SaveBot()
