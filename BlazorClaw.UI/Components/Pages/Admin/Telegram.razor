@@ -28,11 +28,12 @@
         @if (bots.Count == 0) { <p class="text-muted">Keine Bots konfiguriert.</p> }
         else {
             <table class="table table-hover">
-                <thead><tr><th>Bot ID</th><th>Token</th><th>Aktionen</th></tr></thead>
+                <thead><tr><th>Bot ID</th><th>User ID</th><th>Token</th><th>Aktionen</th></tr></thead>
                 <tbody>
                     @foreach (var bot in bots) {
                         <tr>
                             <td><code>@bot.Key</code></td>
+                            <td><code>@ExtractUserId(bot.Value)</code></td>
                             <td><code>@MaskToken(bot.Value)</code></td>
                             <td><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBot(bot.Key)">Löschen</button></td>
                         </tr>
@@ -75,6 +76,12 @@
     }
 
     private string MaskToken(string token) => token.Length > 8 ? token[..4] + "..." + token[^4..] : "****";
+
+    private string ExtractUserId(string token)
+    {
+        var parts = token.Split(':');
+        return parts.Length > 0 ? parts[0] : "Ungültig";
+    }
 
     private void ShowAddModal() => showAddModal = true;
 
