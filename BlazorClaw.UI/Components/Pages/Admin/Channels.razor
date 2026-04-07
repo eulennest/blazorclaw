@@ -32,6 +32,15 @@
             </tr>
             <tr>
                 @{
+                    var mb = BotsEnabled<MatrixBotEntry>();
+                }
+                <td><i class="bi bi-person-workspace"></i> Matrix</td>
+                <td><span class="badge @(mb.Length > 0 ? "bg-success" : "bg-secondary")">@(mb.Length > 0 ? "Aktiv" : "Inaktiv")</span></td>
+                <td><code>@string.Join(", ", mb)</code></td>
+                <td><a href="/admin/channels/matrix" class="btn btn-sm btn-outline-primary"><i class="bi bi-gear"></i> Verwalten</a></td>
+            </tr>
+            <tr>
+                @{
                     var wb = BotsEnabled<WhatsAppBotEntry>();
                 }
                 <td><i class="bi bi-whatsapp"></i> WhatsApp</td>
