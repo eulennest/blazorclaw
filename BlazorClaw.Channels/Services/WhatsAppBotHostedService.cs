@@ -121,11 +121,10 @@ namespace BlazorClaw.Channels.Services
 
         private async Task RemoveBotAsync(string accountId)
         {
-            if (!_bots.TryGetValue(accountId, out var bot))
-                return;
-
             try
             {
+                if (!_bots.TryGetValue(accountId, out var bot))
+                    return;
                 messageDispatcher.Unregister(bot);
                 await bot.DisconnectAsync();
                 _bots.Remove(accountId);

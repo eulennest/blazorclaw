@@ -4,7 +4,7 @@
 @using Microsoft.Extensions.Options
 @inject NavigationManager Navigation
 @inject IOptionsMonitor<BotConfigs<TelegramBotEntry>> config
-@inject IConfiguration Configuration
+@inject IConfigurationRoot Configuration
 
 <PageTitle>Admin - Telegram</PageTitle>
 
@@ -150,7 +150,7 @@
 
     private void LoadData() { }
 
-    private void RefreshData() { LoadData(); StateHasChanged(); }
+    private void RefreshData() { LoadData(); try { StateHasChanged(); } catch { } }
 
     private string MaskToken(string token) => token.Length > 8 ? token[..4] + "..." + token[^4..] : "****";
 
@@ -173,7 +173,7 @@
     private void SaveAccount()
     {
         if (editModel == null || string.IsNullOrWhiteSpace(editModelKey)) return;
-        config.CurrentValue.Save(Configuration, editModelKey, editModel);
+        config.CurrentValue.SaveAsync(Configuration, editModelKey, editModel).GetAwaiter().GetResult();
         successMessage = $"Account '{editModelKey}' erfolgreich {((formMode == CRUDMode.Edit) ? "aktualisiert" : "hinzugefügt")}!";
         CloseModal();
         RefreshData();
@@ -188,7 +188,7 @@
     private void DeleteAccount()
     {
         if (formMode != CRUDMode.Delete || string.IsNullOrEmpty(editModelKey)) return;
-        config.CurrentValue.Delete(Configuration, editModelKey);
+        config.CurrentValue.DeleteAsync(Configuration, editModelKey).GetAwaiter().GetResult();
         successMessage = "Account gelöscht.";
         editModelKey = null;
         CloseModal();

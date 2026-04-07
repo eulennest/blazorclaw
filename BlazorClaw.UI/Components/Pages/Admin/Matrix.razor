@@ -3,7 +3,7 @@
 @using BlazorClaw.UI.Utils
 @using Microsoft.Extensions.Options
 @inject NavigationManager Navigation
-@inject IConfiguration Configuration
+@inject IConfigurationRoot Configuration
 @inject IOptionsMonitor<BotConfigs<MatrixBotEntry>> config
 
 <PageTitle>Admin - Matrix</PageTitle>
@@ -158,7 +158,7 @@
 
     private void LoadData() { }
 
-    private void RefreshData() { LoadData(); StateHasChanged(); }
+    private void RefreshData() { LoadData(); try { StateHasChanged(); } catch { } }
 
     private void LoadEditModal(string? id = null)
     {
@@ -173,7 +173,7 @@
     private void SaveAccount()
     {
         if (editModel == null || string.IsNullOrWhiteSpace(editModelKey)) return;
-        config.CurrentValue.Save(Configuration, editModelKey, editModel);
+        config.CurrentValue.SaveAsync(Configuration, editModelKey, editModel).GetAwaiter().GetResult();
         successMessage = $"Account '{editModelKey}' erfolgreich {((formMode == CRUDMode.Edit) ? "aktualisiert" : "hinzugefügt")}!";
         CloseModal();
         RefreshData();
@@ -188,7 +188,7 @@
     private void DeleteAccount()
     {
         if (formMode != CRUDMode.Delete || string.IsNullOrEmpty(editModelKey)) return;
-        config.CurrentValue.Delete(Configuration, editModelKey);
+        config.CurrentValue.DeleteAsync(Configuration, editModelKey).GetAwaiter().GetResult();
         successMessage = "Account gelöscht.";
         editModelKey = null;
         CloseModal();

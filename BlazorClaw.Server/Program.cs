@@ -34,9 +34,11 @@ var old = builder.Configuration.Sources.LastOrDefault(o => o is FileConfiguratio
 if (old != null) builder.Configuration.Sources.Remove(old);
 builder.Configuration.Add<SaveableJsonConfigurationSource>(o =>
 {
+    o.ReloadOnChange = true;
     o.Optional = true;
     o.Path = confFile;
 });
+builder.Services.AddSingleton<IConfigurationRoot>(builder.Configuration);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

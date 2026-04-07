@@ -13,14 +13,16 @@ namespace BlazorClaw.Core.Utils
         private Timer? _saveTimer;
         private readonly object _saveLock = new();
         private const int SaveDelayMs = 100;
+        private HashSet<string> Deleting = [];
 
         public override void Set(string key, string? value)
         {
             base.Set(key, value);
             if (value == null)
             {
-                Data.Select(kvp => kvp.Key).Where(k => k.StartsWith(key + ConfigurationPath.KeyDelimiter)).ToList()
+                Data.Select(kvp => kvp.Key).Where(k => k == key || k.StartsWith(key + ConfigurationPath.KeyDelimiter)).ToList()
                     .ForEach(k => Data.Remove(k));
+                Deleting.Add(key);
             }
             DebouncedSave();
         }
@@ -38,6 +40,8 @@ namespace BlazorClaw.Core.Utils
         {
             lock (_saveLock)
             {
+                _saveTimer?.Dispose();
+                _saveTimer = null;
                 string? sJson = File.Exists(FileName)
                   ? File.ReadAllText(FileName)
                   : null;
@@ -47,15 +51,20 @@ namespace BlazorClaw.Core.Utils
                   : [];
 
                 // Rebuild entire config from Data dictionary
+                foreach (var item in Deleting)
+                {
+                    SetValueInJson(rootNode ?? [], item, null);
+                }
                 foreach (var kvp in Data)
                 {
                     SetValueInJson(rootNode ?? [], kvp.Key, kvp.Value);
                 }
-
                 // Save
                 sJson = JsonConvert.SerializeObject(rootNode, Newtonsoft.Json.Formatting.Indented);
                 File.WriteAllText(FileName, sJson, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true));
-                OnReload();
+                Deleting.Clear();
+                Data.Clear();
+                Load();
             }
         }
 
