@@ -266,6 +266,7 @@ namespace BlazorClaw.Server.Services
                         });
                     }
                 }
+                sessionState.SystemPrompts.Add(new DefaultAssistChatMessage());
             }
             const int maxtoken = 100000;
             const double warningThreshold = 70;
