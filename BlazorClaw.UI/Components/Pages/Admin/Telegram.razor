@@ -1,0 +1,82 @@
+@page "/admin/channels/telegram"
+@using BlazorClaw.Channels.Services
+@using Microsoft.Extensions.Options
+@inject NavigationManager Navigation
+@inject IConfiguration Configuration
+
+<PageTitle>Admin - Telegram</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>Telegram Kanal-Verwaltung</h2>
+        <p class="text-muted">Verwaltung von Telegram-Bot-Tokens.</p>
+    </div>
+    <div>
+        <button class="btn btn-secondary" @onclick="GoBack">
+            <i class="bi bi-arrow-left"></i> Zurück
+        </button>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle"></i> @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="bi bi-telegram"></i> Telegram Konfiguration</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label">Bot Token</label>
+            <input type="password" class="form-control" @bind="botToken" placeholder="Eingabe des Telegram Bot Tokens" />
+            <small class="form-text text-muted">Token von @BotFather</small>
+        </div>
+        
+        <button class="btn btn-primary" @onclick="SaveConfiguration">
+            <i class="bi bi-save"></i> Konfiguration speichern
+        </button>
+    </div>
+</div>
+
+@code {
+    private string botToken = string.Empty;
+    private string? errorMessage = null;
+    private string? successMessage = null;
+
+    protected override void OnInitialized()
+    {
+        botToken = Configuration["Channels:Telegram:0:Token"] ?? string.Empty;
+    }
+
+    private void SaveConfiguration()
+    {
+        try
+        {
+            Configuration["Channels:Telegram:0:Id"] = "default";
+            Configuration["Channels:Telegram:0:Token"] = botToken;
+
+            successMessage = "Telegram Konfiguration gespeichert! Bitte Server neu starten.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Fehler beim Speichern: {ex.Message}";
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/admin/channels");
+    }
+}
