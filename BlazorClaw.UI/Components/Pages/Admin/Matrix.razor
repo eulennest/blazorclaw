@@ -18,18 +18,18 @@
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">Matrix Bots</h5>
-        <button class="btn btn-sm btn-success" @onclick="ShowAddModal">Bot hinzufügen</button>
+        <button class="btn btn-sm btn-success" @onclick="ShowAddModal">Neuer Account</button>
     </div>
     <div class="card-body">
         <table class="table table-hover">
-            <thead><tr><th>ID</th><th>Homeserver</th><th>User ID</th><th>Enabled</th><th>Aktionen</th></tr></thead>
+            <thead><tr><th>Identifier</th><th>Enabled</th><th>Homeserver</th><th>User ID</th><th>Aktionen</th></tr></thead>
             <tbody>
                 @foreach (var bot in bots) {
                     <tr>
                         <td><code>@bot.Key</code></td>
+                        <td><input type="checkbox" checked="@bot.Value.Enabled" @onchange="(e) => ToggleEnabled(bot.Key, (bool)e.Value!)" /></td>
                         <td>@bot.Value.Homeserver</td>
                         <td>@bot.Value.UserId</td>
-                        <td><input type="checkbox" checked="@bot.Value.Enabled" @onchange="(e) => ToggleEnabled(bot.Key, (bool)e.Value!)" /></td>
                         <td><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBot(bot.Key)">Löschen</button></td>
                     </tr>
                 }
