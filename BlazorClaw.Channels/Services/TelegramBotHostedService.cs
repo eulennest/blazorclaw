@@ -25,6 +25,8 @@ namespace BlazorClaw.Channels.Services
         {
             foreach (var botConfig in telegramConfigs.CurrentValue)
             {
+                if (!botConfig.Value.Enabled) continue;
+
                 var id = botConfig.Key; // Use Key (e.g. main/alerts)
                 var token = botConfig.Value.Token;
                 if (!string.IsNullOrEmpty(token))
@@ -114,7 +116,7 @@ namespace BlazorClaw.Channels.Services
         }
     }
 
-    public class TelegramBotEntry
+    public class TelegramBotEntry : BotEntry
     {
         public string Token { get; set; } = string.Empty;
     }

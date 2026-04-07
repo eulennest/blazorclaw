@@ -1,6 +1,8 @@
 @page "/admin/channels"
 @using BlazorClaw.Channels.Services
+@using Microsoft.Extensions.DependencyInjection
 @inject WhatsAppBotHostedService WhatsAppService
+@inject IServiceProvider sp
 
 <PageTitle>Admin - Kanäle</PageTitle>
 
@@ -20,21 +22,27 @@
         </thead>
         <tbody>
             <tr>
+                @{
+                    var tb = BotsEnabled<TelegramBotEntry>();
+                }
                 <td><i class="bi bi-telegram"></i> Telegram</td>
-                <td><span class="badge bg-success">Aktiv</span></td>
-                <td><code>default</code></td>
+                <td><span class="badge @(tb.Length > 0 ? "bg-sucess" : "bg-secondary")">@(tb.Length > 0 ? "Aktiv" : "Inaktiv")</span></td>
+                <td><code>@string.Join(", ", tb)</code></td>
                 <td><a href="/admin/channels/telegram" class="btn btn-sm btn-outline-primary"><i class="bi bi-gear"></i> Verwalten</a></td>
             </tr>
             <tr>
+                @{
+                    var wb = BotsEnabled<WhatsAppBotEntry>();
+                }
                 <td><i class="bi bi-whatsapp"></i> WhatsApp</td>
                 <td>
-                    @if (whatsappAccountCount == 0)
+                    @if (wb.Length == 0)
                     {
                         <span class="badge bg-secondary">Inaktiv</span>
                     }
                     else if (whatsappQRCount > 0)
                     {
-                        <span class="badge bg-warning">Pairing (@whatsappQRCount/@whatsappAccountCount)</span>
+                        <span class="badge bg-warning">Pairing (@whatsappQRCount)</span>
                     }
                     else
                     {
@@ -42,17 +50,17 @@
                     }
                 </td>
                 <td>
-                    @if (whatsappAccountCount == 0)
+                    @if (wb.Length == 0)
                     {
                         <span class="text-muted">Keine Accounts konfiguriert</span>
                     }
                     else if (whatsappQRCount > 0)
                     {
-                        <span class="text-warning">@whatsappQRCount von @whatsappAccountCount nicht verbunden</span>
+                        <span class="text-warning"><code>@string.Join(", ", tb)</code> @whatsappQRCount nicht verbunden</span>
                     }
                     else
                     {
-                        <span class="text-success">@whatsappAccountCount verbunden</span>
+                        <span class="text-success"><code>@string.Join(", ", tb)</code></span>
                     }
                 </td>
                 <td>
@@ -67,11 +75,16 @@
 
 @code {
     private int whatsappQRCount = 0;
-    private int whatsappAccountCount = 0;
 
     protected override void OnInitialized()
     {
-        whatsappAccountCount = WhatsAppService.GetAccountCount();
         whatsappQRCount = WhatsAppService.GetCurrentQRCodes().Count;
+    }
+
+    protected string[] BotsEnabled<T>() where T : BotEntry
+    {
+        var opts = sp.GetService<Microsoft.Extensions.Options.IOptions<BotConfigs<T>>>()?.Value;
+        if (opts == null) return Array.Empty<string>();
+        return opts.Where(o => o.Value.Enabled).Select(o => o.Key).ToArray();
     }
 }

@@ -5,23 +5,25 @@ using Matrix.Sdk.Core.Domain.RoomEvent;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace BlazorClaw.Channels.Services
 {
-    public class MatrixBotHostedService(IConfiguration configuration, ILogger<MatrixBotHostedService> logger, IMessageDispatcher messageDispatcher) : IHostedService
+    public class MatrixBotHostedService(IOptionsMonitor<BotConfigs<MatrixBotEntry>> matrixConfigs, ILogger<MatrixBotHostedService> logger, IMessageDispatcher messageDispatcher) : IHostedService
     {
         private readonly List<MatrixChannelBot> _bots = [];
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            var matrixConfigs = configuration.GetSection("Channels:Matrix").GetChildren();
             var factory = new MatrixClientFactory();
 
-            foreach (var config in matrixConfigs)
+            foreach (var config in matrixConfigs.CurrentValue)
             {
-                var homeserver = new Uri(config["Homeserver"] ?? "https://matrix.org");
-                var userId = config["UserId"] ?? "";
-                var password = config["Password"] ?? "";
+                if (!config.Value.Enabled) continue;
+
+                var homeserver = new Uri(config.Value.Homeserver ?? "https://matrix.org", UriKind.Absolute);
+                var userId = config.Value.UserId;
+                var password = config.Value.Password;
 
                 logger.LogInformation("Matrix Bot '{id}' initializing ...", config.Key);
 
@@ -110,5 +112,11 @@ namespace BlazorClaw.Channels.Services
         {
             return Client.SendMessageAsync(channelId.ChannelId, Convert.ToString(message.Content) ?? string.Empty);
         }
+    }
+    public class MatrixBotEntry : BotEntry
+    {
+        public string Homeserver { get; set; } = "https://matrix.org";
+        public string UserId { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
     }
 }

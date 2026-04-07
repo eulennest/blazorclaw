@@ -150,11 +150,13 @@ builder.Services.AddScoped<ISessionQueryService, BlazorClaw.Core.Services.Sessio
 builder.Services.AddSingleton<CronJobService>();
 builder.Services.AddSingleton<ICronJobService>(sp => sp.GetRequiredService<CronJobService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<CronJobService>());
-builder.Services.AddHostedService<TelegramBotHostedService>();
-builder.Services.AddHostedService<MatrixBotHostedService>();
 
 builder.Services.Configure<BotConfigs<WhatsAppBotEntry>>(builder.Configuration.GetSection(BotConfigs<WhatsAppBotEntry>.Section));
 builder.Services.Configure<BotConfigs<TelegramBotEntry>>(builder.Configuration.GetSection(BotConfigs<TelegramBotEntry>.Section));
+builder.Services.Configure<BotConfigs<MatrixBotEntry>>(builder.Configuration.GetSection(BotConfigs<MatrixBotEntry>.Section));
+
+builder.Services.AddHostedService<TelegramBotHostedService>();
+builder.Services.AddHostedService<MatrixBotHostedService>();
 builder.Services.AddSingleton<WhatsAppBotHostedService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<WhatsAppBotHostedService>());
 

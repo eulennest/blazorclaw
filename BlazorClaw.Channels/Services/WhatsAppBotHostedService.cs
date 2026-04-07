@@ -150,7 +150,7 @@ namespace BlazorClaw.Channels.Services
         {
             logger.LogInformation("Initializing WhatsApp account '{AccountId}'...", accountId);
 
-            var authDir = config.AuthDir ?? $"./whatsapp_auth/{accountId}";
+            var authDir = $"./whatsapp_auth/{accountId}";
             var pushName = config.PushName ?? "BlazorClaw";
 
             var whatsappConfig = new WhatsAppConfig
@@ -357,11 +357,10 @@ namespace BlazorClaw.Channels.Services
             return Task.CompletedTask;
         }
     }
-    public class WhatsAppBotEntry
+    public class WhatsAppBotEntry : BotEntry
     {
-        public bool Enabled { get; set; } = true;
         public string? PhoneNumber { get; set; }
-        public string? AuthDir { get; set; }
         public string? PushName { get; set; }
     }
+
 }
