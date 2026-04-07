@@ -36,25 +36,25 @@
                     <th>Aktionen</th>
                 </tr>
             </thead>
-            <tbody>
-                @foreach (var entry in bots)
-                {
-                    <tr>
-                        <td><code>@entry.Key</code></td>
-                        <td><input type="checkbox" checked="@entry.Value.Enabled" @onchange="(e) => ToggleEnabled(entry.Key, (bool)e.Value!)" /></td>
-                        <td>@entry.Value.Homeserver</td>
-                        <td>@entry.Value.UserId</td>
-                        <td>
-                            <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => ConfirmEditModal(entry.Key)">
-                                <i class="bi bi-pencil"></i> Bearbeiten
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBot(entry.Key)">
-                                <i class="bi bi-trash"></i> Löschen
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
+                <tbody>
+                    @foreach (var entry in bots)
+                    {
+                        <tr>
+                            <td><code>@entry.Key</code></td>
+                            <td><input type="checkbox" checked="@entry.Value.Enabled" @onchange="(e) => ToggleEnabled(entry.Key, (bool)e.Value!)" /></td>
+                            <td>@entry.Value.Homeserver</td>
+                            <td>@entry.Value.UserId</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => ConfirmEditModal(entry.Key)">
+                                    <i class="bi bi-pencil"></i> Bearbeiten
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBot(entry.Key)">
+                                    <i class="bi bi-trash"></i> Löschen
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
         </table>
     </div>
 </div>
