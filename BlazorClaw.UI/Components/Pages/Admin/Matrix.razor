@@ -44,10 +44,22 @@
             <div class="modal-content">
                 <div class="modal-header"><h5>Neuer Matrix Bot</h5></div>
                 <div class="modal-body">
-                    <input class="form-control mb-2" @bind="newId" placeholder="Bot ID" />
-                    <input class="form-control mb-2" @bind="newHomeserver" placeholder="Homeserver URL" />
-                    <input class="form-control mb-2" @bind="newUserId" placeholder="User ID" />
-                    <input class="form-control mb-2" @bind="newPassword" type="password" placeholder="Passwort" />
+                    <div class="mb-3">
+                        <label class="form-label">Identifier</label>
+                        <input class="form-control" @bind="newId" placeholder="Bot ID" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Homeserver</label>
+                        <input class="form-control" @bind="newHomeserver" placeholder="https://matrix.org" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">User ID</label>
+                        <input class="form-control" @bind="newUserId" placeholder="@bot:example.com" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Passwort</label>
+                        <input class="form-control" @bind="newPassword" type="password" />
+                    </div>
                     <label><input type="checkbox" @bind="newEnabled" /> Enabled</label>
                 </div>
                 <div class="modal-footer">

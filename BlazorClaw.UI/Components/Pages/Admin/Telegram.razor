@@ -51,8 +51,14 @@
             <div class="modal-content">
                 <div class="modal-header"><h5>Neuer Telegram Bot</h5></div>
                 <div class="modal-body">
-                    <input class="form-control mb-2" @bind="newId" placeholder="Bot ID (z.B. default)" />
-                    <input class="form-control" @bind="newToken" placeholder="Bot Token" />
+                    <div class="mb-3">
+                        <label class="form-label">Identifier</label>
+                        <input class="form-control" @bind="newId" placeholder="Bot ID (z.B. default)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Bot Token</label>
+                        <input class="form-control" @bind="newToken" placeholder="Bot Token" />
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="()=>showAddModal=false">Abbrechen</button>
