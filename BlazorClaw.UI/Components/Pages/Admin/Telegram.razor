@@ -28,14 +28,15 @@
         @if (bots.Count == 0) { <p class="text-muted">Keine Bots konfiguriert.</p> }
         else {
             <table class="table table-hover">
-                <thead><tr><th>Bot ID</th><th>User ID</th><th>Token</th><th>Aktionen</th></tr></thead>
+                <thead><tr><th>Bot ID</th><th>User ID</th><th>Token</th><th>Enabled</th><th>Aktionen</th></tr></thead>
                 <tbody>
-                    @foreach (var bot in bots) {
+                    @foreach (var entry in bots) {
                         <tr>
-                            <td><code>@bot.Key</code></td>
-                            <td><code>@ExtractUserId(bot.Value)</code></td>
-                            <td><code>@MaskToken(bot.Value)</code></td>
-                            <td><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBot(bot.Key)">Löschen</button></td>
+                            <td><code>@entry.Key</code></td>
+                            <td><code>@ExtractUserId(entry.Value.Token)</code></td>
+                            <td><code>@MaskToken(entry.Value.Token)</code></td>
+                            <td><input type="checkbox" checked="@entry.Value.Enabled" @onchange="(e) => ToggleEnabled(entry.Key, (bool)e.Value!)" /></td>
+                            <td><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBot(entry.Key)">Löschen</button></td>
                         </tr>
                     }
                 </tbody>
@@ -63,16 +64,17 @@
 }
 
 @code {
-    private Dictionary<string, string> bots = new();
+    private Dictionary<string, TelegramBotEntry> bots = new();
     private bool showAddModal;
     private string newId = "", newToken = "";
+    private bool newEnabled = true;
     private string? errorMessage, successMessage;
 
     protected override void OnInitialized() => LoadBots();
 
     private void LoadBots()
     {
-        bots = configs.Value.ToDictionary(b => b.Key, b => b.Value.Token);
+        bots = configs.Value.ToDictionary(b => b.Key, b => b.Value);
     }
 
     private string MaskToken(string token) => token.Length > 8 ? token[..4] + "..." + token[^4..] : "****";
@@ -85,11 +87,18 @@
 
     private void ShowAddModal() => showAddModal = true;
 
+    private void ToggleEnabled(string id, bool enabled)
+    {
+        var section = BotConfigs<TelegramBotEntry>.Section;
+        Configuration[$"{section}:{id}:Enabled"] = enabled.ToString();
+        LoadBots();
+    }
+
     private void SaveBot()
     {
         var section = BotConfigs<TelegramBotEntry>.Section;
         Configuration[$"{section}:{newId}:Token"] = newToken;
-        successMessage = "Bot hinzugefügt.";
+        Configuration[$"{section}:{newId}:Enabled"] = newEnabled.ToString();
         showAddModal = false;
         LoadBots();
     }
