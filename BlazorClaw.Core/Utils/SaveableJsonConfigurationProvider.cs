@@ -9,7 +9,7 @@ namespace BlazorClaw.Core.Utils
     public class SaveableJsonConfigurationProvider(SaveableJsonConfigurationSource configurationSource) : JsonConfigurationProvider(configurationSource)
     {
         protected string FileName => Source.Path ?? string.Empty;
-        
+
         private Timer? _saveTimer;
         private readonly object _saveLock = new();
         private const int SaveDelayMs = 100;
@@ -50,6 +50,7 @@ namespace BlazorClaw.Core.Utils
                 // Save
                 sJson = JsonConvert.SerializeObject(rootNode, Newtonsoft.Json.Formatting.Indented);
                 File.WriteAllText(FileName, sJson, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true));
+                OnReload();
             }
         }
 
@@ -72,8 +73,22 @@ namespace BlazorClaw.Core.Utils
             }
             else
             {
-                curObj[cols.Last()] = JToken.FromObject(value);
+                curObj[cols.Last()] = GetJToken(value);
             }
+        }
+
+        protected static JToken GetJToken(object obj)
+        {
+            if (obj is string str)
+            {
+                if ("true".Equals(str, StringComparison.InvariantCultureIgnoreCase))
+                    return JToken.FromObject(true);
+                if ("false".Equals(str, StringComparison.InvariantCultureIgnoreCase))
+                    return JToken.FromObject(false);
+                if (str.Length > 0 && str.All(char.IsDigit) && str[0] != '0')
+                    return JToken.FromObject(long.Parse(str));
+            }
+            return JToken.FromObject(obj);
         }
 
         protected override void Dispose(bool disposing)

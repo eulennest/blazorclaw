@@ -86,7 +86,11 @@
     private bool newEnabled = true;
     private string? errorMessage, successMessage;
 
-    protected override void OnInitialized() => LoadBots();
+    protected override void OnInitialized()
+    {
+        LoadBots();
+        configs.OnChange(_ => LoadBots());
+    }
 
     private void LoadBots()
     {
