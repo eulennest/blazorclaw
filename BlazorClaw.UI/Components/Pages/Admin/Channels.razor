@@ -59,17 +59,10 @@
                     }
                 </td>
                 <td>
-                    @if (wb.Length == 0)
+                    <code>@string.Join(", ", tb)</code>
+                    @if (whatsappQRCount > 0)
                     {
-                        <span class="text-muted">Keine Accounts konfiguriert</span>
-                    }
-                    else if (whatsappQRCount > 0)
-                    {
-                        <span class="text-warning"><code>@string.Join(", ", tb)</code> @whatsappQRCount nicht verbunden</span>
-                    }
-                    else
-                    {
-                        <span class="text-success"><code>@string.Join(", ", tb)</code></span>
+                        <span class="text-warning">@whatsappQRCount in Pairing-Mode</span>
                     }
                 </td>
                 <td>
