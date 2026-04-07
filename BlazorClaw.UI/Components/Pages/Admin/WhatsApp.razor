@@ -16,20 +16,8 @@
     <button class="btn btn-secondary" @onclick="GoBack"><i class="bi bi-arrow-left"></i> Zurück</button>
 </div>
 
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle"></i> @errorMessage
-        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
-    </div>
-}
-@if (!string.IsNullOrEmpty(successMessage))
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle"></i> @successMessage
-        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
-    </div>
-}
+@if (!string.IsNullOrEmpty(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
+@if (!string.IsNullOrEmpty(successMessage)) { <div class="alert alert-success">@successMessage</div> }
 
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -39,12 +27,8 @@
         </button>
     </div>
     <div class="card-body">
-        @if (accounts.Count == 0)
-        {
-            <div class="alert alert-info">Keine WhatsApp-Accounts konfiguriert.</div>
-        }
-        else
-        {
+        @if (accounts.Count == 0) { <div class="alert alert-info">Keine WhatsApp-Accounts konfiguriert.</div> }
+        else {
             <table class="table table-hover">
                 <thead>
                     <tr>
@@ -61,7 +45,11 @@
                         var hasQR = qrCodes.Any(q => q.AccountId == account.Key);
                         <tr>
                             <td><code>@account.Key</code></td>
-                            <td><input type="checkbox" checked="@account.Value.Enabled" @onchange="(e) => ToggleEnabled(account.Key, (bool)e.Value!)" /></td>
+                            <td>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" checked="@account.Value.Enabled" @onchange="(e) => ToggleEnabled(account.Key, (bool)e.Value!)" />
+                                </div>
+                            </td>
                             <td>
                                 @if (hasQR) { <span class="badge bg-warning">Wartet auf Pairing</span> }
                                 else { <span class="badge bg-success">Verbunden</span> }
@@ -101,6 +89,10 @@
                         <label class="form-label">Push Name</label>
                         <input type="text" class="form-control" @bind="newPushName" placeholder="z.B. BlazorClaw Bot" />
                     </div>
+                    <div class="mb-3 form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="enabledSwitch" @bind="newEnabled" />
+                        <label class="form-check-label" for="enabledSwitch">Enabled</label>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseAddModal">Abbrechen</button>
@@ -115,12 +107,11 @@
     private List<WhatsAppQRCodeData> qrCodes = new();
     private Dictionary<string, WhatsAppBotEntry> accounts = new();
     private bool showAddModal = false;
-    private bool showDeleteModal = false;
     private bool isEditMode = false;
     private string newAccountId = string.Empty;
     private string newPushName = string.Empty;
-    private string? accountToDelete = null;
-    private string? errorMessage, successMessage;
+    private bool newEnabled = true;
+    private string? accountToDelete, errorMessage, successMessage;
 
     protected override void OnInitialized() => LoadData();
 
@@ -132,16 +123,11 @@
 
     private void RefreshData() { LoadData(); StateHasChanged(); }
 
-    private void ToggleEnabled(string id, bool enabled)
-    {
-        Configuration[$"{BotConfigs<WhatsAppBotEntry>.Section}:{id}:Enabled"] = enabled.ToString();
-        RefreshData();
-    }
-
     private void ConfirmAddAccountModal()
     {
         newAccountId = string.Empty;
         newPushName = string.Empty;
+        newEnabled = true;
         isEditMode = false;
         showAddModal = true;
     }
@@ -150,37 +136,38 @@
     {
         newAccountId = id;
         newPushName = accounts[id].PushName ?? string.Empty;
+        newEnabled = accounts[id].Enabled;
         isEditMode = true;
         showAddModal = true;
     }
 
     private void CloseAddModal() => showAddModal = false;
 
-    private void SaveNewAccount()
+    private void ToggleEnabled(string id, bool enabled)
     {
-        var section = BotConfigs<WhatsAppBotEntry>.Section;
-        Configuration[$"{section}:{newAccountId}:Enabled"] = "true";
-        Configuration[$"{section}:{newAccountId}:PushName"] = newPushName;
-        successMessage = $"Account '{newAccountId}' erfolgreich {(isEditMode ? "aktualisiert" : "hinzugefügt")}!";
-        CloseAddModal();
+        Configuration[$"{BotConfigs<WhatsAppBotEntry>.Section}:{id}:Enabled"] = enabled.ToString();
         RefreshData();
     }
 
-    private void ConfirmDelete(string id) { accountToDelete = id; showDeleteModal = true; }
-    private void CloseDeleteModal() { showDeleteModal = false; accountToDelete = null; }
+    private void SaveNewAccount()
+    {
+        var section = BotConfigs<WhatsAppBotEntry>.Section;
+        Configuration[$"{section}:{newAccountId}:Enabled"] = newEnabled.ToString();
+        Configuration[$"{section}:{newAccountId}:PushName"] = newPushName;
+        successMessage = $"Account '{newAccountId}' erfolgreich {(isEditMode ? "aktualisiert" : "hinzugefügt")}!";
+        RefreshData();
+        CloseAddModal();
+    }
+
+    private void ConfirmDelete(string id) { accountToDelete = id; }
     private void DeleteAccount()
     {
+        if (accountToDelete == null) return;
         Configuration[$"{BotConfigs<WhatsAppBotEntry>.Section}:{accountToDelete}"] = null;
         successMessage = "Account gelöscht.";
-        CloseDeleteModal();
+        accountToDelete = null;
         RefreshData();
     }
+
     private void GoBack() => Navigation.NavigateTo("/admin/channels");
-    private string GenerateQRCodeB64(string data)
-    {
-        using var qrGenerator = new QRCoder.QRCodeGenerator();
-        using var qrCodeData = qrGenerator.CreateQrCode(data, QRCoder.QRCodeGenerator.ECCLevel.Q);
-        using var qrCode = new QRCoder.Base64QRCode(qrCodeData);
-        return "data:image/png;base64," + qrCode.GetGraphic(10);
-    }
 }
