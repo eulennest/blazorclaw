@@ -1,6 +1,5 @@
 @page "/admin/channels/telegram"
 @using BlazorClaw.Channels.Services
-@using Microsoft.Extensions.Options
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
 
@@ -9,74 +8,88 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2>Telegram Kanal-Verwaltung</h2>
-        <p class="text-muted">Verwaltung von Telegram-Bot-Tokens.</p>
+        <p class="text-muted">Verwaltung von Telegram-Bot-Accounts.</p>
     </div>
-    <div>
-        <button class="btn btn-secondary" @onclick="GoBack">
-            <i class="bi bi-arrow-left"></i> Zurück
-        </button>
-    </div>
+    <button class="btn btn-secondary" @onclick="GoBack"><i class="bi bi-arrow-left"></i> Zurück</button>
 </div>
 
-@if (!string.IsNullOrEmpty(errorMessage))
-{
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        <i class="bi bi-exclamation-triangle"></i> @errorMessage
-        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
-    </div>
-}
-@if (!string.IsNullOrEmpty(successMessage))
-{
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        <i class="bi bi-check-circle"></i> @successMessage
-        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
-    </div>
-}
+@if (!string.IsNullOrEmpty(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
+@if (!string.IsNullOrEmpty(successMessage)) { <div class="alert alert-success">@successMessage</div> }
 
 <div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="bi bi-telegram"></i> Telegram Konfiguration</h5>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-telegram"></i> Telegram Bots</h5>
+        <button class="btn btn-sm btn-success" @onclick="ShowAddModal"><i class="bi bi-plus-circle"></i> Bot hinzufügen</button>
     </div>
     <div class="card-body">
-        <div class="mb-3">
-            <label class="form-label">Bot Token</label>
-            <input type="password" class="form-control" @bind="botToken" placeholder="Eingabe des Telegram Bot Tokens" />
-            <small class="form-text text-muted">Token von BotFather</small>
-        </div>
-        
-        <button class="btn btn-primary" @onclick="SaveConfiguration">
-            <i class="bi bi-save"></i> Konfiguration speichern
-        </button>
+        @if (bots.Count == 0) { <p class="text-muted">Keine Bots konfiguriert.</p> }
+        else {
+            <table class="table table-hover">
+                <thead><tr><th>Bot ID</th><th>Token</th><th>Aktionen</th></tr></thead>
+                <tbody>
+                    @foreach (var bot in bots) {
+                        <tr>
+                            <td><code>@bot.Key</code></td>
+                            <td><code>@MaskToken(bot.Value)</code></td>
+                            <td><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBot(bot.Key)">Löschen</button></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
     </div>
 </div>
 
+@if (showAddModal) {
+    <div class="modal show d-block" style="background: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5>Neuer Telegram Bot</h5></div>
+                <div class="modal-body">
+                    <input class="form-control mb-2" @bind="newId" placeholder="Bot ID (z.B. default)" />
+                    <input class="form-control" @bind="newToken" placeholder="Bot Token" />
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="()=>showAddModal=false">Abbrechen</button>
+                    <button class="btn btn-success" @onclick="SaveBot">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
-    private string botToken = string.Empty;
-    private string? errorMessage = null;
-    private string? successMessage = null;
+    private Dictionary<string, string> bots = new();
+    private bool showAddModal;
+    private string newId = "", newToken = "";
+    private string? errorMessage, successMessage;
 
-    protected override void OnInitialized()
+    protected override void OnInitialized() => LoadBots();
+
+    private void LoadBots()
     {
-        botToken = Configuration["Channels:Telegram:0:Token"] ?? string.Empty;
+        bots.Clear();
+        var section = Configuration.GetSection("Channels:Telegram");
+        foreach(var item in section.GetChildren()) bots[item.Key] = item.GetValue<string>("Token") ?? "";
     }
 
-    private void SaveConfiguration()
-    {
-        try
-        {
-            Configuration["Channels:Telegram:0:Id"] = "default";
-            Configuration["Channels:Telegram:0:Token"] = botToken;
+    private string MaskToken(string token) => token.Length > 8 ? token[..4] + "..." + token[^4..] : "****";
 
-            successMessage = "Telegram Konfiguration gespeichert! Bitte Server neu starten.";
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Fehler beim Speichern: {ex.Message}";
-        }
+    private void ShowAddModal() => showAddModal = true;
+
+    private void SaveBot()
+    {
+        Configuration[$"Channels:Telegram:{newId}:Token"] = newToken;
+        successMessage = "Bot hinzugefügt.";
+        showAddModal = false;
+        LoadBots();
     }
 
-    private void GoBack()
+    private void DeleteBot(string id)
     {
-        Navigation.NavigateTo("/admin/channels");
+        Configuration[$"Channels:Telegram:{id}"] = null;
+        LoadBots();
     }
+
+    private void GoBack() => Navigation.NavigateTo("/admin/channels");
 }
