@@ -11,16 +11,11 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2>WhatsApp Kanal-Verwaltung</h2>
-        <p class="text-muted">Verwaltung von WhatsApp-Accounts und QR-Code-Pairing.</p>
+        <p class="text-muted">Verwaltung von WhatsApp-Accounts.</p>
     </div>
-    <div>
-        <button class="btn btn-secondary" @onclick="GoBack">
-            <i class="bi bi-arrow-left"></i> Zurück
-        </button>
-    </div>
+    <button class="btn btn-secondary" @onclick="GoBack"><i class="bi bi-arrow-left"></i> Zurück</button>
 </div>
 
-<!-- Error/Success Messages -->
 @if (!string.IsNullOrEmpty(errorMessage))
 {
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -36,21 +31,17 @@
     </div>
 }
 
-<!-- WhatsApp Accounts Section -->
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-whatsapp"></i> WhatsApp Accounts</h5>
-        <button class="btn btn-sm btn-success" @onclick="ShowAddAccountModal">
+        <button class="btn btn-sm btn-success" @onclick="ConfirmAddAccountModal">
             <i class="bi bi-plus-circle"></i> Neuer Account
         </button>
     </div>
     <div class="card-body">
         @if (accounts.Count == 0)
         {
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle"></i> Keine WhatsApp-Accounts konfiguriert.
-                <button class="btn btn-link p-0" @onclick="ShowAddAccountModal">Jetzt einen Account hinzufügen</button>
-            </div>
+            <div class="alert alert-info">Keine WhatsApp-Accounts konfiguriert.</div>
         }
         else
         {
@@ -70,21 +61,16 @@
                         var hasQR = qrCodes.Any(q => q.AccountId == account.Key);
                         <tr>
                             <td><code>@account.Key</code></td>
+                            <td><input type="checkbox" checked="@account.Value.Enabled" @onchange="(e) => ToggleEnabled(account.Key, (bool)e.Value!)" /></td>
                             <td>
-                                <input type="checkbox" checked="@account.Value.Enabled" @onchange="(e) => ToggleEnabled(account.Key, (bool)e.Value!)" />
-                            </td>
-                            <td>
-                                @if (hasQR)
-                                {
-                                    <span class="badge bg-warning">Wartet auf Pairing</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-success">Verbunden</span>
-                                }
+                                @if (hasQR) { <span class="badge bg-warning">Wartet auf Pairing</span> }
+                                else { <span class="badge bg-success">Verbunden</span> }
                             </td>
                             <td>@account.Value.PushName</td>
                             <td>
+                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => ConfirmEditAccountModal(account.Key)">
+                                    <i class="bi bi-pencil"></i> Bearbeiten
+                                </button>
                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(account.Key)">
                                     <i class="bi bi-trash"></i> Löschen
                                 </button>
@@ -97,101 +83,28 @@
     </div>
 </div>
 
-<!-- QR Codes Section -->
-@if (qrCodes.Count > 0)
-{
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="bi bi-qr-code"></i> Offene Pairings</h5>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                @foreach (var qr in qrCodes)
-                {
-                    <div class="col-md-6 col-lg-4 mb-4">
-                        <div class="card border-warning">
-                            <div class="card-header bg-warning text-dark">
-                                <h6 class="mb-0">
-                                    <i class="bi bi-whatsapp"></i> @qr.AccountId
-                                </h6>
-                            </div>
-                            <div class="card-body text-center">
-                                <img style="max-height:300px" src="@GenerateQRCodeB64(qr.QRCode)"/>
-                                <p class="text-muted small mt-3">
-                                    <i class="bi bi-clock"></i> Generiert: @qr.GeneratedAt.ToString("HH:mm:ss")
-                                </p>
-                                
-                                <div class="alert alert-info small mb-0">
-                                    <i class="bi bi-phone"></i> Scanne diesen QR-Code mit WhatsApp:
-                                    <br />
-                                    <strong>WhatsApp → Verknüpfte Geräte → Gerät verknüpfen</strong>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                }
-            </div>
-            
-            <button class="btn btn-primary" @onclick="RefreshData">
-                <i class="bi bi-arrow-clockwise"></i> Aktualisieren
-            </button>
-        </div>
-    </div>
-}
-
-<!-- Add Account Modal -->
 @if (showAddModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Neuer WhatsApp Account</h5>
+                    <h5 class="modal-title">@(isEditMode ? "Account bearbeiten" : "Neuer Account")</h5>
                     <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Identifier</label>
-                        <input type="text" class="form-control" @bind="newAccountId" placeholder="z.B. default" />
+                        <input type="text" class="form-control" @bind="newAccountId" disabled="@isEditMode" placeholder="z.B. default" />
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label">Push Name</label>
                         <input type="text" class="form-control" @bind="newPushName" placeholder="z.B. BlazorClaw Bot" />
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">Abbrechen</button>
-                    <button type="button" class="btn btn-success" @onclick="SaveNewAccount" disabled="@(string.IsNullOrWhiteSpace(newAccountId) || string.IsNullOrWhiteSpace(newPushName))">
-                        <i class="bi bi-save"></i> Speichern
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-<!-- Delete Confirmation Modal -->
-@if (showDeleteModal)
-{
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title">Account löschen</h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CloseDeleteModal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Möchtest du den WhatsApp-Account <strong>@accountToDelete</strong> wirklich löschen?</p>
-                    <div class="alert alert-warning">
-                        <i class="bi bi-exclamation-triangle"></i> Diese Aktion kann nicht rückgängig gemacht werden!
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="CloseDeleteModal">Abbrechen</button>
-                    <button type="button" class="btn btn-danger" @onclick="DeleteAccount">
-                        <i class="bi bi-trash"></i> Löschen
-                    </button>
+                    <button class="btn btn-secondary" @onclick="CloseAddModal">Abbrechen</button>
+                    <button class="btn btn-success" @onclick="SaveNewAccount">Speichern</button>
                 </div>
             </div>
         </div>
@@ -203,16 +116,13 @@
     private Dictionary<string, WhatsAppBotEntry> accounts = new();
     private bool showAddModal = false;
     private bool showDeleteModal = false;
+    private bool isEditMode = false;
     private string newAccountId = string.Empty;
     private string newPushName = string.Empty;
     private string? accountToDelete = null;
-    private string? errorMessage = null;
-    private string? successMessage = null;
+    private string? errorMessage, successMessage;
 
-    protected override void OnInitialized()
-    {
-        LoadData();
-    }
+    protected override void OnInitialized() => LoadData();
 
     private void LoadData()
     {
@@ -220,11 +130,7 @@
         accounts = WhatsAppOptions.CurrentValue.ToDictionary(x => x.Key, x => x.Value);
     }
 
-    private void RefreshData()
-    {
-        LoadData();
-        StateHasChanged();
-    }
+    private void RefreshData() { LoadData(); StateHasChanged(); }
 
     private void ToggleEnabled(string id, bool enabled)
     {
@@ -232,73 +138,44 @@
         RefreshData();
     }
 
-    private void ShowAddAccountModal()
+    private void ConfirmAddAccountModal()
     {
         newAccountId = string.Empty;
         newPushName = string.Empty;
+        isEditMode = false;
         showAddModal = true;
     }
 
-    private void CloseAddModal()
+    private void ConfirmEditAccountModal(string id)
     {
-        showAddModal = false;
+        newAccountId = id;
+        newPushName = accounts[id].PushName ?? string.Empty;
+        isEditMode = true;
+        showAddModal = true;
     }
+
+    private void CloseAddModal() => showAddModal = false;
 
     private void SaveNewAccount()
     {
-        try
-        {
-            var section = BotConfigs<WhatsAppBotEntry>.Section;
-            // Set new account in IConfiguration
-            Configuration[$"{section}:{newAccountId}:Enabled"] = "true";
-            Configuration[$"{section}:{newAccountId}:PushName"] = newPushName;
-
-            successMessage = $"Account '{newAccountId}' erfolgreich hinzugefügt! Bitte Server neu starten.";
-            CloseAddModal();
-            RefreshData();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Fehler: {ex.Message}";
-        }
+        var section = BotConfigs<WhatsAppBotEntry>.Section;
+        Configuration[$"{section}:{newAccountId}:Enabled"] = "true";
+        Configuration[$"{section}:{newAccountId}:PushName"] = newPushName;
+        successMessage = "Account gespeichert.";
+        CloseAddModal();
+        RefreshData();
     }
 
-    private void ConfirmDelete(string accountId)
-    {
-        accountToDelete = accountId;
-        showDeleteModal = true;
-    }
-
-    private void CloseDeleteModal()
-    {
-        showDeleteModal = false;
-        accountToDelete = null;
-    }
-
+    private void ConfirmDelete(string id) { accountToDelete = id; showDeleteModal = true; }
+    private void CloseDeleteModal() { showDeleteModal = false; accountToDelete = null; }
     private void DeleteAccount()
     {
-        if (accountToDelete == null) return;
-
-        try
-        {
-            // Remove from IConfiguration (set to null)
-            Configuration[$"{BotConfigs<WhatsAppBotEntry>.Section}:{accountToDelete}"] = null;
-
-            successMessage = $"Account '{accountToDelete}' erfolgreich gelöscht! Bitte Server neu starten.";
-            CloseDeleteModal();
-            RefreshData();
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Fehler: {ex.Message}";
-        }
+        Configuration[$"{BotConfigs<WhatsAppBotEntry>.Section}:{accountToDelete}"] = null;
+        successMessage = "Account gelöscht.";
+        CloseDeleteModal();
+        RefreshData();
     }
-
-    private void GoBack()
-    {
-        Navigation.NavigateTo("/admin/channels");
-    }
-
+    private void GoBack() => Navigation.NavigateTo("/admin/channels");
     private string GenerateQRCodeB64(string data)
     {
         using var qrGenerator = new QRCoder.QRCodeGenerator();
