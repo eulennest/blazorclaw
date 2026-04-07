@@ -70,6 +70,9 @@
                         <tr>
                             <td><code>@account.Key</code></td>
                             <td>
+                                <input type="checkbox" checked="@account.Value.Enabled" @onchange="(e) => ToggleEnabled(account.Key, (bool)e.Value!)" />
+                            </td>
+                            <td>
                                 @if (hasQR)
                                 {
                                     <span class="badge bg-warning">Wartet auf Pairing</span>
@@ -219,13 +222,19 @@
     private void LoadData()
     {
         qrCodes = WhatsAppService.GetCurrentQRCodes();
-        accounts = WhatsAppOptions.CurrentValue;
+        accounts = WhatsAppOptions.CurrentValue.ToDictionary(x => x.Key, x => x.Value);
     }
 
     private void RefreshData()
     {
         LoadData();
         StateHasChanged();
+    }
+
+    private void ToggleEnabled(string id, bool enabled)
+    {
+        Configuration[$"{BotConfigs<WhatsAppBotEntry>.Section}:{id}:Enabled"] = enabled.ToString();
+        RefreshData();
     }
 
     private void ShowAddAccountModal()
