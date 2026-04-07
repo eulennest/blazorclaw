@@ -262,7 +262,7 @@ namespace BlazorClaw.Server.Services
                         sessionState.SystemPrompts.Add(new ChatMessage
                         {
                             Role = "system",
-                            Content = $"[memory: {item}]\n{agentPromptContent}"
+                            Content = $"[memory: {item}]\n{agentPromptContent}\n--- EOF: {item} ---"
                         });
                     }
                 }
