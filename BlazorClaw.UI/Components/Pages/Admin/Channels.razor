@@ -26,7 +26,7 @@
                     var tb = BotsEnabled<TelegramBotEntry>();
                 }
                 <td><i class="bi bi-telegram"></i> Telegram</td>
-                <td><span class="badge @(tb.Length > 0 ? "bg-sucess" : "bg-secondary")">@(tb.Length > 0 ? "Aktiv" : "Inaktiv")</span></td>
+                <td><span class="badge @(tb.Length > 0 ? "bg-success" : "bg-secondary")">@(tb.Length > 0 ? "Aktiv" : "Inaktiv")</span></td>
                 <td><code>@string.Join(", ", tb)</code></td>
                 <td><a href="/admin/channels/telegram" class="btn btn-sm btn-outline-primary"><i class="bi bi-gear"></i> Verwalten</a></td>
             </tr>
