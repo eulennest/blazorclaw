@@ -161,7 +161,7 @@
         var section = BotConfigs<WhatsAppBotEntry>.Section;
         Configuration[$"{section}:{newAccountId}:Enabled"] = "true";
         Configuration[$"{section}:{newAccountId}:PushName"] = newPushName;
-        successMessage = "Account gespeichert.";
+        successMessage = $"Account '{newAccountId}' erfolgreich {(isEditMode ? "aktualisiert" : "hinzugefügt")}!";
         CloseAddModal();
         RefreshData();
     }
