@@ -1,9 +1,10 @@
 @page "/admin/channels/matrix"
 @using BlazorClaw.Channels.Services
+@using BlazorClaw.UI.Utils
 @using Microsoft.Extensions.Options
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
-@inject IOptionsMonitor<BotConfigs<MatrixBotEntry>> MatrixOptions
+@inject IOptionsMonitor<BotConfigs<MatrixBotEntry>> config
 
 <PageTitle>Admin - Matrix</PageTitle>
 
@@ -15,82 +16,128 @@
     <button class="btn btn-secondary" @onclick="GoBack"><i class="bi bi-arrow-left"></i> Zurück</button>
 </div>
 
-@if (!string.IsNullOrEmpty(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
-@if (!string.IsNullOrEmpty(successMessage)) { <div class="alert alert-success">@successMessage</div> }
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
 
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0"><i class="bi bi-person-workspace"></i> Matrix Bots</h5>
-        <button class="btn btn-sm btn-success" @onclick="ConfirmAddModal">
+        <button class="btn btn-sm btn-success" @onclick="() => LoadEditModal()">
             <i class="bi bi-plus-circle"></i> Neuer Account
         </button>
     </div>
     <div class="card-body">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>Identifier</th>
-                    <th>Homeserver</th>
-                    <th>User ID</th>
-                    <th>Aktionen</th>
-                </tr>
-            </thead>
+        @if (config.CurrentValue.Count == 0)
+        {
+            <div class="alert alert-info">Keine Bots konfiguriert.</div>
+        }
+        else
+        {
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Identifier</th>
+                        <th>Status</th>
+                        <th>Homeserver</th>
+                        <th>User ID</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
                 <tbody>
-                    @foreach (var entry in bots)
+                    @foreach (var entry in config.CurrentValue)
                     {
                         <tr>
                             <td><code>@entry.Key</code></td>
+                            <td>
+                                @if (!entry.Value.Enabled)
+                                {
+                                    <span class="badge bg-secondary">Deaktiviert</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Aktiv</span>
+                                }
+                            </td>
                             <td>@entry.Value.Homeserver</td>
                             <td>@entry.Value.UserId</td>
                             <td>
-                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => ConfirmEditModal(entry.Key)">
+                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => LoadEditModal(entry.Key)">
                                     <i class="bi bi-pencil"></i> Bearbeiten
                                 </button>
-                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteBot(entry.Key)">
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(entry.Key)">
                                     <i class="bi bi-trash"></i> Löschen
                                 </button>
                             </td>
                         </tr>
                     }
                 </tbody>
-        </table>
+            </table>
+        }
     </div>
 </div>
 
-@if (showAddModal)
+@if (editModel != null && (formMode == CRUDMode.Create || formMode == CRUDMode.Edit))
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(isEditMode ? "Bot bearbeiten" : "Neuer Matrix Bot")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseAddModal"></button>
+                    <h5 class="modal-title">@(formMode == CRUDMode.Edit ? "Bot bearbeiten" : "Neuer Matrix Bot")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Identifier</label>
-                        <input class="form-control" @bind="newId" disabled="@isEditMode" placeholder="Bot ID" />
+                        <input type="text" class="form-control" @bind="editModelKey" disabled="@(formMode == CRUDMode.Edit)" placeholder="Bot ID" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Homeserver</label>
-                        <input class="form-control" @bind="newHomeserver" placeholder="https://matrix.org" />
+                        <input type="text" class="form-control" @bind="editModel.Homeserver" placeholder="https://matrix.org" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">User ID</label>
-                        <input class="form-control" @bind="newUserId" placeholder="@@bot:example.com" />
+                        <input type="text" class="form-control" @bind="editModel.UserId" placeholder="@@bot:example.com" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Passwort</label>
-                        <input class="form-control" @bind="newPassword" type="password" />
+                        <input type="password" class="form-control" @bind="editModel.Password" />
                     </div>
                     <div class="mb-3 form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="enabledSwitch" @bind="newEnabled" />
+                        <input class="form-check-input" type="checkbox" id="enabledSwitch" @bind="editModel.Enabled" />
                         <label class="form-check-label" for="enabledSwitch">Enabled</label>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="CloseAddModal">Abbrechen</button>
-                    <button class="btn btn-success" @onclick="SaveBot">Speichern</button>
+                    <button class="btn btn-secondary" @onclick="CloseModal">Abbrechen</button>
+                    <button class="btn btn-success" @onclick="SaveAccount">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (formMode == CRUDMode.Delete)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Löschen bestätigen</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Möchten Sie den Bot <strong>"@editModelKey"</strong> wirklich löschen?</p>
+                    <p class="text-muted">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Abbrechen</button>
+                    <button class="btn btn-danger" @onclick="DeleteAccount">Löschen</button>
                 </div>
             </div>
         </div>
@@ -98,62 +145,55 @@
 }
 
 @code {
-    private Dictionary<string, MatrixBotEntry> bots = new();
-    private bool showAddModal = false;
-    private bool isEditMode = false;
-    private string newId = "", newHomeserver = "https://matrix.org", newUserId = "", newPassword = "";
-    private bool newEnabled = true;
+    private MatrixBotEntry? editModel;
+    private string? editModelKey;
+    private CRUDMode formMode;
     private string? errorMessage, successMessage;
 
-    protected override void OnInitialized() => LoadBots();
-
-    private void LoadBots()
+    protected override void OnInitialized()
     {
-        bots = MatrixOptions.CurrentValue.ToDictionary(x => x.Key, x => x.Value);
+        config.OnChange(_ => RefreshData());
     }
 
-    private void ConfirmAddModal()
+    private void LoadData() { }
+
+    private void RefreshData() { LoadData(); StateHasChanged(); }
+
+    private void LoadEditModal(string? id = null)
     {
-        newId = string.Empty;
-        newHomeserver = "https://matrix.org";
-        newUserId = string.Empty;
-        newPassword = string.Empty;
-        newEnabled = true;
-        isEditMode = false;
-        showAddModal = true;
+        editModelKey = id;
+        editModel = string.IsNullOrWhiteSpace(id) ? new() { Enabled = true, Homeserver = "https://matrix.org" }
+            : config.CurrentValue.FirstOrDefault(c => c.Key == id).Value?.Clone() as MatrixBotEntry;
+        if (editModel == null) return;
+
+        formMode = string.IsNullOrWhiteSpace(id) ? CRUDMode.Create : CRUDMode.Edit;
     }
 
-    private void ConfirmEditModal(string id)
+    private void SaveAccount()
     {
-        var bot = bots[id];
-        newId = id;
-        newHomeserver = bot.Homeserver;
-        newUserId = bot.UserId;
-        newEnabled = bot.Enabled;
-        isEditMode = true;
-        showAddModal = true;
+        if (editModel == null || string.IsNullOrWhiteSpace(editModelKey)) return;
+        config.CurrentValue.Save(Configuration, editModelKey, editModel);
+        successMessage = $"Bot '{editModelKey}' erfolgreich {((formMode == CRUDMode.Edit) ? "aktualisiert" : "hinzugefügt")}!";
+        CloseModal();
+        RefreshData();
     }
 
-    private void CloseAddModal() => showAddModal = false;
-
-    private void SaveBot()
+    private void ConfirmDelete(string id)
     {
-        var section = BotConfigs<MatrixBotEntry>.Section;
-        Configuration[$"{section}:{newId}:Homeserver"] = newHomeserver;
-        Configuration[$"{section}:{newId}:UserId"] = newUserId;
-        Configuration[$"{section}:{newId}:Password"] = newPassword;
-        Configuration[$"{section}:{newId}:Enabled"] = newEnabled.ToString();
-        successMessage = $"Bot '{newId}' erfolgreich {(isEditMode ? "aktualisiert" : "hinzugefügt")}!";
-        showAddModal = false;
-        LoadBots();
+        formMode = CRUDMode.Delete;
+        editModelKey = id;
     }
 
-    private void DeleteBot(string id)
+    private void DeleteAccount()
     {
-        var section = BotConfigs<MatrixBotEntry>.Section;
-        Configuration[$"{section}:{id}"] = null;
-        LoadBots();
+        if (formMode != CRUDMode.Delete || string.IsNullOrEmpty(editModelKey)) return;
+        config.CurrentValue.Delete(Configuration, editModelKey);
+        successMessage = "Bot gelöscht.";
+        editModelKey = null;
+        CloseModal();
+        RefreshData();
     }
 
+    private void CloseModal() { formMode = CRUDMode.None; editModelKey = null; }
     private void GoBack() => Navigation.NavigateTo("/admin/channels");
 }
