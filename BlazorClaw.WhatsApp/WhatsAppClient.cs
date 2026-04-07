@@ -47,7 +47,7 @@ namespace BlazorClaw.WhatsApp
 
         private void Socket_MessageRecieved(object? sender, MessageRecieveEventArgs e)
         {
-            OnMessage?.Invoke(this, new("", e.Node.GetString() ?? string.Empty));
+            //OnMessage?.Invoke(this, new("", e.Node.GetString() ?? string.Empty));
         }
 
         private void Socket_ConnectionUpdate(object? sender, Baileys.Types.ConnectionUpdateEventArgs update)

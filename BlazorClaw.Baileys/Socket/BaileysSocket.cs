@@ -24,8 +24,8 @@ public class BaileysSocket : IAsyncDisposable
     private readonly ClientWebSocket _ws = new();
     private readonly AuthenticationState _creds;
     private readonly SignalCreds _signalKeys;
-    private readonly KeyPair _emperalKey;
-    private readonly NoiseHandler _noise;
+    private KeyPair _emperalKey;
+    private NoiseHandler _noise;
     private readonly ILogger _logger;
     private readonly CancellationTokenSource _cts = new();
 
@@ -40,13 +40,12 @@ public class BaileysSocket : IAsyncDisposable
     {
         _creds = creds;
         _signalKeys = new SignalCreds(creds.Creds.SignedIdentityKey, creds.Creds.SignedPreKey, creds.Creds.RegistrationId);
-        _emperalKey = Curve25519Utils.GenerateKeyPair();
-        _noise = new NoiseHandler(_emperalKey, logger);
         _logger = logger.ChildFor(this);
     }
 
     public async Task ConnectAsync(string url, CancellationToken cancellationToken = default)
     {
+        _noise = new NoiseHandler(null, _logger);
         _logger.Info($"Connecting to {url}...");
         await _ws.ConnectAsync(new Uri(url), cancellationToken).ConfigureAwait(false);
         _logger.Info("Connected to WebSocket.");
@@ -67,15 +66,7 @@ public class BaileysSocket : IAsyncDisposable
 
     private async Task SendClientHelloAsync(CancellationToken cancellationToken)
     {
-        // Build ClientHello protobuf
-        var clientHello = new global::Proto.HandshakeMessage
-        {
-            ClientHello = new global::Proto.HandshakeMessage.Types.ClientHello
-            {
-                Ephemeral = ByteString.CopyFrom(_emperalKey.Public)
-            }
-        };
-
+        var clientHello = _noise.BuildClientHello();
         var helloBytes = clientHello.ToByteArray();
         await SendRawAsync(helloBytes, cancellationToken).ConfigureAwait(false);
         _logger.Debug($"Sent ClientHello ({helloBytes.Length} bytes)");
@@ -126,7 +117,11 @@ public class BaileysSocket : IAsyncDisposable
                 {
                     var hex = BitConverter.ToString(buffer[..result.Count]).Replace("-", string.Empty);
                     _logger.Trace($"[RECV] {hex}");
-                    await HandleMessageAsync(buffer[..result.Count][3..], cancellationToken).ConfigureAwait(false);
+
+                    foreach (var item in SplitFrames(buffer[..result.Count]))
+                    {
+                        await HandleMessageAsync(item, cancellationToken).ConfigureAwait(false);
+                    }
                 }
             }
         }
@@ -139,11 +134,33 @@ public class BaileysSocket : IAsyncDisposable
         timer?.Stop();
     }
 
+
+    private IEnumerable<byte[]> SplitFrames(byte[] buffer)
+    {
+        int offset = 0;
+        while (offset + 3 <= buffer.Length)
+        {
+            var header = new byte[] { buffer[offset], buffer[offset + 1], buffer[offset + 2] };
+            int size = (int)Generics.DecodeBigEndian(header);
+            offset += 3;
+
+            if (offset + size > buffer.Length)
+                break;
+
+            byte[] frame = new byte[size];
+            Array.Copy(buffer, offset, frame, 0, size);
+            yield return frame;
+
+            offset += size;
+        }
+    }
+
+
     private async Task HandleMessageAsync(byte[] data, CancellationToken cancellationToken = default)
     {
         if (!_handshakeComplete)
         {
-            var keyEnc = _noise.ProcessHandshake(Proto.HandshakeMessage.Parser.ParseFrom(data));
+            var keyEnc = _noise.ProcessHandshake(Proto.HandshakeMessage.Parser.ParseFrom(data), _creds.Creds.NoiseKey);
 
             Proto.ClientPayload? cpNode;
             if (!_creds.Creds.Registered)
@@ -193,8 +210,6 @@ public class BaileysSocket : IAsyncDisposable
             return;
         }
 
-        // After handshake, messages are framed with a 3-byte length
-        if (data.Length < 3) return;
         lastDateRecv = DateTimeOffset.UtcNow;
 
         var decrypted = _noise.Decrypt(data);
@@ -226,7 +241,7 @@ public class BaileysSocket : IAsyncDisposable
                             return;
                         }
                         var refStr = Encoding.UTF8.GetString(refNode);
-                        var qr = $"{refStr},{noiseKeyB64},{identityKeyB64},{advB64}";
+                        var qr = $"{refStr},{noiseKeyB64},{identityKeyB64},{advB64},1";
 
                         OnConectionUpdate(new ConnectionUpdateEventArgs() { Connection = WaConnectionState.Open, Qr = qr });
 
@@ -307,7 +322,7 @@ public class BaileysSocket : IAsyncDisposable
     public void OnKeepAliveTimer(object? sender, ElapsedEventArgs e)
     {
         var diff = DateTimeOffset.UtcNow - lastDateRecv;
-        if (diff.TotalSeconds < 15) return;
+        if (diff.TotalSeconds < 30) return;
         var iq = new BinaryNode
         {
             Tag = "iq",

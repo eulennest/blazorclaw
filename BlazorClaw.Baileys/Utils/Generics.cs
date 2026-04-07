@@ -40,7 +40,22 @@ public static class Generics
         }
         return result;
     }
-
+    /// <summary>
+    /// Decodes a big-endian byte array into a long integer.
+    /// Mirrors the logic of EncodeBigEndian by processing bytes from left to right.
+    /// </summary>
+    /// <param name="data">The big-endian byte array to decode.</param>
+    /// <returns>The resulting long integer value.</returns>
+    public static long DecodeBigEndian(byte[] data)
+    {
+        long result = 0;
+        for (int i = 0; i < data.Length; i++)
+        {
+            result <<= 8;
+            result |= (data[i] & 0xFFL);
+        }
+        return result;
+    }
     // ──────────────────────────────────────────────────────────
     //  Padding helpers (used by the noise protocol)
     // ──────────────────────────────────────────────────────────

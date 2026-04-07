@@ -112,9 +112,7 @@
                                 </h6>
                             </div>
                             <div class="card-body text-center">
-                                <span style="max-height:300px">
-                                    @((MarkupString)GenerateQRCodeSvg(qr.QRCode))
-                                </span>
+                                <img style="max-height:300px" src="@GenerateQRCodeB64(qr.QRCode)"/>
                                 <p class="text-muted small mt-3">
                                     <i class="bi bi-clock"></i> Generiert: @qr.GeneratedAt.ToString("HH:mm:ss")
                                 </p>
@@ -297,11 +295,11 @@
         Navigation.NavigateTo("/admin/channels");
     }
 
-    private string GenerateQRCodeSvg(string data)
+    private string GenerateQRCodeB64(string data)
     {
         using var qrGenerator = new QRCoder.QRCodeGenerator();
         using var qrCodeData = qrGenerator.CreateQrCode(data, QRCoder.QRCodeGenerator.ECCLevel.Q);
-        using var qrCode = new QRCoder.SvgQRCode(qrCodeData);
-        return qrCode.GetGraphic(20);
+        using var qrCode = new QRCoder.Base64QRCode(qrCodeData);
+        return "data:image/png;base64," + qrCode.GetGraphic(10);
     }
 }

@@ -1,6 +1,7 @@
 using Baileys.Crypto;
 using Baileys.Defaults;
 using Baileys.Types;
+using Google.Protobuf;
 
 namespace Baileys.Utils;
 
@@ -30,9 +31,9 @@ public sealed class NoiseHandler
     // ── Intro header (prepended to the first frame sent) ──────
     private readonly byte[] _introHeader;
 
-    public NoiseHandler(KeyPair keyPair, ILogger? logger = null, byte[]? routingInfo = null)
+    public NoiseHandler(KeyPair? keyPair, ILogger? logger = null, byte[]? routingInfo = null)
     {
-        _keyPair = keyPair;
+        _keyPair = keyPair ?? Curve25519Utils.GenerateKeyPair();
         _logger = (logger ?? NullLogger.Instance).ChildFor(this);
 
         // Initialise hash/salt/encKey/decKey from the noise mode string
@@ -104,7 +105,7 @@ public sealed class NoiseHandler
 
     }
 
-    public byte[] ProcessHandshake(Proto.HandshakeMessage serverHello)
+    public byte[] ProcessHandshake(Proto.HandshakeMessage serverHello, KeyPair transportKey)
     {
         if (serverHello?.ServerHello == null)
             throw new ArgumentException("Invalid ServerHello message");
@@ -124,8 +125,8 @@ public sealed class NoiseHandler
         // Hash-Kette wird in Decrypt() automatisch aktualisiert (via Authenticate)
 
         // ClientFinish vorbereiten
-        var keyEnc = Encrypt(_keyPair.Public);
-        MixIntoKey(Curve25519Utils.CalculateAgreement(_keyPair.Private, empBytes));
+        var keyEnc = Encrypt(transportKey.Public);
+        MixIntoKey(Curve25519Utils.CalculateAgreement(transportKey.Private, empBytes));
 
         return keyEnc;
     }
@@ -192,6 +193,19 @@ public sealed class NoiseHandler
     public void SetEncKey(byte[] key) => _encKey = (byte[])key.Clone();
     public void SetDecKey(byte[] key) => _decKey = (byte[])key.Clone();
     public void SetCounter(int counter) => _Counter = counter;
+
+    internal Proto.HandshakeMessage BuildClientHello()
+    {
+        // Build ClientHello protobuf
+        var clientHello = new global::Proto.HandshakeMessage
+        {
+            ClientHello = new global::Proto.HandshakeMessage.Types.ClientHello
+            {
+                Ephemeral = ByteString.CopyFrom(_keyPair.Public)
+            }
+        };
+        return clientHello;
+    }
 }
 
 public class TransportState(byte[] encKey, byte[] decKey)
