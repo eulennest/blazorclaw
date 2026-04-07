@@ -3,10 +3,10 @@ using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Utils;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.CommandLine;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
@@ -15,7 +15,7 @@ using Telegram.Bot.Types.Enums;
 
 namespace BlazorClaw.Channels.Services
 {
-    public class TelegramBotHostedService(PathHelper pathHelper, IConfiguration configuration, IMessageDispatcher md, IServiceScopeFactory scopeFactory, ILogger<TelegramBotHostedService> logger) : IHostedService
+    public class TelegramBotHostedService(PathHelper pathHelper, IOptionsMonitor<BotConfigs<TelegramBotEntry>> telegramConfigs, IMessageDispatcher md, IServiceScopeFactory scopeFactory, ILogger<TelegramBotHostedService> logger) : IHostedService
     {
         private readonly List<TelegramChannelBot> _bots = [];
 
@@ -23,11 +23,10 @@ namespace BlazorClaw.Channels.Services
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            var telegramConfigs = configuration.GetSection("Channels:Telegram").GetChildren();
-            foreach (var botConfig in telegramConfigs)
+            foreach (var botConfig in telegramConfigs.CurrentValue)
             {
                 var id = botConfig.Key; // Use Key (e.g. main/alerts)
-                var token = botConfig["Token"];
+                var token = botConfig.Value.Token;
                 if (!string.IsNullOrEmpty(token))
                 {
                     logger.LogInformation("Telegram Bot '{id}' registering ...", id);
@@ -115,11 +114,15 @@ namespace BlazorClaw.Channels.Services
         }
     }
 
+    public class TelegramBotEntry
+    {
+        public string Token { get; set; } = string.Empty;
+    }
 
     public class TelegramChannelBot(TelegramBotClient Client, PathHelper pathHelper) : AbstractChannelBot("Telegram")
     {
         internal TelegramBotClient Client { get; } = Client;
-        
+
         private string EscapeMarkdownV2(string text)
         {
             if (string.IsNullOrEmpty(text))
@@ -145,7 +148,7 @@ namespace BlazorClaw.Channels.Services
                 .Replace(".", "\\.")
                 .Replace("!", "\\!");
         }
-        
+
         public override async Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
             var content = message.GetTextContent() ?? string.Empty;

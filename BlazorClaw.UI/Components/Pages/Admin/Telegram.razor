@@ -1,6 +1,9 @@
 @page "/admin/channels/telegram"
 @using BlazorClaw.Channels.Services
+@using Microsoft.Extensions.Options
+@using System.Linq
 @inject NavigationManager Navigation
+@inject IOptions<BotConfigs<TelegramBotEntry>> configs
 @inject IConfiguration Configuration
 
 <PageTitle>Admin - Telegram</PageTitle>
@@ -68,9 +71,7 @@
 
     private void LoadBots()
     {
-        bots.Clear();
-        var section = Configuration.GetSection("Channels:Telegram");
-        foreach(var item in section.GetChildren()) bots[item.Key] = item.GetValue<string>("Token") ?? "";
+        bots = configs.Value.ToDictionary(b => b.Key, b => b.Value.Token);
     }
 
     private string MaskToken(string token) => token.Length > 8 ? token[..4] + "..." + token[^4..] : "****";
@@ -79,7 +80,8 @@
 
     private void SaveBot()
     {
-        Configuration[$"Channels:Telegram:{newId}:Token"] = newToken;
+        var section = BotConfigs<TelegramBotEntry>.Section;
+        Configuration[$"{section}:{newId}:Token"] = newToken;
         successMessage = "Bot hinzugefügt.";
         showAddModal = false;
         LoadBots();
@@ -87,7 +89,8 @@
 
     private void DeleteBot(string id)
     {
-        Configuration[$"Channels:Telegram:{id}"] = null;
+        var section = BotConfigs<TelegramBotEntry>.Section;
+        Configuration[$"{section}:{id}"] = null;
         LoadBots();
     }
 

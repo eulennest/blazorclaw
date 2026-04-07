@@ -24,7 +24,7 @@ namespace BlazorClaw.Channels.Services
     /// Manages multiple WhatsApp accounts via WhatsAppClient
     /// </summary>
     public class WhatsAppBotHostedService(
-        IOptionsMonitor<WhatsAppConfigs> configuration,
+        IOptionsMonitor<BotConfigs<WhatsAppBotEntry>> configuration,
         IMessageDispatcher messageDispatcher,
         ILogger<WhatsAppBotHostedService> logger) : IHostedService
     {
@@ -49,7 +49,7 @@ namespace BlazorClaw.Channels.Services
             logger.LogInformation("WhatsApp Channel Service started with {Count} accounts", _bots.Count);
         }
 
-        private async Task LoadBotsAsync(WhatsAppConfigs config, CancellationToken cancellationToken)
+        private async Task LoadBotsAsync(BotConfigs<WhatsAppBotEntry> config, CancellationToken cancellationToken)
         {
             foreach (var accountConfig in config)
             {
@@ -73,7 +73,7 @@ namespace BlazorClaw.Channels.Services
             }
         }
 
-        private async Task ReloadBotsAsync(WhatsAppConfigs newConfig)
+        private async Task ReloadBotsAsync(BotConfigs<WhatsAppBotEntry> newConfig)
         {
             logger.LogInformation("Reloading WhatsApp bots...");
 
@@ -145,7 +145,7 @@ namespace BlazorClaw.Channels.Services
 
         private async Task AddAccountAsync(
             string accountId,
-            WhatsAppConfigEntry config,
+            WhatsAppBotEntry config,
             CancellationToken cancellationToken)
         {
             logger.LogInformation("Initializing WhatsApp account '{AccountId}'...", accountId);
@@ -357,12 +357,7 @@ namespace BlazorClaw.Channels.Services
             return Task.CompletedTask;
         }
     }
-
-    public class WhatsAppConfigs : Dictionary<string, WhatsAppConfigEntry>
-    {
-        public const string Section = "Channels:WhatsApp:Accounts";
-    }
-    public class WhatsAppConfigEntry
+    public class WhatsAppBotEntry
     {
         public bool Enabled { get; set; } = true;
         public string? PhoneNumber { get; set; }

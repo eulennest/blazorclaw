@@ -153,7 +153,8 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<CronJobService>())
 builder.Services.AddHostedService<TelegramBotHostedService>();
 builder.Services.AddHostedService<MatrixBotHostedService>();
 
-builder.Services.Configure<WhatsAppConfigs>(builder.Configuration.GetSection(WhatsAppConfigs.Section));
+builder.Services.Configure<BotConfigs<WhatsAppBotEntry>>(builder.Configuration.GetSection(BotConfigs<WhatsAppBotEntry>.Section));
+builder.Services.Configure<BotConfigs<TelegramBotEntry>>(builder.Configuration.GetSection(BotConfigs<TelegramBotEntry>.Section));
 builder.Services.AddSingleton<WhatsAppBotHostedService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<WhatsAppBotHostedService>());
 

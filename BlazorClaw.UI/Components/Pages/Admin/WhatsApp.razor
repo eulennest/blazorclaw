@@ -4,7 +4,7 @@
 @inject WhatsAppBotHostedService WhatsAppService
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
-@inject IOptionsMonitor<WhatsAppConfigs> WhatsAppOptions
+@inject IOptionsMonitor<BotConfigs<WhatsAppBotEntry>> WhatsAppOptions
 
 <PageTitle>Admin - WhatsApp</PageTitle>
 
@@ -202,7 +202,7 @@
 
 @code {
     private List<WhatsAppQRCodeData> qrCodes = new();
-    private Dictionary<string, WhatsAppConfigEntry> accounts = new();
+    private Dictionary<string, WhatsAppBotEntry> accounts = new();
     private bool showAddModal = false;
     private bool showDeleteModal = false;
     private string newAccountId = string.Empty;
@@ -244,10 +244,10 @@
     {
         try
         {
+            var section = BotConfigs<WhatsAppBotEntry>.Section;
             // Set new account in IConfiguration
-            Configuration[$"{WhatsAppConfigs.Section}:{newAccountId}:Enabled"] = "true";
-            Configuration[$"{WhatsAppConfigs.Section}:{newAccountId}:PushName"] = newPushName;
-            Configuration[$"{WhatsAppConfigs.Section}:{newAccountId}:AuthDir"] = $"./whatsapp_auth/{newAccountId}";
+            Configuration[$"{section}:{newAccountId}:Enabled"] = "true";
+            Configuration[$"{section}:{newAccountId}:PushName"] = newPushName;
 
             successMessage = $"Account '{newAccountId}' erfolgreich hinzugefügt! Bitte Server neu starten.";
             CloseAddModal();
@@ -278,7 +278,7 @@
         try
         {
             // Remove from IConfiguration (set to null)
-            Configuration[$"{WhatsAppConfigs.Section}:{accountToDelete}"] = null;
+            Configuration[$"{BotConfigs<WhatsAppBotEntry>.Section}:{accountToDelete}"] = null;
 
             successMessage = $"Account '{accountToDelete}' erfolgreich gelöscht! Bitte Server neu starten.";
             CloseDeleteModal();
