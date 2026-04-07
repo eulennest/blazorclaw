@@ -76,19 +76,41 @@ namespace BlazorClaw.Channels.Services
             try
             {
                 var inst = _bots.FirstOrDefault(b => b.Client.BotId == botClient.BotId);
-                if (inst == null || update.Message == null) return;
-                var telegramId = update.Message.From!.Id.ToString();
-                logger.LogInformation("Incoming Msg From: {telegramId}, Type: {Type}", telegramId, update.Message.Type);
-                await botClient.SendChatAction(update.Message.Chat.Id, Telegram.Bot.Types.Enums.ChatAction.Typing, cancellationToken: cancellationToken);
+                if (inst == null) return;
+                
+                // Wir unterstützen jetzt auch Callbacks und andere Typen
+                long chatId = 0;
+                string? telegramId = null;
 
+                if (update.Message != null)
+                {
+                    chatId = update.Message.Chat.Id;
+                    telegramId = update.Message.From?.Id.ToString();
+                }
+                else if (update.CallbackQuery != null)
+                {
+                    chatId = update.CallbackQuery.Message?.Chat.Id ?? 0;
+                    telegramId = update.CallbackQuery.From.Id.ToString();
+                }
+                
+                if (chatId == 0 || telegramId == null) return;
 
-                if (update.Message.Voice != null)
+                logger.LogInformation("Incoming Msg/Query From: {telegramId}, Type: {Type}", telegramId, update.Type);
+                await botClient.SendChatAction(chatId, ChatAction.Typing, cancellationToken: cancellationToken);
+
+                if (update.Message?.Voice != null)
                 {
                     var ret = await DownloadVoiceMessage(botClient, update.Message.Voice.FileId);
                     if (ret != null) await inst.OnMessageReceivedAsync(new ChannelSession(inst, telegramId), ret);
                 }
-                else if (update.Message.Text != null)
+                else if (update.Message?.Text != null)
+                {
                     await inst.OnMessageReceivedAsync(new ChannelSession(inst, telegramId), update.Message.Text);
+                }
+                else if (update.CallbackQuery != null)
+                {
+                    await inst.OnMessageReceivedAsync(new ChannelSession(inst, telegramId), update.CallbackQuery.Data ?? string.Empty);
+                }
             }
             catch (Exception ex)
             {
