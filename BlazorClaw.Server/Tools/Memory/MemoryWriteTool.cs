@@ -2,7 +2,6 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.VFS;
-using ReverseMarkdown.Converters;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
@@ -40,6 +39,10 @@ public class MemoryWriteTool : BaseTool<MemoryWriteTool.Params>
 
         var mi = await vfs.GetMetaInfoAsync(path);
         var mode = p.Mode ?? WriteMode.Create;
+        if (!mi.Exists)
+        {
+            await vfs.CreateDirectoryRecursiveAsync(path.ParentPath);
+        }
         if (mode == WriteMode.Append)
         {
             using var stream = await mi.OpenAsync(FileMode.Append, FileAccess.Write);

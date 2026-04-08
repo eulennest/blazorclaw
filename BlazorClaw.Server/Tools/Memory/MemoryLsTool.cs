@@ -46,3 +46,8 @@ public class MemoryLsTool : BaseTool<MemoryLsTool.Params>
         return sb.ToString();
     }
 }
+public class MemoryGlobTool : MemoryLsTool
+{
+    public override string Name => "memory_glob";
+    public override string Description => "Listet alle Memory-Dateien im memory auf. (Alias für memory_ls)";
+}
