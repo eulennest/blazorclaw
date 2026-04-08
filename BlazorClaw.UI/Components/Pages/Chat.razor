@@ -83,17 +83,20 @@
             {
                 if (!showTools && msg.IsTool) continue;
 
-                <div class="message @(msg.IsUser ? "own" : "other") role-@(msg.Role)">
-                    <div class="message-avatar">
-                        @if (msg.IsUser)
-                        {
-                            <i class="bi bi-person"></i>
-                        }
-                        else
-                        {
-                            <i class="bi bi-robot"></i>
-                        }
-                    </div>
+                <div class="message @(msg.IsUser ? "own" : "other") @(msg.IsSystem ? "system" : "") role-@(msg.Role)">
+                    @if (!msg.IsSystem)
+                    {
+                        <div class="message-avatar">
+                            @if (msg.IsUser)
+                            {
+                                <i class="bi bi-person"></i>
+                            }
+                            else
+                            {
+                                <i class="bi bi-robot"></i>
+                            }
+                        </div>
+                    }
                     <div class="message-content">
                         @if (!msg.IsTool)
                             @((MarkupString)RenderMarkdown(@msg.GetTextContent() ?? string.Empty))
@@ -607,6 +610,31 @@
     .message.role-error .message-content {
         background: #ff2d2d;
     }
+
+    .message.system {
+        justify-content: center;
+        flex-direction: column;
+        align-items: center;
+        margin: 8px 0;
+    }
+
+        .message.system .message-content {
+            background: transparent;
+            border: 1px solid #4a4a4a;
+            border-radius: 12px;
+            padding: 8px 16px;
+            max-width: 80%;
+            text-align: center;
+            font-style: italic;
+            color: #a0a0a0;
+        }
+
+        .message.system .message-content::before {
+            content: "\F3E2"; /* bi-gear */
+            font-family: "bootstrap-icons";
+            margin-right: 8px;
+            opacity: 0.7;
+        }
 
     .message-content code {
         background: #3d3d3d;
