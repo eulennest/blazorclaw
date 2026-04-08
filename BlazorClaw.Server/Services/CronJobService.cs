@@ -166,7 +166,7 @@ namespace BlazorClaw.Server.Services
             }
 
             // Add cron tag to message
-            string fullMessage = $"[CRON: {job.Description} |  Next-Run: {job.NextExecution:u}]\n{messageText}".Trim();
+            string fullMessage = $"[TRIGGER | {DateTime.UtcNow:u} | CRON:{job.Description} |  Next-Run: {job.NextExecution:u}]\n{messageText}\n[/TRIGGER]".Trim();
 
             // Get target sessions
             List<Guid> sessionIds;
@@ -216,7 +216,7 @@ namespace BlazorClaw.Server.Services
                     }
 
                     logger.LogDebug("Adding cron message to session {SessionId}", sessionId);
-                    sess.MessageHistory.Add(new() { Role = "user", Content = fullMessage });
+                    sess.MessageHistory.Add(new() { Role = job.System ? "system" : "user", Content = fullMessage });
 
                     int responseCount = 0;
                     await foreach (var msg in sm.DispatchToLLMAsync(sess, cmdContext))

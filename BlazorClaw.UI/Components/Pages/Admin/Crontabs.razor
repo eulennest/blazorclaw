@@ -25,15 +25,15 @@
                     
                     <div class="mb-3">
                         <label class="form-label">Beschreibung</label>
-                        <InputText @bind-Value="formModel.Description" class="form-control" 
-                            placeholder="z.B. Tägliche Sicherung" />
+                        <InputText @bind-Value="formModel.Description" class="form-control"
+                                   placeholder="z.B. Tägliche Sicherung" />
                         <ValidationMessage For="() => formModel.Description" />
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Cron-Ausdruck</label>
-                        <InputText @bind-Value="formModel.Cron" class="form-control" 
-                            placeholder="0 0 * * * (täglich um 00:00)" />
+                        <InputText @bind-Value="formModel.Cron" class="form-control"
+                                   placeholder="0 0 * * * (täglich um 00:00)" />
                         <small class="form-text text-muted d-block mt-1">
                             Cronos Format: Minute Hour DayOfMonth Month DayOfWeek
                         </small>
@@ -53,8 +53,8 @@
 
                     <div class="mb-3">
                         <label class="form-label">Daten (JSON)</label>
-                        <InputTextArea @bind-Value="formModel.Data" class="form-control" 
-                            placeholder='{"text":"Überprüfe den Status"}' rows="2" />
+                        <InputTextArea @bind-Value="formModel.Data" class="form-control"
+                                       placeholder='{"text":"Überprüfe den Status"}' rows="2" />
                     </div>
 
                     <div class="mb-3">
@@ -74,7 +74,7 @@
                     <div class="form-check mb-3">
                         <InputCheckbox @bind-Value="formModel.System" class="form-check-input" id="systemCheck" />
                         <label class="form-check-label" for="systemCheck">
-                            System-Job (unveränderbar)
+                            System-Job (role=system)
                         </label>
                     </div>
 
@@ -168,15 +168,12 @@
                                             <button class="btn btn-sm btn-outline-success" @onclick="() => ExecuteJobNow(cron.Id)" title="Sofort ausführen">
                                                 <i class="bi bi-play-circle"></i>
                                             </button>
-                                            @if (!cron.System)
-                                            {
-                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCrontab(cron)">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCrontab(cron.Id)">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            }
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => EditCrontab(cron)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCrontab(cron.Id)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </td>
                                     </tr>
                                 }
@@ -269,7 +266,7 @@
     private async Task DeleteCrontab(Guid id)
     {
         var cron = await Db.Crontabs.FindAsync(id);
-        if (cron != null && !cron.System)
+        if (cron != null)
         {
             Db.Crontabs.Remove(cron);
             await Db.SaveChangesAsync();

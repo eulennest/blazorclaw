@@ -260,7 +260,7 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, I
 
     private async Task<McpServerEntry?> ResolveMcpRegistryAsync(Uri mcpUri)
     {
-        var registry = await LoadRegistryAsync();
+        var registry = await McpRegistry.LoadRegistryAsync(vfs, PathUtils.VfsMcpUser);
 
         if ("mcp".Equals(mcpUri.Scheme, StringComparison.InvariantCultureIgnoreCase))
         {
@@ -269,25 +269,6 @@ public class McpCallTool(IHttpClientFactory httpClientFactory, IVfsSystem vfs, I
 
         var server = mcpUri.ToString();
         return registry.Servers.FirstOrDefault(s => s.ServerUri.StartsWith(server, StringComparison.InvariantCultureIgnoreCase));
-    }
-
-    private async Task<McpRegistry> LoadRegistryAsync()
-    {
-        try
-        {
-            var filePath = VfsPath.Parse("/~secure/mcp.json");
-            if (!await vfs.ExistsAsync(filePath))
-                return new McpRegistry();
-
-            using var stream = await vfs.OpenFileAsync(filePath, FileMode.Open, FileAccess.Read);
-            return await JsonSerializer.DeserializeAsync<McpRegistry>(stream)
-                ?? new McpRegistry();
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Could not load MCP registry");
-            return new McpRegistry();
-        }
     }
 }
 

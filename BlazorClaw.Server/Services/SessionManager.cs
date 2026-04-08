@@ -206,7 +206,7 @@ namespace BlazorClaw.Server.Services
             var provMan = sessionState.Services.GetRequiredService<IProviderManager>();
             sessionState.Provider = provMan.GetProviderConfig(sessionState.Session.CurrentModel.Split('/')[0]) ?? sessionState.Provider;
 
-            var toolRegistry = sessionState.Services.GetRequiredService<IToolRegistry>();
+            var toolRegistry = sessionState.Services.GetRequiredService<IToolProvider>();
             var policyProvider = sessionState.Services.GetRequiredService<IToolPolicyProvider>();
 
             if ((sessionState.Tools?.Count ?? 0) == 0)
@@ -302,7 +302,7 @@ namespace BlazorClaw.Server.Services
             }
         }
 
-        private async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, MessageContext context, IToolRegistry toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
+        private async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(ChatSessionState sessionState, MessageContext context, IToolProvider toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
         {
             var request = new ChatCompletionRequest
             {

@@ -1,5 +1,6 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.VFS;
 using System.ComponentModel;
 
@@ -32,7 +33,7 @@ public class McpListTool(IVfsSystem vfs)
 
     protected override async Task<string> ExecuteInternalAsync(McpListToolParams p, MessageContext context)
     {
-        var registry = await McpRegistry.LoadRegistryAsync(vfs);
+        var registry = await McpRegistry.LoadRegistryAsync(vfs, PathUtils.VfsMcpUser);
 
         var servers = registry.Servers
             .Where(s => !p.OnlyEnabled || s.Enabled)

@@ -21,9 +21,6 @@ public class McpServerEntry
     [JsonPropertyName("authType")]
     public string AuthType { get; set; } = "none";
 
-    [JsonPropertyName("tokenName")]
-    public string? TokenName { get; set; }
-
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 
@@ -39,15 +36,16 @@ public class McpRegistry
     [JsonPropertyName("servers")]
     public List<McpServerEntry> Servers { get; set; } = new();
 
-    public static async Task<McpRegistry> LoadRegistryAsync(IVfsSystem vfs)
+    public static Task<McpRegistry> LoadRegistryAsync(IVfsSystem vfs, VfsPath path) => LoadRegistryAsync(new VfsEntity(vfs, path));
+    public static async Task<McpRegistry> LoadRegistryAsync(VfsEntity vfs)
     {
         try
         {
-            var filePath = GetRegistryPath();
-            if (!await vfs.ExistsAsync(filePath))
+            var filePath = vfs.Path;
+            if (!await vfs.VFS.ExistsAsync(filePath))
                 return new McpRegistry();
 
-            using var stream = await vfs.OpenFileAsync(filePath, FileMode.Open, FileAccess.Read);
+            using var stream = await vfs.VFS.OpenFileAsync(filePath, FileMode.Open, FileAccess.Read);
             return await JsonSerializer.DeserializeAsync<McpRegistry>(stream)
                 ?? new McpRegistry();
         }
@@ -57,24 +55,20 @@ public class McpRegistry
         }
     }
 
-    public static async Task SaveRegistryAsync(McpRegistry registry, IVfsSystem vfs)
+    public static Task SaveRegistryAsync(McpRegistry registry, IVfsSystem vfs, VfsPath path) => SaveRegistryAsync(registry, new VfsEntity(vfs, path));
+    public static async Task SaveRegistryAsync(McpRegistry registry, VfsEntity vfs)
     {
-        var filePath = GetRegistryPath();
+        var filePath = vfs.Path;
 
         // Ensure directory exists
         var parentPath = filePath.ParentPath;
-        if (!await vfs.ExistsAsync(parentPath))
-            await vfs.CreateDirectoryAsync(parentPath);
+        if (!await vfs.VFS.ExistsAsync(parentPath))
+            await vfs.VFS.CreateDirectoryAsync(parentPath);
 
         // Write JSON
-        using var stream = await vfs.OpenFileAsync(filePath, FileMode.Create, FileAccess.Write);
+        using var stream = await vfs.VFS.OpenFileAsync(filePath, FileMode.Create, FileAccess.Write);
         var options = new JsonSerializerOptions { WriteIndented = true };
         await JsonSerializer.SerializeAsync(stream, registry, options);
 
-    }
-
-    private static VfsPath GetRegistryPath()
-    {
-        return VfsPath.Parse("/~secure/mcp.json");
     }
 }

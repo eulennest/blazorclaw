@@ -1,5 +1,6 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.VFS;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -69,7 +70,7 @@ public class McpSetTool(IVfsSystem vfs, ILogger<McpSetTool> logger)
             throw new ArgumentException($"AuthType muss 'none', 'bearer' oder 'basic' sein, nicht '{p.AuthType}'");
 
         // Load existing registry
-        var registry = await McpRegistry.LoadRegistryAsync(vfs);
+        var registry = await McpRegistry.LoadRegistryAsync(vfs, PathUtils.VfsMcpUser);
 
         // Add or update server
         var existing = registry.Servers.FirstOrDefault(s => s.Name == p.Name);

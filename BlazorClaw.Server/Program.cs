@@ -97,7 +97,7 @@ builder.Services.TryAddScoped<IVfsSystem>(sp =>
     return PathUtils.BuildVFSAsync(sp).GetAwaiter().GetResult();
 });
 // Tool registry
-builder.Services.TryAddScoped<IToolRegistry>(sp => new ToolRegistry(PluginUtils.BuildPlugins<ITool>(sp)));
+builder.Services.TryAddScoped<IToolProvider>(sp => new ToolAggregator(PluginUtils.BuildPlugins<IToolProvider>(sp, typeof(ToolAggregator))));
 
 // Security
 builder.Services.TryAddScoped<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));

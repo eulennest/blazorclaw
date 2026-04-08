@@ -40,7 +40,7 @@ public class McpController(ISessionManager sessionManager, ILogger<McpController
 
     private object Tools_List(MessageContext context)
     {
-        var toolRegistry = context.Provider.GetRequiredService<IToolRegistry>();
+        var toolRegistry = context.Provider.GetRequiredService<IToolProvider>();
         var tools = toolRegistry.GetAllTools().ToList();
 
         var toolSchemas = tools.Select(t => new
@@ -142,7 +142,7 @@ public class McpController(ISessionManager sessionManager, ILogger<McpController
             }
             else if ("tools/call".Equals(method))
             {
-                var toolRegistry = context.Provider.GetRequiredService<IToolRegistry>();
+                var toolRegistry = context.Provider.GetRequiredService<IToolProvider>();
                 // Get tool
 
                 if (!paramsElement.TryGetProperty("name", out var toolElement))
