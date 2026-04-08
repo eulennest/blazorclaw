@@ -253,6 +253,7 @@
             editingCrontab.Action = formModel.Action;
             editingCrontab.Data = formModel.Data;
             editingCrontab.SessionId = formModel.SessionId == Guid.Empty ? null : formModel.SessionId;
+            editingCrontab.System = formModel.System;
             Db.Crontabs.Update(editingCrontab);
         }
 
