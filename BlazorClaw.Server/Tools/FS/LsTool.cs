@@ -5,7 +5,6 @@ using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.VFS;
 using Microsoft.Extensions.FileSystemGlobbing;
 using System.ComponentModel;
-using System.Net;
 using System.Text;
 
 namespace BlazorClaw.Server.Tools.FS;

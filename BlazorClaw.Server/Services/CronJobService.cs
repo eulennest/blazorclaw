@@ -1,5 +1,6 @@
 ﻿using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Data;
+using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Models;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
@@ -9,7 +10,7 @@ using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
 {
-    public class CronJobService(IServiceScopeFactory scopeFactory, ILogger<CronJobService> logger) : BackgroundService, ICronJobService
+    public class CronJobService(IServiceScopeFactory scopeFactory, ILogger<CronJobService> logger, IMessageDispatcher dispatcher) : BackgroundService, ICronJobService
     {
         CancellationTokenSource cancellationTokenSource = new();
         public void ForceExecute()
@@ -201,7 +202,7 @@ namespace BlazorClaw.Server.Services
                     if (onlyIfNewUserMsg)
                     {
                         var last = sess.MessageHistory.LastOrDefault(o => o.IsUser);
-                        if (last?.GetTextContent()?.StartsWith("[CRON: ") ?? false)
+                        if (last?.GetTextContent()?.StartsWith("[TRIGGER ") ?? false)
                         {
                             logger.LogDebug("Skipping session {SessionId}: last message is already from cron", sessionId);
                             continue;
@@ -214,49 +215,8 @@ namespace BlazorClaw.Server.Services
                         logger.LogWarning("No message context available for session {SessionId}", sessionId);
                         continue;
                     }
-
-                    logger.LogDebug("Adding cron message to session {SessionId}", sessionId);
-                    sess.MessageHistory.Add(new() { Role = job.System ? "system" : "user", Content = fullMessage });
-
-                    int responseCount = 0;
-                    await foreach (var msg in sm.DispatchToLLMAsync(sess, cmdContext))
-                    {
-                        if (!msg.IsAssistant) continue;
-                        var ret = msg.GetTextContent();
-                        if (string.IsNullOrWhiteSpace(ret)) continue;
-                        if ("NO_REPLY".Equals(ret))
-                        {
-                            logger.LogDebug("LLM returned NO_REPLY for session {SessionId}", sessionId);
-                            continue;
-                        }
-                        if ("HEARTBEAT_OK".Equals(ret))
-                        {
-                            logger.LogDebug("LLM returned HEARTBEAT_OK for session {SessionId}", sessionId);
-                            continue;
-                        }
-
-                        try
-                        {
-                            if (cmdContext.Channel != null)
-                            {
-                                logger.LogInformation("Sending cron response to {ChannelProvider}:{ChannelId} (SessionId: {SessionId})",
-                                cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, sessionId);
-                                await cmdContext.Channel.SendChannelAsync(msg);
-                            }
-                            responseCount++;
-
-                        }
-                        catch (Exception sex)
-                        {
-                            logger.LogWarning(sex, "Error sending message to user channel");
-                        }
-                    }
-
-                    if (responseCount > 0)
-                    {
-                        processedCount++;
-                        logger.LogDebug("Session {SessionId} processed: {ResponseCount} response(s) sent", sessionId, responseCount);
-                    }
+                    
+                    await dispatcher.DispatchMessageAsync(cmdContext.Channel!, new ChatMessage() { Role = job.System ? "system" : "user", Content = fullMessage }).NoThrow();
                 }
                 catch (Exception ex)
                 {

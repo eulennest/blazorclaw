@@ -1,5 +1,4 @@
 using BlazorClaw.Core.VFS;
-using Microsoft.CodeAnalysis.Elfie.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 

@@ -10,18 +10,14 @@ using BlazorClaw.Core.Speech;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.VFS;
-using BlazorClaw.Core.VFS.Systems;
 using BlazorClaw.UI.Components.Account;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System.Collections.Concurrent;
 using System.CommandLine;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using static Matrix.Sdk.Core.Infrastructure.Dto.Sync.Event.Room.Messaging.ImageContent;
 
 namespace BlazorClaw.Server.Services
 {
