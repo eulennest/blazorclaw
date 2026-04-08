@@ -99,7 +99,7 @@ public class McpSetTool(IVfsSystem vfs, ILogger<McpSetTool> logger)
         }
 
         // Save registry
-        await McpRegistry.SaveRegistryAsync(registry, vfs);
+        await McpRegistry.SaveRegistryAsync(registry, vfs, PathUtils.VfsMcpUser);
 
         return $"✅ MCP Server '{p.Name}' gespeichert.\n" +
                $"URI: {p.ServerUri}\n" +

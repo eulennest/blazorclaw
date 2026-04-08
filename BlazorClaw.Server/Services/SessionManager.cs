@@ -213,7 +213,7 @@ namespace BlazorClaw.Server.Services
             {
 
                 // 2. Tools filtern und hinzufügen
-                var tools = await policyProvider.FilterToolsAsync(toolRegistry.GetAllTools(), context);
+                var tools = await policyProvider.FilterToolsAsync(await toolRegistry.GetAllToolsAsync().ToListAsync(), context);
                 if (tools.Any())
                 {
                     sessionState.Tools ??= [];
