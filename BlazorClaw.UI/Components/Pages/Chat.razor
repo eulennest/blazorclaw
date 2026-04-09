@@ -37,9 +37,12 @@
         <div class="sessions-list">
             @foreach (var session in sessions)
             {
+                var isGuest = string.IsNullOrEmpty(session.UserId);
+                var isMain = !isGuest && session.UserId == session.Id.ToString();
+                var iconClass = isGuest ? "bi bi-person-x" : (isMain ? "bi bi-person" : "bi bi-people");
                 <a href="/chat/@session.Id"
                    class="session-item @(session.Id == SessionId ? "active" : "")">
-                    <i class="bi bi-chat-dots"></i>
+                    <i class="@iconClass"></i>
                     <span class="session-title">@session.Title</span>
                 </a>
             }
