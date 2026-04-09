@@ -33,7 +33,7 @@ namespace BlazorClaw.Core.Utils
         public static string GetUserBasePath(MessageContext context)
         {
             var userId = context.Session?.UserId?.ToLowerInvariant();
-            if (!Guid.TryParse(userId, out var uuid)) userId = $"guest_{context.Session?.Id}");
+            if (!Guid.TryParse(userId, out var uuid)) userId = $"guest_{context.Session?.Id}";
             return GetUserBasePath(context.Provider, userId);
         }
 
