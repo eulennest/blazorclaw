@@ -98,6 +98,7 @@
                         </div>
                     }
                     <div class="message-content">
+                        <div class="message-time">@msg.CreatedAt?.ToString("HH:mm")</div>
                         @if (!msg.IsTool)
                             @((MarkupString)RenderMarkdown(@msg.GetTextContent() ?? string.Empty))
 
@@ -634,6 +635,12 @@
             font-family: "bootstrap-icons";
             margin-right: 8px;
             opacity: 0.7;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: #6a6a6a;
+            margin-bottom: 4px;
         }
 
     .message-content code {
