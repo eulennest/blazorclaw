@@ -98,7 +98,7 @@
                         </div>
                     }
                     <div class="message-content">
-                        <div class="message-time">@msg.CreatedAt?.ToString("HH:mm")</div>
+                        <div class="message-time" title="@msg.CreatedAt?.ToString("dd.MM.yyyy HH:mm:ss")">@msg.CreatedAt?.ToString("HH:mm")</div>
                         @if (!msg.IsTool)
                             @((MarkupString)RenderMarkdown(@msg.GetTextContent() ?? string.Empty))
 
