@@ -18,7 +18,7 @@ using System.CommandLine;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using Telegram.Bot.Types;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace BlazorClaw.Server.Services
 {
@@ -117,6 +117,17 @@ namespace BlazorClaw.Server.Services
             }
 
             return state;
+        }
+
+        public async Task DeleteSessionAsync(Guid sessionId)
+        {
+            _sessions.TryRemove(sessionId, out _);
+            var path = Path.Combine(SessionStoragePath, $"session_{sessionId}.json");
+            if (File.Exists(path)) File.Delete(path);
+
+            var scope = scopeFactory.CreateScope();
+            using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await db.ChatSessions.Where(o => o.Id.Equals(sessionId)).ExecuteDeleteAsync();
         }
 
         public async Task SaveSessionAsync(ChatSessionState sessionState, bool newVersion = false)
