@@ -48,6 +48,7 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
+                        <th>User</th>
                         <th>Titel</th>
                         <th>Modell</th>
                         <th>Letzte Aktivität</th>
@@ -58,7 +59,13 @@
                 <tbody>
                     @foreach (var session in sessions)
                     {
+                        var isGuest = string.IsNullOrEmpty(session.UserId);
+                        var isMain = !isGuest && session.UserId == session.Id.ToString();
+                        var iconClass = isGuest ? "bi bi-person-x" : (isMain ? "bi bi-person" : "bi bi-people");
                         <tr>
+                            <td>
+                                <i class="@iconClass"></i>
+                            </td>
                             <td>
                                 <a href="/chat/@session.Id" class="text-decoration-none">
                                     <strong>@session.Title</strong>
