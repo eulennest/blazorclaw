@@ -18,15 +18,16 @@ using System.CommandLine;
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Telegram.Bot.Types;
 
 namespace BlazorClaw.Server.Services
 {
-    public class SessionManager(PathHelper pathHelper, IHttpContextAccessor httpContext, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options) : ISessionManager
+    public class SessionManager(PathHelper pathHelper, IHttpContextAccessor httpContext, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options, IdentityUserAccessor userAccessor) : ISessionManager
     {
         public string SessionStoragePath { get; set; } = "sessions";
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
 
-        public async Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string? model = null)
+        public async Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string? model = null, string? user = null)
         {
             var state = await GetSessionAsync(sessionId).ConfigureAwait(false);
 
@@ -37,7 +38,6 @@ namespace BlazorClaw.Server.Services
                 using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                 var sess = await db.ChatSessions.FindAsync(sessionId);
                 model ??= sess?.CurrentModel ?? options.CurrentValue.Model;
-                var userAccessor = scope.ServiceProvider.GetRequiredService<IdentityUserAccessor>();
                 if (sess == null)
                 {
                     sess = new ChatSession
@@ -47,24 +47,14 @@ namespace BlazorClaw.Server.Services
                         CreatedAt = DateTime.UtcNow,
                         LastUsedAt = DateTime.UtcNow,
                     };
-                    if (httpContext.HttpContext != null)
+                    if (user == null && httpContext.HttpContext != null)
                     {
-                        var userId = (await userAccessor.GetUserAsync(httpContext?.HttpContext))?.Id;
-                        if (!string.IsNullOrWhiteSpace(userId)) sess.UserId = userId;
+                        user = (await userAccessor.GetUserAsync(httpContext?.HttpContext))?.Id;
                     }
+                    if (!string.IsNullOrWhiteSpace(user)) sess.UserId = user;
                     db.ChatSessions.Add(sess);
                     await db.SaveChangesAsync().ConfigureAwait(false);
                 }
-                if (string.IsNullOrWhiteSpace(sess.UserId))
-                {
-                    var userId = (await userAccessor.GetUserAsync(httpContext?.HttpContext))?.Id;
-                    if (!string.IsNullOrWhiteSpace(userId))
-                    {
-                        sess.UserId = userId;
-                        await db.SaveChangesAsync().ConfigureAwait(false);
-                    }
-                }
-
 
                 state = new ChatSessionState
                 {
@@ -75,8 +65,20 @@ namespace BlazorClaw.Server.Services
                 await SetVFSAsync(state);
                 scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
 
-
                 _sessions.TryAdd(sessionId, state);
+            }
+
+            if (string.IsNullOrWhiteSpace(state.Session.UserId))
+            {
+                var userId = (await userAccessor.GetUserAsync(httpContext?.HttpContext))?.Id;
+                if (!string.IsNullOrWhiteSpace(userId) && state.Session.Id.ToString() == userId)
+                {
+                    state.Session.UserId = userId;
+                    var scope = scopeFactory.CreateScope();
+                    using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    db.ChatSessions.Update(state.Session);
+                    await db.SaveChangesAsync().ConfigureAwait(false);
+                }
             }
             return state;
         }
@@ -111,7 +113,6 @@ namespace BlazorClaw.Server.Services
                     await SetVFSAsync(state);
                     scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
                     _sessions.TryAdd(sessionId, state);
-                    return state;
                 }
             }
 
