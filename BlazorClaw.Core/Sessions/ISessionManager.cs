@@ -13,6 +13,7 @@ public interface ISessionManager
     Task AppendMessageAsync(Guid sessionId, ChatMessage message);
     IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sess, MessageContext context);
     Task<object?> DispatchCommandAsync(string cmdline, MessageContext cmdContext, RootCommand rootCmd, ICommandProvider commandProvider);
+    Task DeleteSessionAsync(Guid sessionId);
 }
 
 public interface IChannelBot
