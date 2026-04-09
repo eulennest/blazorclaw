@@ -1,3 +1,4 @@
+using Bitwarden.Sdk;
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Data;
 using BlazorClaw.Core.DTOs;
@@ -18,7 +19,6 @@ using System.CommandLine;
 using System.Net;
 using System.Text;
 using System.Text.Json;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace BlazorClaw.Server.Services
 {
@@ -121,11 +121,14 @@ namespace BlazorClaw.Server.Services
 
         public async Task DeleteSessionAsync(Guid sessionId)
         {
-            _sessions.TryRemove(sessionId, out _);
+            _sessions.TryRemove(sessionId, out var sess);
+            sess?.Scope.Dispose();
             var path = Path.Combine(SessionStoragePath, $"session_{sessionId}.json");
             if (File.Exists(path)) File.Delete(path);
 
             var scope = scopeFactory.CreateScope();
+            var userBaseFolder = PathUtils.GetUserBasePath(scope.ServiceProvider, $"guest_{sessionId}");
+            Directory.Delete(userBaseFolder, true);
             using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             await db.ChatSessions.Where(o => o.Id.Equals(sessionId)).ExecuteDeleteAsync();
         }

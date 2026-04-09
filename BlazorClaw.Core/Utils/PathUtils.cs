@@ -32,15 +32,15 @@ namespace BlazorClaw.Core.Utils
         }
         public static string GetUserBasePath(MessageContext context)
         {
-            var userId = context.UserId?.ToLowerInvariant();
-            if (!Guid.TryParse(userId, out var uuid)) uuid = context.Session?.Id ?? Guid.NewGuid();
-            return GetUserBasePath(context.Provider, uuid);
+            var userId = context.Session?.UserId?.ToLowerInvariant();
+            if (!Guid.TryParse(userId, out var uuid)) userId = $"guest_{context.Session?.Id}");
+            return GetUserBasePath(context.Provider, userId);
         }
 
-        public static string GetUserBasePath(IServiceProvider provider, Guid userId)
+        public static string GetUserBasePath(IServiceProvider provider, string userId)
         {
             var basePath = GetAllBasePath(provider);
-            return Path.GetFullPath(Path.Combine(basePath, userId.ToString()));
+            return Path.GetFullPath(Path.Combine(basePath, userId));
         }
 
         public static string GetWorkspacePath(this MessageContext context)
@@ -65,26 +65,39 @@ namespace BlazorClaw.Core.Utils
             return fpath;
         }
 
-        public static async Task<MountpointVfsSystem> BuildVFSAsync(IServiceProvider sp)
+        public static async Task<ApplicationUser?> GetUserAsync(IServiceProvider sp)
         {
             var sess = sp.GetService<SessionStateAccessor>()?.SessionState?.Session;
-            var userId = sess?.UserId?.ToLowerInvariant();
-            var au = sp.GetRequiredService<UserManager<ApplicationUser>>();
-            ApplicationUser? u = null;
-            if (string.IsNullOrWhiteSpace(userId))
+            if (sess != null)
             {
-                var aus = sp.GetRequiredService<IHttpContextAccessor>();
-                if (aus.HttpContext?.User != null)
+                if (!Guid.TryParse(sess.UserId, out var _)) return null;
+                var au = sp.GetRequiredService<UserManager<ApplicationUser>>();
+                return await au.FindByIdAsync(sess.UserId).ConfigureAwait(false);
+            }
+            var aus = sp.GetRequiredService<IHttpContextAccessor>();
+            if (aus.HttpContext?.User == null) return null;
+            var sm = sp.GetRequiredService<UserManager<ApplicationUser>>();
+            return await sm.GetUserAsync(aus.HttpContext.User).ConfigureAwait(false);
+        }
+
+        public static async Task<MountpointVfsSystem> BuildVFSAsync(IServiceProvider sp)
+        {
+            var user = await GetUserAsync(sp).ConfigureAwait(false);
+            var au = sp.GetRequiredService<UserManager<ApplicationUser>>();
+            var roles = user != null ? await au.GetRolesAsync(user).ConfigureAwait(false) : ["Guest"];
+
+            var folder = user?.Id;
+            if (string.IsNullOrWhiteSpace(folder))
+            {
+                var sess = sp.GetService<SessionStateAccessor>()?.SessionState?.Session;
+                if (sess != null)
                 {
-                    u = await au.GetUserAsync(aus.HttpContext.User).ConfigureAwait(false);
-                    if (u != null) userId = u.Id;
+                    folder = $"guest_{sess.Id}";
                 }
             }
-            if (userId != null) u ??= await au.FindByIdAsync(userId).ConfigureAwait(false);
+            if (string.IsNullOrWhiteSpace(folder))
+                throw new Exception("Cannot determine user folder");
 
-            if (!Guid.TryParse(userId, out var uuid)) uuid = sess?.Id ?? Guid.NewGuid();
-
-            var roles = u != null ? await au.GetRolesAsync(u).ConfigureAwait(false) : ["Guest"];
             var conf = sp.GetRequiredService<IOptions<SecurityOptions>>();
 
             var sandboxDisabled = false;
@@ -103,7 +116,7 @@ namespace BlazorClaw.Core.Utils
                 }
             }
 
-            var userBaseFolder = GetUserBasePath(sp, uuid);
+            var userBaseFolder = GetUserBasePath(sp, folder);
             var vfs = new MountpointVfsSystem();
             Directory.CreateDirectory(userBaseFolder);
             if (Directory.Exists(userBaseFolder))
@@ -142,7 +155,6 @@ namespace BlazorClaw.Core.Utils
             }
 
             return vfs;
-
         }
     }
 
