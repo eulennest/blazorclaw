@@ -157,8 +157,7 @@
         isDeleting = true;
         try
         {
-            Db.ChatSessions.Remove(sessionToDelete);
-            await Db.SaveChangesAsync();
+            await sessionManager.DeleteSessionAsync(sessionToDelete.Id);
 
             showDeleteModal = false;
             sessionToDelete = null;
