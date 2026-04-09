@@ -42,6 +42,8 @@ public class ChatMessage
     [JsonExtensionData]
     public Dictionary<string, object>? ExtensionData { get; set; }
 
+    [JsonPropertyName("timestamp")]
+    public virtual long? Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
     [JsonIgnore]
     public bool IsAssistant => Role.Equals("assistant", StringComparison.OrdinalIgnoreCase);
@@ -59,6 +61,10 @@ public class ChatMessage
     public bool HasMedia => !string.IsNullOrWhiteSpace(MediaContent?.Url) || Images?.Count > 0;
     [JsonIgnore]
     public bool HasContent => !string.IsNullOrWhiteSpace(Content?.ToString());
+
+    [JsonIgnore]
+    public DateTimeOffset? CreatedAt => Timestamp.HasValue ? DateTimeOffset.FromUnixTimeSeconds(Timestamp.Value) : null;
+
 
     public IEnumerable<ContentEntry> GetContents()
     {
