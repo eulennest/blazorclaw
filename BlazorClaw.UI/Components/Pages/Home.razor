@@ -154,7 +154,7 @@
             newId = Guid.Parse(userId!);
         }
         
-        var sess = await sessionManager.GetOrCreateSessionAsync(newId);
+        var sess = await sessionManager.GetOrCreateSessionAsync(newId, null, userId);
         if (sess != null) Nav.NavigateTo($"/chat/{sess.Session.Id}");
     }
 
