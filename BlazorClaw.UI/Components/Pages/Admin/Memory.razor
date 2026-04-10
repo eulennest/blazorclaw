@@ -38,8 +38,8 @@
                     <div class="list-group list-group-flush">
                         @foreach (var user in users)
                         {
-                            <button class="list-group-item list-group-item-action @(selectedUserId == user.Key ? "active" : "")"
-                                    @onclick="() => SelectUser(user.Key)">
+                            <button class="list-group-item list-group-item-action @(selectedFolder == user.Key ? "active" : "")"
+                                    @onclick="() => SelectFolder(user.Key)">
                                 <div class="fw-bold">@user.Value</div>
                             </button>
                         }
@@ -51,7 +51,7 @@
 
     <!-- Files & Editor -->
     <div class="col-md-9">
-        @if (selectedUserId == null)
+        @if (selectedFolder == null)
         {
             <div class="alert alert-info">
                 <i class="bi bi-info-circle"></i> Wähle einen Benutzer, um seine Memory-Dateien anzuschauen.
@@ -190,8 +190,8 @@
 </div>
 
 @code {
-    private Dictionary<Guid, string>? users;
-    private Guid? selectedUserId;
+    private Dictionary<string, string>? users;
+    private string? selectedFolder;
     private IVfsSystem? vfs;
 
     private List<VfsPathInfo>? memoryFiles;
@@ -207,12 +207,12 @@
 
     protected override async Task OnInitializedAsync()
     {
-        users ??= await LoadUsers();
+        users ??= await LoadFolders();
     }
 
-    private async Task<Dictionary<Guid, string>> LoadUsers()
+    private async Task<Dictionary<string, string>> LoadFolders()
     {
-        var ret = new Dictionary<Guid, string>();
+        var ret = new Dictionary<string, string>();
         try
         {
             var basePath = PathUtils.GetAllBasePath(provider);
@@ -221,9 +221,8 @@
 
             foreach (var item in di.EnumerateDirectories())
             {
-                if (!Guid.TryParse(item.Name, out var uid)) continue;
-                var name = uList.FirstOrDefault(u => u.Id.Equals(uid.ToString()))?.UserName ?? item.Name;
-                ret.Add(uid, name);
+                var name = uList.FirstOrDefault(u => u.Id.Equals(item.Name))?.UserName ?? item.Name;
+                ret.Add(item.Name, name);
             }
         }
         catch (Exception ex)
@@ -233,10 +232,10 @@
         return ret;
     }
 
-    private async Task SelectUser(Guid userId)
+    private async Task SelectFolder(string folder)
     {
-        selectedUserId = userId;
-        var memoryBase = Path.Combine(PathUtils.GetUserBasePath(provider, selectedUserId.Value), "memory");
+        selectedFolder = folder;
+        var memoryBase = Path.Combine(PathUtils.GetUserBasePath(provider, folder), "memory");
         vfs = new Core.VFS.Systems.PhysicalFileSystem(memoryBase);
         selectedFile = null;
         fileToDelete = null;
@@ -271,7 +270,7 @@
 
     private async Task LoadFileContent()
     {
-        if (selectedUserId == null || selectedFile == null) return;
+        if (selectedFolder == null || selectedFile == null) return;
 
         try
         {
@@ -288,7 +287,7 @@
 
     private async Task SaveFile()
     {
-        if (selectedUserId == null || fileContent == null || selectedFile == null) return;
+        if (selectedFolder == null || fileContent == null || selectedFile == null) return;
 
         isSaving = true;
         try
@@ -319,7 +318,7 @@
 
     private async Task ConfirmDelete()
     {
-        if (fileToDelete == null || selectedUserId == null)
+        if (fileToDelete == null || selectedFolder == null)
             return;
 
         showDeleteConfirmation = false;
@@ -347,7 +346,7 @@
     private async Task CreateNewFile()
     {
         newFileName = newFileName?.Trim().Trim(VfsPath.DirectorySeparator);
-        if (string.IsNullOrWhiteSpace(newFileName) || vfs == null || selectedUserId == null || fileContent == null)
+        if (string.IsNullOrWhiteSpace(newFileName) || vfs == null || selectedFolder == null || fileContent == null)
             return;
 
         try
