@@ -149,6 +149,11 @@
     private async Task CreateNewSession()
     {
         var newId = Guid.NewGuid();
+        if (!await Db.ChatSessions.AnyAsync(o => o.Id.ToString() == userId))
+        {
+            newId = Guid.Parse(userId!);
+        }
+        
         var sess = await sessionManager.GetOrCreateSessionAsync(newId);
         if (sess != null) Nav.NavigateTo($"/chat/{sess.Session.Id}");
     }
