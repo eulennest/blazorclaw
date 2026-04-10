@@ -1,4 +1,3 @@
-using Bitwarden.Sdk;
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Data;
 using BlazorClaw.Core.DTOs;
@@ -130,7 +129,7 @@ namespace BlazorClaw.Server.Services
 
             var scope = scopeFactory.CreateScope();
             var userBaseFolder = PathUtils.GetUserBasePath(scope.ServiceProvider, $"guest_{sessionId}");
-            if(Directory.Exists(userBaseFolder)) Directory.Delete(userBaseFolder, true);
+            if (Directory.Exists(userBaseFolder)) Directory.Delete(userBaseFolder, true);
             using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             await db.ChatSessions.Where(o => o.Id.Equals(sessionId)).ExecuteDeleteAsync();
         }
