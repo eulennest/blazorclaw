@@ -130,7 +130,7 @@ namespace BlazorClaw.Server.Services
 
             var scope = scopeFactory.CreateScope();
             var userBaseFolder = PathUtils.GetUserBasePath(scope.ServiceProvider, $"guest_{sessionId}");
-            Directory.Delete(userBaseFolder, true);
+            if(Directory.Exists(userBaseFolder)) Directory.Delete(userBaseFolder, true);
             using var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             await db.ChatSessions.Where(o => o.Id.Equals(sessionId)).ExecuteDeleteAsync();
         }
