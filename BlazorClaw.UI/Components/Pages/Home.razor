@@ -48,9 +48,9 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>User</th>
                         <th>Titel</th>
                         <th>Modell</th>
+                        <th>User</th>
                         <th>Letzte Aktivität</th>
                         <th>Erstellt</th>
                         <th style="width: 120px;">Aktionen</th>
@@ -62,16 +62,16 @@
                         var isGuest = string.IsNullOrEmpty(session.UserId);
                         var isMain = !isGuest && session.UserId == session.Id.ToString();
                         var iconClass = isGuest ? "bi bi-person-x" : (isMain ? "bi bi-person" : "bi bi-people");
+                        var name = uList.FirstOrDefault(u => u.Id.Equals(session.UserId))?.UserName;
                         <tr>
                             <td>
                                 <i class="@iconClass"></i>
-                            </td>
-                            <td>
                                 <a href="/chat/@session.Id" class="text-decoration-none">
                                     <strong>@session.Title</strong>
                                 </a>
                             </td>
                             <td><code class="small">@session.CurrentModel</code></td>
+                            <td>@(name ?? "GUEST")</td>
                             <td>@session.LastUsedAt.ToLocalTime().ToString("g")</td>
                             <td>@session.CreatedAt.ToLocalTime().ToString("d")</td>
                             <td>
@@ -126,6 +126,7 @@
     private bool showDeleteModal = false;
     private ChatSession? sessionToDelete;
     private bool isDeleting = false;
+    private List<ApplicationUser> uList = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -137,10 +138,12 @@
             userId = UserManager.GetUserId(user);
             isAdmin = user.IsInRole("Admin");
 
-            sessions = isAdmin 
+            sessions = isAdmin
                 ? await SessionQueryService.GetAllSessionsAsync()
                 : await SessionQueryService.GetSessionsForUserAsync(userId!);
         }
+
+        uList = await Db.Users.ToListAsync();
     }
 
     private async Task CreateNewSession()
@@ -172,7 +175,7 @@
             // Reload sessions
             var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
             var user = authState.User;
-            sessions = isAdmin 
+            sessions = isAdmin
                 ? await SessionQueryService.GetAllSessionsAsync()
                 : await SessionQueryService.GetSessionsForUserAsync(userId!);
         }

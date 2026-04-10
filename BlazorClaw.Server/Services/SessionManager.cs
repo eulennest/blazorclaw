@@ -22,7 +22,7 @@ using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
 {
-    public class SessionManager(PathHelper pathHelper, IHttpContextAccessor httpContext, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options, IdentityUserAccessor userAccessor) : ISessionManager
+    public class SessionManager(PathHelper pathHelper, IHttpContextAccessor httpContext, IServiceScopeFactory scopeFactory, ILogger<SessionManager> logger, IOptionsMonitor<LlmOptions> options) : ISessionManager
     {
         public string SessionStoragePath { get; set; } = "sessions";
         private readonly ConcurrentDictionary<Guid, ChatSessionState> _sessions = new();
@@ -30,6 +30,8 @@ namespace BlazorClaw.Server.Services
         public async Task<ChatSessionState> GetOrCreateSessionAsync(Guid sessionId, string? model = null, string? user = null)
         {
             var state = await GetSessionAsync(sessionId).ConfigureAwait(false);
+            using var scoped = scopeFactory.CreateScope();
+            var userAccessor = scoped.ServiceProvider.GetRequiredService<IdentityUserAccessor>();
 
             if (state == null)
             {
