@@ -28,17 +28,23 @@ public class MemoryReadTool : BaseTool<MemoryReadTool.Params>
 
     protected override async Task<string> ExecuteInternalAsync(Params p, MessageContext context)
     {
-        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
+        if (p.Limit.HasValue && p.Limit.Value < 0) throw new ArgumentException("Limit muss größer oder gleich 0 sein.", nameof(p.Limit));
+        if (p.Offset.HasValue && p.Offset.Value < 0) throw new ArgumentException("Offset muss größer oder gleich 0 sein.", nameof(p.Offset));
+
         if (p.FileName.StartsWith('/')) p.FileName = p.FileName[1..];
         var path = VfsPath.Parse(PathUtils.VfsMemory, p.FileName);
         if (path.IsDirectory)
             throw new FileNotFoundException($"Path ist keine Datei: {p.FileName}");
         if (!PathUtils.VfsMemory.IsParentOf(path)) throw new InvalidPathException(p.FileName);
 
+        var vfs = context.Provider.GetRequiredService<IVfsSystem>();
         var mi = await vfs.GetMetaInfoAsync(path);
-        if (!mi.Exists) throw new FileNotFoundException($"Memory Datei '{p.FileName}' wurde nicht gefunden.", p.FileName);
-        if (p.Limit.HasValue && p.Limit.Value < 0) throw new ArgumentException("Limit muss größer oder gleich 0 sein.", nameof(p.Limit));
-        if (p.Offset.HasValue && p.Offset.Value < 0) throw new ArgumentException("Offset muss größer oder gleich 0 sein.", nameof(p.Offset));
+        if (!mi.Exists)
+        {
+            var list = await vfs.GetSubPathsRecursiveAsync(PathUtils.VfsMemory).FirstOrDefaultAsync(o => o.EntityName.EndsWith(mi.Name, StringComparison.InvariantCultureIgnoreCase));
+            var mean = list.IsFile ? $" Meintest du vielleicht '{list}'?" : "";
+            throw new FileNotFoundException($"Memory Datei '{p.FileName}' wurde nicht gefunden.{mean}", p.FileName);
+        }
 
         using var stream = await mi.OpenReadAsync();
         using var reader = new StreamReader(stream);
