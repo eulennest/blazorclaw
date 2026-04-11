@@ -47,3 +47,4 @@ tmp/
 *.db-wal
 session_*.json
 BlazorClaw.Server/userdata/
+uploads/

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Hosting;
+﻿using BlazorClaw.Core.Utils;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 
@@ -34,7 +35,12 @@ namespace BlazorClaw.Core.Services
         }
 
         public string GetBaseFolder() => env.ContentRootPath;
-        public string GetMediaFolder() => Path.Combine(GetBaseFolder(), "uploads");
+        public string GetMediaFolder()
+        {
+            var path = Path.Combine(GetBaseFolder(), "uploads");
+            Directory.CreateDirectory(path);
+            return path;
+        }
 
         public async Task<Tuple<Stream, string>?> GetMediaFileAsync(string fileName)
         {
@@ -71,35 +77,66 @@ namespace BlazorClaw.Core.Services
 
         public async Task<string?> SaveMediaFileAsync(string data)
         {
-            if (data.StartsWith("data:"))
+            try
             {
-                // Split the string to escape the real data
 
-                var b64 = data.Split(",".ToCharArray(), 2);
-                var ext = GetExtension(b64[0]);
-                var filename = Path.Combine(GetMediaFolder(), $"{Guid.NewGuid()}{ext}");
-                // Convert the base 64 String to byte array
-                byte[] byteArray = Convert.FromBase64String(b64[1]);
-                await File.WriteAllBytesAsync(filename, byteArray);
-                return filename;
-            }
-            if (data.StartsWith("http://") || data.StartsWith("https://"))
-            {
-                var uri = new Uri(data);
-                if (uri.Host == GetBaseUrl().Host) return data;
 
-                var ext = Path.GetExtension(uri.AbsolutePath);
-                if (string.IsNullOrWhiteSpace(ext)) ext = ".dat";
-                var filename = Path.Combine(GetMediaFolder(), $"{Guid.NewGuid()}{ext}");
-
-                using var strm = await httpClient.GetStreamAsync(uri);
-                using (var fStrm = File.OpenWrite(filename))
+                if (data.StartsWith("data:"))
                 {
-                    await strm.CopyToAsync(fStrm);
-                }
-                return filename;
-            }
+                    // Split the string to escape the real data
 
+                    var b64 = data.Split(",".ToCharArray(), 2);
+                    var mime = b64[0];
+                    // Convert the base 64 String to byte array
+                    byte[] byteArray = Convert.FromBase64String(b64[1]);
+                    if (string.IsNullOrEmpty(mime) || mime.Contains("stream") || mime.Contains("base64"))
+                    {
+                        mime = Mimetype.DetectMimeType(byteArray);
+                    }
+                    var ext = Mimetype.GetExtensionFromMimeType(mime) ?? ".dat";
+                    var filename = Path.Combine(GetMediaFolder(), $"{Guid.NewGuid()}{ext}");
+                    await File.WriteAllBytesAsync(filename, byteArray);
+                    return filename;
+                }
+                if (data.StartsWith("http://") || data.StartsWith("https://"))
+                {
+                    var uri = new Uri(data);
+                    if (uri.Host == GetBaseUrl().Host) return data;
+
+                    var ext = Path.GetExtension(uri.AbsolutePath);
+                    if (string.IsNullOrWhiteSpace(ext)) ext = "";
+                    var filename = Path.Combine(GetMediaFolder(), $"{Guid.NewGuid()}{ext}");
+
+                    using var strm = await httpClient.GetStreamAsync(uri);
+                    using (var fStrm = File.OpenWrite(filename))
+                    {
+                        await strm.CopyToAsync(fStrm);
+                    }
+                    if (ext == "")
+                    {
+                        using var fStrm = File.OpenRead(filename);
+                        var buff = new byte[1024];
+                        fStrm.Read(buff, 0, buff.Length);
+                        var mime = Mimetype.DetectMimeType(buff);
+                        var newExt = Mimetype.GetExtensionFromMimeType(mime);
+                        if (!string.IsNullOrWhiteSpace(newExt) && newExt != ext)
+                        {
+                            var newFilename = filename + newExt;
+                            File.Move(filename, newFilename);
+                            filename = newFilename;
+                        }
+                    }
+                    return filename;
+                }
+                if (data.StartsWith("file://"))
+                {
+                    var uri = new Uri(data);
+                    if (uri.IsFile) return uri.LocalPath;
+                }
+            }
+            catch
+            {
+            }
             return null;
         }
 

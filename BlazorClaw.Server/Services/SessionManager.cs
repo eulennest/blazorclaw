@@ -239,7 +239,7 @@ namespace BlazorClaw.Server.Services
                 if (File.Exists("SYSTEMPROMPT.md"))
                 {
                     var systemPromptContent = await File.ReadAllTextAsync("SYSTEMPROMPT.md").ConfigureAwait(false);
-                    sessionState.SystemPrompts.Add(new ChatMessage(ChatRole.System, systemPromptContent) { CreatedAt = DateTimeOffset.UtcNow } );
+                    sessionState.SystemPrompts.Add(new ChatMessage(ChatRole.System, systemPromptContent) { CreatedAt = DateTimeOffset.UtcNow });
                 }
 
                 sessionState.SystemPrompts.Add(new ChatMessage(ChatRole.System,
@@ -316,7 +316,16 @@ namespace BlazorClaw.Server.Services
 
         private async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(IChatClient chatClient, ChatOptions opts, ChatSessionState sessionState, MessageContext context, IToolProvider toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
         {
-            var messages = sessionState.MessageHistory;
+            var messages = sessionState.MessageHistory.Select(o => o.Clone());
+            foreach (var message in messages)
+            {
+                foreach (var item in message.Contents.OfType<UriContent>().ToList())
+                {
+                    message.Contents.Remove(item);
+                    message.Contents.Add(new TextContent($"[MEDIA:{item.Uri} Type={item.MediaType}]"));
+                }
+            }
+
 
             var content = await chatClient.GetResponseAsync(messages, opts);
 
@@ -367,61 +376,76 @@ namespace BlazorClaw.Server.Services
 
         public async Task ConvertMediaFilesAsync(MessageContext context, ChatMessage message)
         {
-            var msg = message.Text;
-
-            if (msg.Length > 6 && msg[..8].Contains('['))
+            var i = 0;
+            foreach (var item in message.Contents.OfType<TextContent>().ToList())
             {
-                var trimMsg = msg.TrimStart(' ', '\r', '\n', '*', '#', '-');
-
-                // Pattern mit 3-5 Großbuchstaben
-                var match = JsonHelper.MediaTagRegex().Match(trimMsg);
-                logger.LogInformation(match.ToString());
-
-                if (match.Success)
+                var msg = item.Text;
+                if (msg.Length > 6 && msg[..8].Contains('['))
                 {
-                    string tag = match.Groups[1].Value;    // z.B. "IMAGE" oder "TTS"
-                    string payload = WebUtility.HtmlDecode(match.Groups[2].Value.Trim()); // URL oder Text
+                    var trimMsg = msg.TrimStart(' ', '\r', '\n', '*', '#', '-');
 
-                    logger.LogInformation("Media TAG: {tag} ,Payload: {payload}", tag, payload);
-                    // Logik:
-                    switch (tag)
+                    // Pattern mit 3-5 Großbuchstaben
+                    var match = JsonHelper.MediaTagRegex().Match(trimMsg);
+                    logger.LogInformation(match.ToString());
+                    var ok = false;
+                    if (match.Success)
                     {
-                        case "TTS":
-                            var ttsp = context.Provider.GetRequiredService<ITextToSpeechProvider>();
+                        string tag = match.Groups[1].Value;    // z.B. "IMAGE" oder "TTS"
+                        string payload = WebUtility.HtmlDecode(match.Groups[2].Value.Trim()); // URL oder Text
 
-                            // 1. Stimme parsen: "[TTS:Hallo|voice:onyx]" -> "Hallo", "onyx"
-                            string finalPayload = payload;
-                            string selectedVoiceName = ""; // Default
+                        logger.LogInformation("Media TAG: {tag} ,Payload: {payload}", tag, payload);
+                        // Logik:
+                        switch (tag)
+                        {
+                            case "TTS":
+                                var ttsp = context.Provider.GetRequiredService<ITextToSpeechProvider>();
 
-                            if (payload.Contains("|voice:"))
+                                // 1. Stimme parsen: "[TTS:Hallo|voice:onyx]" -> "Hallo", "onyx"
+                                string finalPayload = payload;
+                                string selectedVoiceName = ""; // Default
+
+                                if (payload.Contains("|voice:"))
+                                {
+                                    var parts = payload.Split("|voice:", 2);
+                                    finalPayload = parts[0];
+                                    selectedVoiceName = parts[1];
+                                }
+                                else
+                                {
+                                    // Fallback: Erste verfügbare Stimme nehmen, falls kein |voice: ... angegeben
+                                    var firstVoice = await ttsp.ListVoicesAsync().FirstAsync();
+                                    if (firstVoice != null) selectedVoiceName = firstVoice.VoiceName; // Statt VoiceName einfach .Id nehmen
+                                }
+
+                                var file = await pathHelper.SaveMediaFileAsync(await ttsp.TextToSpeechAsync(selectedVoiceName, finalPayload, new object()));
+                                if (file != null)
+                                {
+                                    message.Contents.Insert(i++, new UriContent(file, "audio/ogg"));
+                                    ok = true;
+                                }
+
+                                break;
+                            default:
+                                var ft = await GetMediaFileAsync(payload);
+                                if (ft != null)
+                                {
+                                    var ext = Path.GetExtension(ft.AbsolutePath).Trim('.');
+                                    message.Contents.Insert(i++, new UriContent(ft, $"{tag.ToLowerInvariant()}/{ext}"));
+                                    ok = true;
+                                }
+                                break;
+                        }
+                        if (ok)
+                        {
+                            var pos = item.Text.IndexOf(']');
+                            if (pos > 4)
                             {
-                                var parts = payload.Split("|voice:", 2);
-                                finalPayload = parts[0];
-                                selectedVoiceName = parts[1];
+                                item.Text = item.Text[(pos + 1)..].TrimStart(' ', '*', '#', '-').Trim();
                             }
-                            else
-                            {
-                                // Fallback: Erste verfügbare Stimme nehmen, falls kein |voice: ... angegeben
-                                var firstVoice = await ttsp.ListVoicesAsync().FirstAsync();
-                                if (firstVoice != null) selectedVoiceName = firstVoice.VoiceName; // Statt VoiceName einfach .Id nehmen
-                            }
-
-                            var file = await pathHelper.SaveMediaFileAsync(await ttsp.TextToSpeechAsync(selectedVoiceName, finalPayload, new object()));
-                            if (file != null) message.Contents.Add(new UriContent(file, "audio/ogg"));
-
-                            break;
-                        default:
-                            var ft = await GetMediaFileAsync(payload);
-                            if (ft != null)
-                            {
-                                var ext = Path.GetExtension(ft.AbsolutePath).Trim('.');
-                                message.Contents.Add(new UriContent(ft, $"{tag.ToLowerInvariant()}/{ext}"));
-                            }
-                            break;
+                        }
                     }
                 }
             }
-
             foreach (var item in message.Contents.OfType<UriContent>())
             {
                 var f = await GetMediaFileAsync(item.Uri.ToString());
