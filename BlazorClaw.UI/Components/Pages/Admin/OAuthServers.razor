@@ -1,0 +1,365 @@
+@page "/admin/oauthservers"
+@using System.Text.Json
+@using BlazorClaw.Core.Data
+@using BlazorClaw.Core.Models
+@using Microsoft.EntityFrameworkCore
+@inject NavigationManager Navigation
+@inject ApplicationDbContext Db
+
+<PageTitle>Admin - OAuth Server</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>OAuth Server-Verwaltung</h2>
+        <p class="text-muted">Verwaltung von OAuth/OIDC Server-Konfigurationen.</p>
+    </div>
+    <button class="btn btn-secondary" @onclick="GoBack"><i class="bi bi-arrow-left"></i> Zurück</button>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-shield-lock"></i> OAuth Server</h5>
+        <button class="btn btn-sm btn-success" @onclick="() => LoadEditModal()">
+            <i class="bi bi-plus-circle"></i> Neuer Server
+        </button>
+    </div>
+    <div class="card-body">
+        @if (data.Count == 0)
+        {
+            <div class="alert alert-info">Keine OAuth Server konfiguriert.</div>
+        }
+        else
+        {
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Client ID</th>
+                        <th>Auth Endpoint</th>
+                        <th>Token Endpoint</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in data)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@entry.Name</strong>
+                                @if (!string.IsNullOrWhiteSpace(entry.WellKnownUrl))
+                                {
+                                    <br><small class="text-muted"><code>@entry.WellKnownUrl</code></small>
+                                }
+                            </td>
+                            <td><code>@(string.IsNullOrWhiteSpace(entry.ClientId) ? "-" : entry.ClientId)</code></td>
+                            <td><code>@entry.AuthEndpoint</code></td>
+                            <td><code>@entry.TokenEndpoint</code></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => LoadEditModal(entry.Id)">
+                                    <i class="bi bi-pencil"></i> Bearbeiten
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(entry.Id)">
+                                    <i class="bi bi-trash"></i> Löschen
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@if (editModel != null && (formMode == CRUDMode.Create || formMode == CRUDMode.Edit))
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(formMode == CRUDMode.Edit ? "Server bearbeiten" : "Neuer Server")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (formMode == CRUDMode.Create)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" @bind="editModel.Name" placeholder="z.B. OpenAI Codex OAuth" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Base URL</label>
+                            <input type="text" class="form-control" @bind="editModelBaseUrl" placeholder="z.B. https://example.com" />
+                            <div class="form-text">`/.well-known/openid-configuration` wird automatisch ergänzt und geladen.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" @bind="editModel.Name" placeholder="Name" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Well-Known URL</label>
+                            <input type="text" class="form-control" @bind="editModel.WellKnownUrl" placeholder="https://.../.well-known/openid-configuration" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Client ID</label>
+                            <input type="text" class="form-control" @bind="editModel.ClientId" placeholder="Client ID" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Client Secret</label>
+                            <input type="text" class="form-control" @bind="editModel.ClientSecret" placeholder="Client Secret" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Scopes</label>
+                            <input type="text" class="form-control" @bind="editModel.Scopes" placeholder="openid profile email" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Redirect URI</label>
+                            <input type="text" class="form-control" @bind="editModel.RedirectUri" placeholder="https://.../callback" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Auth Endpoint</label>
+                            <input type="text" class="form-control" @bind="editModel.AuthEndpoint" placeholder="https://.../authorize" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Token Endpoint</label>
+                            <input type="text" class="form-control" @bind="editModel.TokenEndpoint" placeholder="https://.../token" />
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Abbrechen</button>
+                    <button class="btn btn-success" @onclick="SaveAccount">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (formMode == CRUDMode.Delete)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Löschen bestätigen</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Möchten Sie den Server wirklich löschen?</p>
+                    <p class="text-muted">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Abbrechen</button>
+                    <button class="btn btn-danger" @onclick="DeleteAccount">Löschen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private enum CRUDMode
+    {
+        None,
+        Create,
+        Edit,
+        Delete
+    }
+
+    private List<OAuthServer> data = [];
+    private OAuthServer? editModel;
+    private Guid? editModelKey;
+    private CRUDMode formMode;
+    private string? editModelBaseUrl;
+    private string? errorMessage, successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        data = await Db.OAuthServers
+            .OrderBy(o => o.Name)
+            .ToListAsync();
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadData();
+        try { StateHasChanged(); } catch { }
+    }
+
+    private void LoadEditModal(Guid? id = null)
+    {
+        errorMessage = null;
+        successMessage = null;
+        editModelKey = id;
+        editModelBaseUrl = null;
+
+        if (id == null)
+        {
+            editModel = new()
+            {
+                Name = string.Empty,
+                ClientId = string.Empty,
+                Scopes = string.Empty,
+                RedirectUri = string.Empty,
+                TokenEndpoint = string.Empty,
+                AuthEndpoint = string.Empty
+            };
+            formMode = CRUDMode.Create;
+            return;
+        }
+
+        var current = data.FirstOrDefault(c => c.Id == id.Value);
+        if (current == null) return;
+
+        editModel = new OAuthServer
+        {
+            Id = current.Id,
+            Name = current.Name,
+            WellKnownUrl = current.WellKnownUrl,
+            ClientId = current.ClientId,
+            ClientSecret = current.ClientSecret,
+            Scopes = current.Scopes,
+            RedirectUri = current.RedirectUri,
+            TokenEndpoint = current.TokenEndpoint,
+            AuthEndpoint = current.AuthEndpoint
+        };
+
+        formMode = CRUDMode.Edit;
+    }
+
+    private async Task SaveAccount()
+    {
+        if (editModel == null) return;
+
+        errorMessage = null;
+        successMessage = null;
+
+        if (formMode == CRUDMode.Create)
+        {
+            if (string.IsNullOrWhiteSpace(editModel.Name) || string.IsNullOrWhiteSpace(editModelBaseUrl))
+            {
+                errorMessage = "Name und Base URL sind erforderlich.";
+                return;
+            }
+
+            var wellKnownUrl = BuildWellKnownUrl(editModelBaseUrl);
+            try
+            {
+                using var http = new HttpClient();
+                var json = await http.GetStringAsync(wellKnownUrl);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                var authEndpoint = root.GetProperty("authorization_endpoint").GetString();
+                var tokenEndpoint = root.GetProperty("token_endpoint").GetString();
+                var scopes = root.TryGetProperty("scopes_supported", out var scopesElement) && scopesElement.ValueKind == JsonValueKind.Array
+                    ? string.Join(' ', scopesElement.EnumerateArray().Select(x => x.GetString()).OfType<string>())
+                    : string.Empty;
+
+                var model = new OAuthServer
+                {
+                    Name = editModel.Name,
+                    WellKnownUrl = wellKnownUrl,
+                    ClientId = string.Empty,
+                    ClientSecret = null,
+                    Scopes = scopes,
+                    RedirectUri = string.Empty,
+                    TokenEndpoint = tokenEndpoint ?? string.Empty,
+                    AuthEndpoint = authEndpoint ?? string.Empty
+                };
+
+                Db.OAuthServers.Add(model);
+                await Db.SaveChangesAsync();
+                successMessage = $"Server '{model.Name}' erfolgreich hinzugefügt!";
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Well-Known konnte nicht geladen werden: {ex.Message}";
+                return;
+            }
+        }
+        else if (formMode == CRUDMode.Edit && editModelKey != null)
+        {
+            var model = await Db.OAuthServers.FindAsync(editModelKey.Value);
+            if (model == null)
+            {
+                errorMessage = "Server nicht gefunden.";
+                return;
+            }
+
+            model.Name = editModel.Name;
+            model.WellKnownUrl = editModel.WellKnownUrl;
+            model.ClientId = editModel.ClientId;
+            model.ClientSecret = editModel.ClientSecret;
+            model.Scopes = editModel.Scopes;
+            model.RedirectUri = editModel.RedirectUri;
+            model.TokenEndpoint = editModel.TokenEndpoint;
+            model.AuthEndpoint = editModel.AuthEndpoint;
+
+            await Db.SaveChangesAsync();
+            successMessage = $"Server '{model.Name}' erfolgreich aktualisiert!";
+        }
+
+        CloseModal();
+        await RefreshData();
+    }
+
+    private void ConfirmDelete(Guid id)
+    {
+        formMode = CRUDMode.Delete;
+        editModelKey = id;
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    private async Task DeleteAccount()
+    {
+        if (formMode != CRUDMode.Delete || editModelKey == null) return;
+
+        var model = await Db.OAuthServers.FindAsync(editModelKey.Value);
+        if (model == null)
+        {
+            errorMessage = "Server nicht gefunden.";
+            return;
+        }
+
+        Db.OAuthServers.Remove(model);
+        await Db.SaveChangesAsync();
+        successMessage = "Server gelöscht.";
+        CloseModal();
+        await RefreshData();
+    }
+
+    private void CloseModal()
+    {
+        formMode = CRUDMode.None;
+        editModel = null;
+        editModelKey = null;
+        editModelBaseUrl = null;
+    }
+
+    private static string BuildWellKnownUrl(string baseUrl)
+    {
+        var value = baseUrl.Trim();
+        value = value.EndsWith('/') ? value[..^1] : value;
+        return value + "/.well-known/openid-configuration";
+    }
+
+    private void GoBack() => Navigation.NavigateTo("/admin");
+}
