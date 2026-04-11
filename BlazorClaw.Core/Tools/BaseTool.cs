@@ -1,5 +1,6 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Utils;
+using Microsoft.Extensions.AI;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 
@@ -11,7 +12,7 @@ public interface ITool
     string Name { get; }
     string Description { get; }
     JsonElement GetSchema();
-    object BuildArguments(IDictionary<string, object?>? arguments);
+    object BuildArguments(IDictionary<object, object?>? arguments);
     Task<string> ExecuteAsync(object arguments, MessageContext context);
 }
 
@@ -20,8 +21,9 @@ public abstract class BaseTool<TParams> : ITool where TParams : class
     public abstract string Name { get; }
     public abstract string Description { get; }
 
-    public JsonElement GetSchema() => SchemaGenerator.Generate(typeof(TParams));
-    public object BuildArguments(IDictionary<string, object?>? arguments)
+   // public JsonElement GetSchema() => SchemaGenerator.Generate(typeof(TParams));
+    public JsonElement GetSchema() => AIJsonUtilities.CreateJsonSchema(typeof(TParams));
+    public object BuildArguments(IDictionary<object, object?>? arguments)
     {
         var str = JsonSerializer.Serialize(arguments, JsonHelper.DefaultOptions);
         return JsonSerializer.Deserialize<TParams>(str, JsonHelper.DefaultOptions)!;

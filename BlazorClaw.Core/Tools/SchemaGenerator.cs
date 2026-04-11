@@ -118,7 +118,7 @@ public static class SchemaGenerator
             "Int32" or "Int64" => "integer",
             "Double" or "Decimal" or "Single" => "number",
             "Boolean" => "boolean",
-            _ => "string"
+            _ => "object"
         };
     }
 
