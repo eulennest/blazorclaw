@@ -48,10 +48,16 @@ namespace BlazorClaw.Core.Services
             var file = Path.Combine(GetMediaFolder(), Path.GetFileName(fileName));
             if (!System.IO.File.Exists(file)) return null;
             Stream strm = File.OpenRead(file);
-            var buff = new byte[1024];
-            strm.Read(buff, 0, buff.Length);
-            strm.Seek(0, SeekOrigin.Begin);
-            return Tuple.Create(strm, Mimetype.DetectMimeType(buff) ?? string.Empty);
+            var ct = Mimetype.GetMimeTypeFromExtension(file);
+            if (string.IsNullOrWhiteSpace(ct))
+            {
+                var buff = new byte[1024];
+                strm.Read(buff, 0, buff.Length);
+                strm.Seek(0, SeekOrigin.Begin);
+                ct = Mimetype.DetectMimeType(buff);
+            }
+            if (string.IsNullOrWhiteSpace(ct)) ct = null;
+            return Tuple.Create(strm, ct ?? Mimetype.Binary);
         }
 
 
@@ -59,8 +65,6 @@ namespace BlazorClaw.Core.Services
         {
             try
             {
-
-
                 if (data.StartsWith("data:"))
                 {
                     // Split the string to escape the real data
@@ -69,7 +73,7 @@ namespace BlazorClaw.Core.Services
                     var mime = b64[0];
                     // Convert the base 64 String to byte array
                     byte[] byteArray = Convert.FromBase64String(b64[1]);
-                    if (string.IsNullOrEmpty(mime) || mime.Contains("stream") || mime.Contains("base64"))
+                    if (string.IsNullOrEmpty(mime) || !mime.Contains('/'))
                     {
                         mime = Mimetype.DetectMimeType(byteArray);
                     }

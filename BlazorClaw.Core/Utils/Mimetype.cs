@@ -6,6 +6,7 @@
         public const string JPEG = "image/jpeg";
         public const string GIF = "image/gif";
         public const string PDF = "application/pdf";
+        public const string Binary = "application/octet-stream";
 
         private static Dictionary<string, string>? mimetypes = null;
         private static Dictionary<string, string>? mimetypesExt = null;
