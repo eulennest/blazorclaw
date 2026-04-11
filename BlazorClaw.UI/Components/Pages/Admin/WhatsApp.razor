@@ -1,7 +1,8 @@
 @page "/admin/channels/whatsapp"
 @using BlazorClaw.Channels.Services
+@using BlazorClaw.Core.Services
 @using Microsoft.Extensions.Options
-@inject WhatsAppBotHostedService WhatsAppService
+@inject ChannelRegistry Channels
 @inject NavigationManager Navigation
 @inject IConfigurationRoot Configuration
 @inject IOptionsMonitor<BotConfigs<WhatsAppBotEntry>> config
@@ -156,7 +157,11 @@
 
     private void LoadData()
     {
-        qrCodes = WhatsAppService.GetCurrentQRCodes();
+        qrCodes = Channels.OfType<WhatsAppChannelBot>()
+            .Select(o => o.CurrentQRCode)
+            .Where(o => o != null)
+            .Cast<WhatsAppQRCodeData>()
+            .ToList();
     }
 
     private void RefreshData() { LoadData(); try { StateHasChanged(); } catch { } }

@@ -162,8 +162,7 @@ builder.Services.Configure<BotConfigs<MatrixBotEntry>>(builder.Configuration.Get
 
 builder.Services.AddHostedService<BotHostedService<MatrixBotEntry, MatrixChannelBot>>();
 builder.Services.AddHostedService<BotHostedService<TelegramBotEntry, TelegramChannelBot>>();
-builder.Services.AddSingleton<WhatsAppBotHostedService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<WhatsAppBotHostedService>());
+builder.Services.AddHostedService<BotHostedService<WhatsAppBotEntry, WhatsAppChannelBot>>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

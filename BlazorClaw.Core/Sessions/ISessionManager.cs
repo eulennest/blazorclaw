@@ -31,6 +31,11 @@ public interface IConfigure<in T>
     ValueTask<bool> ConfigureAsync(T config); 
 }
 
+public interface IKeyedConfigure<in T>
+{
+    ValueTask<bool> ConfigureAsync(string key, T config);
+}
+
 public interface IChannelSession : IChannelBot
 {
     string ChannelId { get; }
