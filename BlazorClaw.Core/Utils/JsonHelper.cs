@@ -32,6 +32,22 @@ namespace BlazorClaw.Core.Utils
                 return jo;
             }
         }
+        public static JsonSerializerOptions AiSaveOptions
+        {
+            get
+            {
+                var jo = new JsonSerializerOptions(JsonSerializerDefaults.Web)
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    PropertyNameCaseInsensitive = true,
+                    IgnoreReadOnlyFields = true,
+                    WriteIndented = true,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                };
+                jo.Converters.Add(new JsonStringEnumConverter());
+                return jo;
+            }
+        }
     }
 
     public static class DependencyInjectionExtensions
