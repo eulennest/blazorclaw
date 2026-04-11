@@ -90,16 +90,13 @@ namespace BlazorClaw.Channels.Services
                     return;
                 }
 
-                var configured = true;
-                if (bot is IKeyedConfigure<TConfig> keyedConfigurable)
+                if (bot is not IKeyedConfigure<TConfig> keyedConfigurable)
                 {
-                    configured = await keyedConfigurable.ConfigureAsync(botId, config);
-                }
-                else if (bot is IConfigure<TConfig> configurable)
-                {
-                    configured = await configurable.ConfigureAsync(config);
+                    logger.LogError("Bot '{id}' does not implement keyed configuration.", botId);
+                    return;
                 }
 
+                var configured = await keyedConfigurable.ConfigureAsync(botId, config);
                 if (!configured)
                 {
                     logger.LogWarning("Bot '{id}' configuration failed.", botId);

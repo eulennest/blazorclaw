@@ -26,11 +26,6 @@ public interface IChannelBot
     Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default);
     Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default);
 }
-public interface IConfigure<in T>
-{
-    ValueTask<bool> ConfigureAsync(T config); 
-}
-
 public interface IKeyedConfigure<in T>
 {
     ValueTask<bool> ConfigureAsync(string key, T config);
@@ -108,16 +103,10 @@ public abstract class AbstractChannelBot(string channelProvider) : IChannelBot
     public abstract Task StopAsync(CancellationToken cancellationToken = default);
 }
 
-public abstract class AbstractConfigChannelBot<T>(string channelProvider) : AbstractChannelBot(channelProvider), IConfigure<T>, IKeyedConfigure<T>
+public abstract class AbstractConfigChannelBot<T>(string channelProvider) : AbstractChannelBot(channelProvider), IKeyedConfigure<T>
 {
     public string Key { get; protected set; } = string.Empty;
     public T? Config { get; protected set; }
-
-    public ValueTask<bool> ConfigureAsync(T config)
-    {
-        Config = config;
-        return ConfigureAsync();
-    }
 
     public ValueTask<bool> ConfigureAsync(string key, T config)
     {
