@@ -12,7 +12,7 @@ public interface ITool
     string Name { get; }
     string Description { get; }
     JsonElement GetSchema();
-    object BuildArguments(IDictionary<object, object?>? arguments);
+    object BuildArguments(object? arguments);
     Task<string> ExecuteAsync(object arguments, MessageContext context);
 }
 
@@ -21,11 +21,13 @@ public abstract class BaseTool<TParams> : ITool where TParams : class
     public abstract string Name { get; }
     public abstract string Description { get; }
 
-   // public JsonElement GetSchema() => SchemaGenerator.Generate(typeof(TParams));
+    // public JsonElement GetSchema() => SchemaGenerator.Generate(typeof(TParams));
     public JsonElement GetSchema() => AIJsonUtilities.CreateJsonSchema(typeof(TParams));
-    public object BuildArguments(IDictionary<object, object?>? arguments)
+    public object BuildArguments(object? arguments)
     {
-        var str = JsonSerializer.Serialize(arguments, JsonHelper.DefaultOptions);
+        if (arguments == null) return null!;
+        if (arguments is not string str)
+            str = JsonSerializer.Serialize(arguments, JsonHelper.DefaultOptions);
         return JsonSerializer.Deserialize<TParams>(str, JsonHelper.DefaultOptions)!;
     }
 

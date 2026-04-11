@@ -13,6 +13,6 @@ public class AIToolWrapper(ITool tool, MessageContext context) : AIFunction
 
     protected override async ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
     {
-        return await tool.ExecuteAsync(tool.BuildArguments(arguments.Context), context).ConfigureAwait(false);
+        return await tool.ExecuteAsync(tool.BuildArguments(arguments), context).ConfigureAwait(false);
     }
 }

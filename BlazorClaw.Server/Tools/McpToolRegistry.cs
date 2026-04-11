@@ -63,7 +63,7 @@ public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
         public string Name => $"mcp-{entry.Name}-" + tool.Name.Replace(".", "___");
         public string Description => tool.Description ?? string.Empty;
 
-        public object BuildArguments(IDictionary<string, object?>? arguments)
+        public object BuildArguments(object? arguments)
         {
             return arguments!;
         }
