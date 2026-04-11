@@ -25,7 +25,7 @@
                 string? line = null;
                 while ((line = reader.ReadLine()) != null)
                 {
-                    string[] cols = line.Trim().Split(['\t', ' '], StringSplitOptions.RemoveEmptyEntries);
+                    string[] cols = line.Trim().Split(new[] { '\t', ' ' }, StringSplitOptions.RemoveEmptyEntries);
                     for (int i = 1; i < cols.Length; i++)
                     {
                         mimetypes.Add(cols[i], cols[0]);

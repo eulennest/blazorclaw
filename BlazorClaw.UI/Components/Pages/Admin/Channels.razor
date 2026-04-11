@@ -2,7 +2,7 @@
 @using BlazorClaw.Channels.Services
 @using BlazorClaw.Core.Services
 @using Microsoft.Extensions.DependencyInjection
-@inject ChannelRegistry Channels
+@inject ChannelRegistry ChannelRegistry
 @inject IServiceProvider sp
 
 <PageTitle>Admin - Kanäle</PageTitle>
@@ -74,7 +74,7 @@
 
     protected override void OnInitialized()
     {
-        whatsappQRCount = Channels.OfType<WhatsAppChannelBot>().Count(o => o.CurrentQRCode != null);
+        whatsappQRCount = ChannelRegistry.OfType<WhatsAppChannelBot>().Count(o => o.CurrentQRCode != null);
     }
 
     protected string[] BotsEnabled<T>() where T : BotEntry

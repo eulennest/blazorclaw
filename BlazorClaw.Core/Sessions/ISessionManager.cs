@@ -64,6 +64,14 @@ public class ChannelSession(IChannelBot bot, string channelId, string? senderId 
         add { bot.MessageReceived += value; }
         remove { bot.MessageReceived -= value; }
     }
+    public Task StartAsync(CancellationToken cancellationToken = default)
+    {
+        return bot.StartAsync(cancellationToken);
+    }
+    public Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        return bot.StopAsync(cancellationToken);
+    }
     public Task SendChannelAsync(ChatMessage message, CancellationToken cancellationToken = default)
     {
         return bot.SendChannelAsync(this, message, cancellationToken);

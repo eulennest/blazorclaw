@@ -14,7 +14,7 @@ namespace BlazorClaw.Server.Services
     {
         private readonly ChatSessionState state;
 
-        public DynamicSystemChatMessage(ChatSessionState state) : base(ChatRole.System, [])
+        public DynamicSystemChatMessage(ChatSessionState state) : base(ChatRole.System, new List<AIContent>())
         {
             this.state = state;
             Contents.Add(new TextContent(BuildText()));

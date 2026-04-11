@@ -59,6 +59,16 @@ public class OpenAiController(IMessageDispatcher md, ILogger<OpenAiController> l
         public string SenderId { get; set; } = channelId;
         public Guid SessionId { get; set; }
 
+        public override Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
+        public override Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
         public override Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
             var text = message.Text?.Trim();

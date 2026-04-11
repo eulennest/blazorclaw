@@ -43,6 +43,8 @@ namespace BlazorClaw.Channels.Services
 
             var whatsappConfig = new WhatsAppConfig
             {
+                AccountId = key,
+                PhoneNumber = config.PhoneNumber,
                 PushName = config.PushName ?? "BlazorClaw"
             };
 
@@ -65,7 +67,7 @@ namespace BlazorClaw.Channels.Services
             OnQRCode?.Invoke(this, e);
         }
 
-        private void Client_OnConnectionUpdate(object? sender, ConnectionUpdateEventArgs e)
+        private void Client_OnConnectionUpdate(object? sender, Baileys.Types.ConnectionUpdateEventArgs e)
         {
             var status = e.Connection?.ToString().ToLowerInvariant();
             logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", AccountId, status);

@@ -343,7 +343,7 @@ namespace BlazorClaw.Server.Services
                 var calls = message.Contents.OfType<FunctionCallContent>().ToList();
                 if (calls.Count > 0)
                 {
-                    var msg = new ChatMessage(ChatRole.Tool, []) { CreatedAt = DateTimeOffset.UtcNow };
+                    var msg = new ChatMessage(ChatRole.Tool, new List<AIContent>()) { CreatedAt = DateTimeOffset.UtcNow };
                     foreach (var call in calls)
                     {
                         logger.LogInformation("Tool called: {Name} args: {Args}", call.Name, call.Arguments);

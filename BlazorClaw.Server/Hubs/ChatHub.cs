@@ -24,6 +24,16 @@ public class ChatHub : Hub, IChannelBot
 
     public event Func<IChannelSession, object, Task>? MessageReceived;
 
+    public Task StartAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        return Task.CompletedTask;
+    }
+
     public async Task SendMessage(Guid sessionId, string message)
     {
         var userIdString = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString();
