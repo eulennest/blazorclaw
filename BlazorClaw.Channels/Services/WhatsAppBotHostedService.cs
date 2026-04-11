@@ -18,20 +18,17 @@ namespace BlazorClaw.Channels.Services
     /// <summary>
     /// WhatsApp channel handler - sends messages to WhatsApp
     /// </summary>
-    public class WhatsAppChannelBot(ILogger<WhatsAppChannelBot> logger) : AbstractChannelBot("WhatsApp"), IWhatsAppClient, IKeyedConfigure<WhatsAppBotEntry>
+    public class WhatsAppChannelBot(ILogger<WhatsAppChannelBot> logger) : AbstractConfigChannelBot<WhatsAppBotEntry>("WhatsApp"), IWhatsAppClient
     {
         private WhatsAppClient? client;
 
-        public string AccountId { get; private set; } = string.Empty;
+        public string AccountId => Key;
         public WhatsAppQRCodeData? CurrentQRCode { get; private set; }
-        public WhatsAppBotEntry? Config { get; private set; }
 
         public event EventHandler<QrCodeEventArgs>? OnQRCode;
 
-        public ValueTask<bool> ConfigureAsync(string key, WhatsAppBotEntry config)
+        protected override ValueTask<bool> ConfigureAsync()
         {
-            AccountId = key;
-            Config = config;
             CurrentQRCode = null;
 
             if (client != null)
@@ -43,9 +40,9 @@ namespace BlazorClaw.Channels.Services
 
             var whatsappConfig = new WhatsAppConfig
             {
-                AccountId = key,
-                PhoneNumber = config.PhoneNumber,
-                PushName = config.PushName ?? "BlazorClaw"
+                AccountId = Key,
+                PhoneNumber = Config?.PhoneNumber,
+                PushName = Config?.PushName ?? "BlazorClaw"
             };
 
             client = new WhatsAppClient(whatsappConfig, logger);

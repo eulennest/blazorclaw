@@ -108,14 +108,24 @@ public abstract class AbstractChannelBot(string channelProvider) : IChannelBot
     public abstract Task StopAsync(CancellationToken cancellationToken = default);
 }
 
-public abstract class AbstractConfigChannelBot<T>(string channelProvider) : AbstractChannelBot(channelProvider), IConfigure<T>
+public abstract class AbstractConfigChannelBot<T>(string channelProvider) : AbstractChannelBot(channelProvider), IConfigure<T>, IKeyedConfigure<T>
 {
+    public string Key { get; protected set; } = string.Empty;
     public T? Config { get; protected set; }
+
     public ValueTask<bool> ConfigureAsync(T config)
     {
         Config = config;
         return ConfigureAsync();
     }
+
+    public ValueTask<bool> ConfigureAsync(string key, T config)
+    {
+        Key = key;
+        Config = config;
+        return ConfigureAsync();
+    }
+
     protected abstract ValueTask<bool> ConfigureAsync();
 }
 
