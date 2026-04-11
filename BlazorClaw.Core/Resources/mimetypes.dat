@@ -531,10 +531,11 @@ application/yin+xml	.yin
 application/zip	.zip
 audio/adpcm	.adp
 audio/basic	.au
+audio/flac	.flac
 audio/midi	.mid
 audio/mp4	.mp4a
 audio/mpeg	.mp3 .mpga
-audio/ogg	.oga
+audio/ogg	.ogg .oga
 audio/vnd.dece.audio	.uva
 audio/vnd.digital-winds	.eol
 audio/vnd.dra	.dra
@@ -567,6 +568,7 @@ image/g3fax	.g3
 image/gif	.gif
 image/ief	.ief
 image/jpeg	.jpg .jpeg
+image/jp2	.jp2
 image/ktx	.ktx
 image/png	.png
 image/prs.btif	.btif
