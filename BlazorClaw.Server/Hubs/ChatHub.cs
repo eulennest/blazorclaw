@@ -33,7 +33,7 @@ public class ChatHub : Hub, IChannelBot
         {
             SessionId = sessionId
         };
-        await SendChannelAsync(canid, new(ChatRole.User, message));
+        await SendChannelAsync(canid, new(ChatRole.User, message) { CreatedAt = DateTimeOffset.UtcNow });
 
         try
         {
@@ -42,7 +42,7 @@ public class ChatHub : Hub, IChannelBot
         catch (Exception ex)
         {
             logger.LogError(ex, "Error: {Message}", ex);
-            await SendUserAsync(canid, new(new("error"), ex.Message));
+            await SendUserAsync(canid, new(new("error"), ex.Message) { CreatedAt = DateTimeOffset.UtcNow });
         }
     }
 

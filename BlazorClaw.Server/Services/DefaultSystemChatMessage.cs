@@ -5,8 +5,13 @@ using System.Text;
 
 namespace BlazorClaw.Server.Services
 {
-    internal class DefaultSystemChatMessage() : ChatMessage(ChatRole.System, BuildText())
+    internal class DefaultSystemChatMessage : ChatMessage
     {
+        public DefaultSystemChatMessage() : base(ChatRole.System, BuildText())
+        {
+            CreatedAt = DateTimeOffset.UtcNow;
+        }
+
         private static string BuildText()
         {
             var sb = new StringBuilder();
@@ -50,8 +55,13 @@ namespace BlazorClaw.Server.Services
         }
     }
 
-    internal class DefaultAssistChatMessage() : ChatMessage(ChatRole.Assistant, BuildText())
+    internal class DefaultAssistChatMessage : ChatMessage
     {
+        public DefaultAssistChatMessage() : base(ChatRole.Assistant, BuildText())
+        {
+            CreatedAt = DateTimeOffset.UtcNow;
+        }
+
         private static string BuildText()
         {
             var sb = new StringBuilder();

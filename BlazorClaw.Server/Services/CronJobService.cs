@@ -217,7 +217,7 @@ namespace BlazorClaw.Server.Services
                         continue;
                     }
 
-                    await dispatcher.DispatchMessageAsync(cmdContext.Channel!, new ChatMessage(job.System ? ChatRole.System : ChatRole.User, fullMessage)).NoThrow();
+                    await dispatcher.DispatchMessageAsync(cmdContext.Channel!, new ChatMessage(job.System ? ChatRole.System : ChatRole.User, fullMessage) { CreatedAt = DateTimeOffset.UtcNow }).NoThrow();
                 }
                 catch (Exception ex)
                 {

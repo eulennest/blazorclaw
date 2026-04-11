@@ -32,7 +32,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
         // Komprimiere den Verlauf: Historie leeren und Zusammenfassung als System-Message
         var last = sess.MessageHistory.TakeLast(20).ToList();
         sess.MessageHistory.Clear();
-        sess.MessageHistory.Add(new(ChatRole.System, sb.ToString()));
+        sess.MessageHistory.Add(new(ChatRole.System, sb.ToString()) { CreatedAt = DateTimeOffset.UtcNow });
 
         var hasasist = false;
         foreach (var msg in last)

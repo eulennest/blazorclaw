@@ -18,6 +18,7 @@ namespace BlazorClaw.Server.Services
         {
             this.state = state;
             Contents.Add(new TextContent(BuildText()));
+            CreatedAt = DateTimeOffset.UtcNow;
         }
 
         [JsonIgnore]

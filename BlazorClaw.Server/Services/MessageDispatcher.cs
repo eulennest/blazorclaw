@@ -87,7 +87,7 @@ namespace BlazorClaw.Server.Services
                     strm = await pathHelper.GetMediaFileAsync(file);
                     var transText = await sst.SpeechToTextAsync(strm.Item1, strm.Item2);
 
-                    var newMsg = new ChatMessage(ChatRole.User, $"[VOICE:{uri}] Transcription:\n{transText}");
+                    var newMsg = new ChatMessage(ChatRole.User, $"[VOICE:{uri}] Transcription:\n{transText}") { CreatedAt = DateTimeOffset.UtcNow };
                     newMsg.Contents.Add(new UriContent(uri));
                     message = newMsg;
                 }
@@ -99,7 +99,7 @@ namespace BlazorClaw.Server.Services
                         {
                             var rootCmd = await BuildRootCommand(cmdContext);
                             var ret = await sm.DispatchCommandAsync(msgString, cmdContext, rootCmd, cmdContext.Provider.GetRequiredService<ICommandProvider>());
-                            var msg = new ChatMessage(new("command"), Convert.ToString(ret) ?? string.Empty);
+                            var msg = new ChatMessage(new("command"), Convert.ToString(ret) ?? string.Empty) { CreatedAt = DateTimeOffset.UtcNow };
                             if (ret != null)
                             {
                                 var textRes = Convert.ToString(ret);
@@ -115,11 +115,11 @@ namespace BlazorClaw.Server.Services
                         {
                             logger.LogError(ex, "Error processing command '{Command}' for {ChannelProvider}:{ChannelId} : {Message}", msgString, cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, ex.Message);
                             var textRes = $"Error processing command: {ex.Message}";
-                            await cmdContext.Channel.SendUserAsync(new(new("error"), ex.Message));
+                            await cmdContext.Channel.SendUserAsync(new(new("error"), ex.Message) { CreatedAt = DateTimeOffset.UtcNow });
                             return; // Exit early on command error
                         }
                     }
-                    message = new ChatMessage(ChatRole.User, msgString);
+                    message = new ChatMessage(ChatRole.User, msgString) { CreatedAt = DateTimeOffset.UtcNow };
                 }
 
                 if (message is ChatMessage chatMsg)
@@ -143,7 +143,7 @@ namespace BlazorClaw.Server.Services
             }
             catch (Exception ex)
             {
-                await channelSession.SendUserAsync(new(new("error"), ex.Message));
+                await channelSession.SendUserAsync(new(new("error"), ex.Message) { CreatedAt = DateTimeOffset.UtcNow });
                 logger.LogError(ex, "Error: {Messsage}", ex.Message);
             }
         }
