@@ -26,5 +26,5 @@ public class ApiKey
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
-    public OAuthToken? OAuthToken { get; set; }
+    public virtual OAuthToken? OAuthToken { get; set; }
 }

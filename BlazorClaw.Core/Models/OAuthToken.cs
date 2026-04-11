@@ -23,5 +23,5 @@ public class OAuthToken
     [MaxLength(2000)]
     public required string Scope { get; set; }
 
-    public OAuthServer Server { get; set; } = null!;
+    public virtual OAuthServer Server { get; set; } = null!;
 }
