@@ -20,10 +20,11 @@ namespace BlazorClaw.Server.Services
             sb.AppendLine();
             sb.AppendLine("Available tags:");
             sb.AppendLine("- [TTS:Text] = Text-to-Speech output (prepend at start of message)");
+            sb.AppendLine("- [MEDIA:URL] = All Media Files, Mode automatic selected");
             sb.AppendLine("- [IMAGE:URL] = Display image");
             sb.AppendLine("- [VIDEO:URL] = Display video");
             sb.AppendLine("- [VOICE:URL] = Play voice file");
-            sb.AppendLine("- [MUSIC:URL] = Play music");
+            sb.AppendLine("- [AUDIO:URL] = Play music");
             sb.AppendLine("- [FILE:URL] = Link to file");
             sb.AppendLine();
             sb.AppendLine("Rules:");
@@ -31,6 +32,9 @@ namespace BlazorClaw.Server.Services
             sb.AppendLine("- ONE tag maximum per message");
             sb.AppendLine("- Escape ']' character as '&#93;' inside tag content");
             sb.AppendLine("- Text can be added after the tag");
+            sb.AppendLine("- You can use the sleep_sec-Tool for sending multiple tags");
+            sb.AppendLine("- The URL can be a http, https or base64 Data-Uri");
+
             sb.AppendLine();
             sb.AppendLine("Examples:");
             sb.AppendLine("- `[TTS:Hallo Daniel, wie geht es dir?]` Make TTS as Voice Bubble");
