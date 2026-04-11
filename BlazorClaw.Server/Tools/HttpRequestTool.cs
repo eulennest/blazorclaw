@@ -1,5 +1,8 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Core.Utils;
+using BlazorClaw.Core.VFS;
+using Proto;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
@@ -31,6 +34,10 @@ public class HttpRequestParams : BaseToolParams
     [Description("Timeout in Sekunden")]
     [Range(1, 300)]
     public int TimeoutSeconds { get; set; } = 30;
+
+    [Description("Speicherort (optional). Speichert den Result als Datei anstelle in zurück zugeben")]
+    public string? SaveAs { get; set; }
+
 }
 
 public class HttpRequestTool(IHttpClientFactory httpClientFactory, ILogger<HttpRequestTool> logger) : BaseTool<HttpRequestParams>
@@ -48,7 +55,7 @@ public class HttpRequestTool(IHttpClientFactory httpClientFactory, ILogger<HttpR
         Beispiel (Home Assistant Light ausschalten mit Token aus Vault):
         {
           "method": "POST",
-          "url": "https://qdha.duckdns.org:8123/api/services/light/turn_off",
+          "url": "https://example.org:8123/api/services/light/turn_off",
           "bearerToken": "@HA_TOKEN",
           "body": "{"entity_id": "@ENTITY_ID"}",
           "headers": {
@@ -121,33 +128,51 @@ public class HttpRequestTool(IHttpClientFactory httpClientFactory, ILogger<HttpR
             logger.LogInformation("HTTP Request: {Method} {Url}", method, p.Url);
 
             // Send request
-            var response = await client.SendAsync(request);
+            var response = await client.SendAsync(request).ConfigureAwait(false);
 
-            // Read response body
-            var responseBody = await response.Content.ReadAsStringAsync();
-
-            // Format response
+            logger.LogInformation("HTTP Response: {Status}", response.StatusCode);
             var result = $"Status: {(int)response.StatusCode} {response.StatusCode}\n\n";
 
-            // Try to format JSON if content is JSON
-            if (response.Content.Headers.ContentType?.MediaType?.Contains("application/json") ?? false)
+            if (response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(p.SaveAs))
             {
-                try
+                var vfs = context.Provider.GetRequiredService<IVfsSystem>();
+                var path = VfsPath.Parse(PathUtils.VfsHome, p.SaveAs);
+                if (path.IsDirectory)
+                    throw new FileNotFoundException($"Path ist keine Datei: {p.SaveAs}");
+                var mi = await vfs.GetMetaInfoAsync(path);
+                if (mi.Exists) throw new InvalidOperationException($"Datei existiert bereits: {path}");
+
+                using var strm = await vfs.OpenFileAsync(path, FileMode.CreateNew, FileAccess.Write);
+                using var source = await response.Content.ReadAsStreamAsync();
+                await source.CopyToAsync(strm);
+                result += $"Gespeichert unter: {path} Size: {strm.Length}";
+            }
+            else
+            {
+                // Read response body
+                var responseBody = await response.Content.ReadAsStringAsync();
+
+                // Format response
+
+                // Try to format JSON if content is JSON
+                if (response.Content.Headers.ContentType?.MediaType?.Contains("application/json") ?? false)
                 {
-                    var jsonDoc = JsonSerializer.Deserialize<JsonElement>(responseBody);
-                    result += JsonSerializer.Serialize(jsonDoc, new JsonSerializerOptions { WriteIndented = true });
+                    try
+                    {
+                        var jsonDoc = JsonSerializer.Deserialize<JsonElement>(responseBody);
+                        result += JsonSerializer.Serialize(jsonDoc, new JsonSerializerOptions { WriteIndented = true });
+                    }
+                    catch
+                    {
+                        result += responseBody;
+                    }
                 }
-                catch
+                else
                 {
                     result += responseBody;
                 }
             }
-            else
-            {
-                result += responseBody;
-            }
 
-            logger.LogInformation("HTTP Response: {Status}", response.StatusCode);
 
             return result;
         }

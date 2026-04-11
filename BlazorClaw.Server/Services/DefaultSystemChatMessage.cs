@@ -1,6 +1,4 @@
-﻿
-using BlazorClaw.Core.DTOs;
-using Microsoft.Extensions.AI;
+﻿using Microsoft.Extensions.AI;
 using System.Text;
 
 namespace BlazorClaw.Server.Services
