@@ -76,7 +76,7 @@ public class ModelSwitchTool(IProviderManager providerManager) : BaseTool<ModelS
         var modelName = cols.Length > 1 ? cols[1] : cols[0];
         var availableProviders = providerManager.GetProviders().ToList();
 
-        if (availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
+        if (availableProviders.Any(p => p.Id.Equals(providerName, StringComparison.OrdinalIgnoreCase)))
         {
             var exists = await providerManager.GetModelsAsync(providerName).ContainsAsync(modelName);
             if (exists) return searchTerm;

@@ -5,6 +5,7 @@ using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Speech;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.AI;
 using System.Collections.Concurrent;
 using System.CommandLine;
 
@@ -86,14 +87,8 @@ namespace BlazorClaw.Server.Services
                     strm = await pathHelper.GetMediaFileAsync(file);
                     var transText = await sst.SpeechToTextAsync(strm.Item1, strm.Item2);
 
-                    var newMsg = new ChatMessage
-                    {
-                        Role = "user",
-                        Content = $"[VOICE MSG:{uri}] Transcription:\n{transText}"
-                    };
-                    newMsg.MediaContent ??= new();
-                    newMsg.MediaContent.Type = "voice";
-                    newMsg.MediaContent.Url = uri.ToString();
+                    var newMsg = new ChatMessage(ChatRole.User, $"[VOICE:{uri}] Transcription:\n{transText}");
+                    newMsg.Contents.Add(new UriContent(uri));
                     message = newMsg;
                 }
                 else if (message is string msgString)
@@ -104,7 +99,7 @@ namespace BlazorClaw.Server.Services
                         {
                             var rootCmd = await BuildRootCommand(cmdContext);
                             var ret = await sm.DispatchCommandAsync(msgString, cmdContext, rootCmd, cmdContext.Provider.GetRequiredService<ICommandProvider>());
-                            var msg = new ChatMessage { Role = "command", Content = Convert.ToString(ret) ?? string.Empty };
+                            var msg = new ChatMessage(new("command"), Convert.ToString(ret) ?? string.Empty);
                             if (ret != null)
                             {
                                 var textRes = Convert.ToString(ret);
@@ -120,11 +115,11 @@ namespace BlazorClaw.Server.Services
                         {
                             logger.LogError(ex, "Error processing command '{Command}' for {ChannelProvider}:{ChannelId} : {Message}", msgString, cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, ex.Message);
                             var textRes = $"Error processing command: {ex.Message}";
-                            await cmdContext.Channel.SendUserAsync(ChatMessage.Build(ex));
+                            await cmdContext.Channel.SendUserAsync(new(new("error"), ex.Message));
                             return; // Exit early on command error
                         }
                     }
-                    message = new ChatMessage() { Role = "user", Content = msgString };
+                    message = new ChatMessage(ChatRole.User, msgString);
                 }
 
                 if (message is ChatMessage chatMsg)
@@ -134,20 +129,21 @@ namespace BlazorClaw.Server.Services
                     await foreach (var msg in sm.DispatchToLLMAsync(session, cmdContext).ConfigureAwait(false))
                     {
                         if (cmdContext.Channel == null) continue;
-                        if (msg.GetTextContent() is string textContent)
+                        var textContent = msg.Text;
+                        if (!string.IsNullOrWhiteSpace(textContent))
                         {
                             textContent = textContent.Trim('`', ' ', '\r', '\n', '\t');
                             if ("NO_REPLY".Equals(textContent)) continue;
                             if ("HEARTBEAT_OK".Equals(textContent)) continue;
                         }
-                        logger.LogInformation("Sending reply to {ChannelProvider}:{ChannelId} : {content}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, msg.Content);
+                        logger.LogInformation("Sending reply to {ChannelProvider}:{ChannelId} : {content}", cmdContext.Channel.ChannelProvider, cmdContext.Channel.ChannelId, textContent);
                         await cmdContext.Channel.SendChannelAsync(msg).ConfigureAwait(false);
                     }
                 }
             }
             catch (Exception ex)
             {
-                await channelSession.SendUserAsync(ChatMessage.Build(ex));
+                await channelSession.SendUserAsync(new(new("error"), ex.Message));
                 logger.LogError(ex, "Error: {Messsage}", ex.Message);
             }
         }

@@ -1,6 +1,7 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
+using Microsoft.Extensions.AI;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -31,33 +32,42 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
         // Komprimiere den Verlauf: Historie leeren und Zusammenfassung als System-Message
         var last = sess.MessageHistory.TakeLast(20).ToList();
         sess.MessageHistory.Clear();
-        sess.MessageHistory.Add(new() { Role = "system", Content = sb.ToString() });
+        sess.MessageHistory.Add(new(ChatRole.System, sb.ToString()));
 
         var hasasist = false;
         foreach (var msg in last)
         {
-            if (msg.IsAssistant && (msg.ToolCalls?.Any(o => Name.Equals(o.Function.Name)) ?? false))
+            if (msg.Role == ChatRole.Assistant)
             {
-                msg.ToolCalls.ForEach(o =>
+                foreach (var item in msg.Contents.OfType<FunctionCallContent>())
                 {
-                    if (Name.Equals(o.Function.Name))
-                        o.Function.Arguments = "{\"Summary\":\"[Tool-Parameter gekürzt - Volle Summary siehe System-Prompt oben]\"}";
-                });
+                    if (Name.Equals(item.Name))
+                    {
+                        item.Arguments = new Dictionary<string, object?>
+                        {
+                            ["Summary"] = "[Tool-Parameter gekürzt - Volle Summary siehe System-Prompt oben]"
+                        };
+                    }
+                }
             }
-            if (!hasasist && msg.IsTool) continue;
-            if (!hasasist && msg.IsAssistant) hasasist = true;
 
-            if (msg.IsTool && msg.GetTextContent() is string str && str.Length > 100)
+            if (msg.Role == ChatRole.Tool)
             {
                 // Kürze alte Tool-Ausgaben, damit die Session nicht zu groß wird.
                 // Die Zusammenfassung sollte ja die wichtigen Infos enthalten, damit das Tool nicht mehr unbedingt nötig ist.
-                var txt = $"... [GEKÜRZT {str.Length} Zeichen]";
-                msg.Content = str[..100] + txt;
+                foreach (var item in msg.Contents.OfType<FunctionResultContent>())
+                {
+                    var txt = Convert.ToString(item.Result);
+                    if (txt?.Length > 100)
+                    {
+                        item.Result = $"{txt[..100]}... [GEKÜRZT {txt.Length} Zeichen]";
+                    }
+                }
             }
             sess.MessageHistory.Add(msg);
         }
         await sessionManager.SaveSessionAsync(sess, true);
-        var count = sess.MessageHistory.Count(o => !o.IsSystem);
+        var count = sess.MessageHistory.Count(o => o.Role != ChatRole.System);
         return $"OK: Zusammenfassung wurde im System-Prompt gespeichert. Aktuelle Nachrichten: {count} (exkl. System-Events).";
     }
 }

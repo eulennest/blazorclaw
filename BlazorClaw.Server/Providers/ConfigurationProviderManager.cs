@@ -1,6 +1,8 @@
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Providers;
 using BlazorClaw.Core.Utils;
+using Microsoft.Extensions.AI;
+using OpenAI;
 
 namespace BlazorClaw.Server.Providers
 {
@@ -17,6 +19,25 @@ namespace BlazorClaw.Server.Providers
             _providers = LoadFromConfig();
         }
 
+        public ValueTask<IChatClient> GetChatClientAsync(string model, CancellationToken ct = default)
+        {
+            if (!ModelPath.TryDecompose(model, out var head, out var tail))
+                throw new ArgumentException("Invalid model path.", nameof(model));
+            var conf = GetProviderConfig(head) ?? throw new InvalidOperationException($"Provider '{head}' not found.");
+
+            var opts = new OpenAIClientOptions()
+            {
+                Endpoint = new Uri(conf.Uri)
+            };
+
+            var chat = new OpenAI.Chat.ChatClient(tail, new System.ClientModel.ApiKeyCredential(conf.Token ?? string.Empty), opts).AsIChatClient();
+            return new ValueTask<IChatClient>(chat);
+        }
+
+        public ValueTask<IEmbeddingGenerator<string, Embedding<float>>> GetEmbeddingClientAsync(string model, CancellationToken ct = default)
+        {
+            throw new NotImplementedException();
+        }
 
         public async IAsyncEnumerable<string> GetModelsAsync()
         {
@@ -65,9 +86,9 @@ namespace BlazorClaw.Server.Providers
             return _providers.FirstOrDefault(p => p.Name.Equals(provider, StringComparison.OrdinalIgnoreCase));
         }
 
-        public IEnumerable<string> GetProviders()
+        public IEnumerable<ProviderInfo> GetProviders()
         {
-            return _providers.Select(p => p.Name);
+            return _providers.Select(p => new ProviderInfo(p.Name, FeatureSupport.Chat));
         }
 
         public Task<bool> SetProviderAsync(string provider, IProviderConfiguration config)

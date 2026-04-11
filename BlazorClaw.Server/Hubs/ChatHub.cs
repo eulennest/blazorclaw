@@ -1,6 +1,7 @@
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.AI;
 using System.Security.Claims;
 
 namespace BlazorClaw.Server.Hubs;
@@ -32,7 +33,7 @@ public class ChatHub : Hub, IChannelBot
         {
             SessionId = sessionId
         };
-        await SendChannelAsync(canid, ChatMessage.Build(message));
+        await SendChannelAsync(canid, new(ChatRole.User, message));
 
         try
         {
@@ -41,7 +42,7 @@ public class ChatHub : Hub, IChannelBot
         catch (Exception ex)
         {
             logger.LogError(ex, "Error: {Message}", ex);
-            await SendUserAsync(canid, ChatMessage.Build(ex));
+            await SendUserAsync(canid, new(new("error"), ex.Message));
         }
     }
 

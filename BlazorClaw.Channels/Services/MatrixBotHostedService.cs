@@ -1,8 +1,7 @@
-using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
 using Matrix.Sdk;
 using Matrix.Sdk.Core.Domain.RoomEvent;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -105,12 +104,12 @@ namespace BlazorClaw.Channels.Services
         internal IMatrixClient Client { get; } = Client;
         public override Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            return Client.SendMessageAsync(channelId.ChannelId, message.GetTextContent() ?? string.Empty);
+            return Client.SendMessageAsync(channelId.ChannelId, message.Text);
         }
 
         public override Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            return Client.SendMessageAsync(channelId.ChannelId, Convert.ToString(message.Content) ?? string.Empty);
+            return Client.SendMessageAsync(channelId.ChannelId, message.Text);
         }
     }
     public class MatrixBotEntry : BotEntry

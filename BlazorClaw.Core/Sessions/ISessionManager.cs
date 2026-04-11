@@ -1,5 +1,5 @@
 using BlazorClaw.Core.Commands;
-using BlazorClaw.Core.DTOs;
+using Microsoft.Extensions.AI;
 using System.CommandLine;
 
 namespace BlazorClaw.Core.Sessions;

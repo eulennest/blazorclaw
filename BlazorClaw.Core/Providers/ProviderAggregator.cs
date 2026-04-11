@@ -1,3 +1,5 @@
+using Microsoft.Extensions.AI;
+
 namespace BlazorClaw.Core.Providers
 {
 
@@ -8,7 +10,7 @@ namespace BlazorClaw.Core.Providers
         public IAsyncEnumerable<string> GetModelsAsync(string provider)
         {
             provider = SplitProviderFromModel(provider);
-            var prov = _providers.FirstOrDefault(o => o.GetProviders().Contains(provider));
+            var prov = FindProvider(provider);
             return prov?.GetModelsAsync(provider) ?? AsyncEnumerable.Empty<string>();
         }
         public async IAsyncEnumerable<string> GetModelsAsync()
@@ -20,15 +22,7 @@ namespace BlazorClaw.Core.Providers
             }
         }
 
-
-        public IProviderConfiguration? GetProviderConfig(string provider)
-        {
-            provider = SplitProviderFromModel(provider);
-            var prov = _providers.FirstOrDefault(o => o.GetProviders().Contains(provider));
-            return prov?.GetProviderConfig(provider);
-        }
-
-        public IEnumerable<string> GetProviders()
+        public IEnumerable<ProviderInfo> GetProviders()
         {
             return _providers.SelectMany(o => o.GetProviders());
         }
@@ -40,7 +34,7 @@ namespace BlazorClaw.Core.Providers
 
         public async Task<bool> SetProviderAsync(string provider, IProviderConfiguration config)
         {
-            var prov = _providers.FirstOrDefault(o => o.GetProviders().Contains(provider));
+            var prov = FindProvider(provider);
             if (prov != null) return await prov.SetProviderAsync(provider, config);
 
             foreach (var item in _providers)
@@ -54,6 +48,25 @@ namespace BlazorClaw.Core.Providers
                 { }
             }
             return false;
+        }
+
+        private IProviderManager? FindProvider(string provider)
+        {
+            return _providers.FirstOrDefault(o => o.GetProviders().Any(p => p.Id == provider));
+        }
+
+        public ValueTask<IChatClient> GetChatClientAsync(string model, CancellationToken ct = default)
+        {
+            var provider = SplitProviderFromModel(model);
+            var prov = FindProvider(provider);
+            return prov?.GetChatClientAsync(model, ct) ?? throw new Exception($"Provider '{provider}' not found.");
+        }
+
+        public ValueTask<IEmbeddingGenerator<string, Embedding<float>>> GetEmbeddingClientAsync(string model, CancellationToken ct = default)
+        {
+            var provider = SplitProviderFromModel(model);
+            var prov = FindProvider(provider);
+            return prov?.GetEmbeddingClientAsync(provider, ct) ?? throw new Exception($"Provider '{provider}' not found.");
         }
     }
 }

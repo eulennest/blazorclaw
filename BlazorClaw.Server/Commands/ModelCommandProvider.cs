@@ -80,7 +80,7 @@ public class ModelSwitchCommand : ISystemCommand, ISystemCommandExecutor
         var modelName = cols.Length > 1 ? cols[1] : cols[0];
         var availableProviders = _providerManager.GetProviders().ToList();
 
-        if (availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
+        if (availableProviders.Any(p =>p.Id.Equals(providerName, StringComparison.OrdinalIgnoreCase)))
         {
             var exists = await _providerManager.GetModelsAsync(providerName).ContainsAsync(modelName);
             if (exists) return searchTerm;

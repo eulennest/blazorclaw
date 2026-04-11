@@ -1,8 +1,6 @@
-using Baileys.Types;
-using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.WhatsApp;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -306,7 +304,7 @@ namespace BlazorClaw.Channels.Services
         {
             try
             {
-                var content = message.GetTextContent() ?? string.Empty;
+                var content = message.Text;
 
                 if (!string.IsNullOrWhiteSpace(content))
                 {

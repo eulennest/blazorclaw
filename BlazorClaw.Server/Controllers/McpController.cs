@@ -164,7 +164,7 @@ public class McpController(ISessionManager sessionManager, ILogger<McpController
                     : "{}";
 
                 // Deserialize tool parameters using tool's BuildArguments
-                var toolArgs = tool.BuildArguments(paramsJson);
+                var toolArgs = tool.BuildArguments(null);
 
                 // Execute tool
                 result = new

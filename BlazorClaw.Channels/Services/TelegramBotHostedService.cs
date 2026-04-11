@@ -1,8 +1,8 @@
 using BlazorClaw.Core.Commands;
-using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Utils;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -175,32 +175,38 @@ namespace BlazorClaw.Channels.Services
 
         public override async Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            var content = message.GetTextContent() ?? string.Empty;
-            if (message.Images?.Count > 0)
-            {
-                foreach (var item in message.Images)
-                {
-                    await Client.SendPhoto(channelId.ChannelId, await GetMediaFileAsync(item.ImageUrl?.Url ?? string.Empty), content ?? string.Empty, cancellationToken: cancellationToken);
-                    content = null;
-                }
-            }
+            var content = message.Text;
 
-            // 2. Medien (Voice/Video/File - Pipeline)
-            if (message.MediaContent != null && !string.IsNullOrWhiteSpace(message.MediaContent.Url))
+            foreach (var item in message.Contents)
             {
-                switch (message.MediaContent.Type.ToLower())
+                if(item is UriContent uri)
                 {
-                    case "voice":
-                        // native Sprachnachricht (Telegram UI)
-                        await Client.SendVoice(channelId.ChannelId, message.MediaContent.Url, cancellationToken: cancellationToken);
-                        break;
-                    case "video":
-                        await Client.SendVideo(channelId.ChannelId, message.MediaContent.Url, cancellationToken: cancellationToken);
-                        break;
-                    default:
-                        await Client.SendDocument(channelId.ChannelId, message.MediaContent.Url, cancellationToken: cancellationToken);
-                        break;
+                    var uriStr = uri.Uri.ToString();
+                    if ("audio/ogg".Equals(uri.MediaType)) {
+                        await Client.SendVoice(channelId.ChannelId, uriStr, cancellationToken: cancellationToken);
+                    }
+                    else if (uri.MediaType.StartsWith("image/"))
+                    {
+                        await Client.SendPhoto(channelId.ChannelId, await GetMediaFileAsync(uriStr), content ?? string.Empty, cancellationToken: cancellationToken);
+                        content = null;
+                    }
+                    else if (uri.MediaType.StartsWith("audio/"))
+                    {
+                        await Client.SendAudio(channelId.ChannelId, await GetMediaFileAsync(uriStr), content ?? string.Empty, cancellationToken: cancellationToken);
+                        content = null;
+                    }
+                    else if (uri.MediaType.StartsWith("video/"))
+                    {
+                        await Client.SendVideo(channelId.ChannelId, await GetMediaFileAsync(uriStr), content ?? string.Empty, cancellationToken: cancellationToken);
+                        content = null;
+                    }
+                    else
+                    {
+                        await Client.SendDocument(channelId.ChannelId, await GetMediaFileAsync(uriStr), content ?? string.Empty, cancellationToken: cancellationToken);
+                        content = null;
+                    }
                 }
+
             }
 
             if (!string.IsNullOrWhiteSpace(content))

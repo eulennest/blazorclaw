@@ -10,16 +10,16 @@ public class ChatCompletionRequest
     public string Model { get; set; } = string.Empty;
 
     [JsonPropertyName("messages")]
-    public List<ChatMessage> Messages { get; set; } = [];
+    public List<DtoChatMessage> Messages { get; set; } = [];
 
     [JsonPropertyName("tools")]
     public List<FunctionMessage>? Tools { get; set; }
 
     [JsonExtensionData]
-    public Dictionary<string, object>? ExtensionData { get; set; }
+    public Dictionary<string, object?>? ExtensionData { get; set; }
 }
 
-public class ChatMessage
+public class DtoChatMessage
 {
     [JsonPropertyName("role")]
     public virtual string Role { get; set; } = string.Empty;
@@ -40,7 +40,7 @@ public class ChatMessage
     public virtual string? Reasoning { get; set; }
 
     [JsonExtensionData]
-    public Dictionary<string, object>? ExtensionData { get; set; }
+    public Dictionary<string, object?>? ExtensionData { get; set; }
 
     [JsonPropertyName("timestamp")]
     public virtual long? Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -109,13 +109,13 @@ public class ChatMessage
         Content = entrys;
     }
 
-    public static ChatMessage Build(string content)
+    public static DtoChatMessage Build(string content)
     {
-        return new ChatMessage { Role = "user", Content = content };
+        return new DtoChatMessage { Role = "user", Content = content };
     }
-    public static ChatMessage Build(Exception ex)
+    public static DtoChatMessage Build(Exception ex)
     {
-        return new ChatMessage { Role = "error", Content = $"Error: {ex.Message}" };
+        return new DtoChatMessage { Role = "error", Content = $"Error: {ex.Message}" };
     }
 
 }
@@ -134,7 +134,7 @@ public class ContentEntry(string type)
     public string Type { get; set; } = type;
 
     [JsonExtensionData]
-    public Dictionary<string, object>? ExtensionData { get; set; }
+    public Dictionary<string, object?>? ExtensionData { get; set; }
 }
 
 public class Images() : ContentEntry("image_url")
@@ -149,7 +149,7 @@ public class ImageUrl
     public string Url { get; set; } = string.Empty;
 
     [JsonExtensionData]
-    public Dictionary<string, object>? ExtensionData { get; set; }
+    public Dictionary<string, object?>? ExtensionData { get; set; }
 }
 
 public class ToolCall
@@ -164,7 +164,7 @@ public class ToolCall
     public FunctionCall Function { get; set; } = new();
 
     [JsonExtensionData]
-    public Dictionary<string, object>? ExtensionData { get; set; }
+    public Dictionary<string, object?>? ExtensionData { get; set; }
 }
 
 public class FunctionCall
@@ -176,7 +176,7 @@ public class FunctionCall
     public string Arguments { get; set; } = string.Empty;
 
     [JsonExtensionData]
-    public Dictionary<string, object>? ExtensionData { get; set; }
+    public Dictionary<string, object?>? ExtensionData { get; set; }
 }
 
 public class ToolDefinition
@@ -192,12 +192,14 @@ public class ToolDefinition
     public required string Description { get; set; }
 
     [JsonExtensionData]
-    public Dictionary<string, object>? ExtensionData { get; set; }
+    public Dictionary<string, object?>? ExtensionData { get; set; }
 }
 public class FunctionMessage() : ContentEntry("function")
 {
     [JsonPropertyName("function")]
     public required ToolDefinition Function { get; set; }
+
+
 }
 
 
@@ -217,7 +219,7 @@ public class ChatCompletionResponse
 
 
     [JsonExtensionData]
-    public Dictionary<string, object>? ExtensionData { get; set; }
+    public Dictionary<string, object?>? ExtensionData { get; set; }
 }
 
 public class ChatChoice
@@ -226,13 +228,13 @@ public class ChatChoice
     public int Index { get; set; }
 
     [JsonPropertyName("message")]
-    public ChatMessage Message { get; set; } = new();
+    public DtoChatMessage Message { get; set; } = new();
 
     [JsonPropertyName("finish_reason")]
     public string? FinishReason { get; set; }
 
     [JsonExtensionData]
-    public Dictionary<string, object>? ExtensionData { get; set; }
+    public Dictionary<string, object?>? ExtensionData { get; set; }
 }
 
 public class TokenUsage

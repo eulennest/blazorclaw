@@ -2,6 +2,7 @@ using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.AI;
 using System.Security.Claims;
 
 namespace BlazorClaw.Server.Controllers;
@@ -35,7 +36,7 @@ public class OpenAiController(IMessageDispatcher md, ILogger<OpenAiController> l
             foreach (var item in bot.ReceivedMessages)
             {
                 resp.Choices ??= [];
-                resp.Choices.Add(new ChatChoice { Message = new ChatMessage() { Content = item } });
+                resp.Choices.Add(new ChatChoice { Message = new DtoChatMessage() { Content = item } });
             }
         }
         catch (Exception ex)
@@ -60,7 +61,7 @@ public class OpenAiController(IMessageDispatcher md, ILogger<OpenAiController> l
 
         public override Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            var text = Convert.ToString(message.Content)?.Trim();
+            var text = message.Text?.Trim();
             if (!string.IsNullOrWhiteSpace(text))
             {
                 ReceivedMessages.Add(text);
@@ -74,7 +75,7 @@ public class OpenAiController(IMessageDispatcher md, ILogger<OpenAiController> l
         }
         public override Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
-            var text = Convert.ToString(message.Content)?.Trim();
+            var text = message.Text?.Trim();
             if (!string.IsNullOrWhiteSpace(text))
             {
                 ReceivedMessages.Add(text);

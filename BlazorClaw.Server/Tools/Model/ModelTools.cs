@@ -84,7 +84,7 @@ public class ModelSetTool : BaseTool<ModelSetParams>
             var providerName = parts[0];
             var availableProviders = _providerManager.GetProviders().ToList();
 
-            if (!availableProviders.Contains(providerName, StringComparer.OrdinalIgnoreCase))
+            if (!availableProviders.Any(p => p.Id.Equals(providerName, StringComparison.OrdinalIgnoreCase)))
                 return Task.FromResult($"Fehler: Provider '{providerName}' nicht konfiguriert. Verfügbare Provider: {string.Join(", ", availableProviders)}");
 
             context.Session.CurrentModel = p.Model;

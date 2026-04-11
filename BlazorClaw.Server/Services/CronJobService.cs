@@ -6,6 +6,7 @@ using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Utils;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.AI;
 using System.Text.Json;
 
 namespace BlazorClaw.Server.Services
@@ -201,8 +202,8 @@ namespace BlazorClaw.Server.Services
 
                     if (onlyIfNewUserMsg)
                     {
-                        var last = sess.MessageHistory.LastOrDefault(o => o.IsUser);
-                        if (last?.GetTextContent()?.StartsWith("[TRIGGER ") ?? false)
+                        var last = sess.MessageHistory.LastOrDefault(o => o.Role == ChatRole.User);
+                        if (last?.Text?.StartsWith("[TRIGGER ") ?? false)
                         {
                             logger.LogDebug("Skipping session {SessionId}: last message is already from cron", sessionId);
                             continue;
@@ -215,8 +216,8 @@ namespace BlazorClaw.Server.Services
                         logger.LogWarning("No message context available for session {SessionId}", sessionId);
                         continue;
                     }
-                    
-                    await dispatcher.DispatchMessageAsync(cmdContext.Channel!, new ChatMessage() { Role = job.System ? "system" : "user", Content = fullMessage }).NoThrow();
+
+                    await dispatcher.DispatchMessageAsync(cmdContext.Channel!, new ChatMessage(job.System ? ChatRole.System : ChatRole.User, fullMessage)).NoThrow();
                 }
                 catch (Exception ex)
                 {
