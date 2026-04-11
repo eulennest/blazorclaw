@@ -47,33 +47,13 @@ namespace BlazorClaw.Core.Services
             if (!Guid.TryParse(Path.GetFileNameWithoutExtension(fileName), out _)) return null;
             var file = Path.Combine(GetMediaFolder(), Path.GetFileName(fileName));
             if (!System.IO.File.Exists(file)) return null;
-            return Tuple.Create((Stream)File.OpenRead(file), GetContentType(file));
+            Stream strm = File.OpenRead(file);
+            var buff = new byte[1024];
+            strm.Read(buff, 0, buff.Length);
+            strm.Seek(0, SeekOrigin.Begin);
+            return Tuple.Create(strm, Mimetype.DetectMimeType(buff) ?? string.Empty);
         }
 
-        public static string GetContentType(string? filename)
-        {
-            if (!string.IsNullOrWhiteSpace(filename))
-            {
-                var rext = Path.GetExtension(filename).ToLowerInvariant();
-                if (rext == ".png") return "image/png";
-                if (rext == ".jpg" || rext == ".jpeg") return "image/jpeg";
-                if (rext == ".txt") return "text/plain";
-                if (rext == ".ogg") return "audio/opus";
-            }
-            return "application/octet-stream";
-        }
-
-        public static string GetExtension(string contentType)
-        {
-            if (contentType.Contains("image/png")) return ".png";
-            else if (contentType.Contains("image/jpeg")) return ".jpg";
-            else if (contentType.Contains("image/jpg")) return ".jpg";
-            else if (contentType.Contains("text/")) return ".txt";
-            else if (contentType.Contains("audio/opus")) return ".ogg";
-            else if (contentType.Contains("audio/ogg")) return ".ogg";
-            else if (contentType.Contains("audio/mpeg")) return ".mp3";
-            return ".dat";
-        }
 
         public async Task<string?> SaveMediaFileAsync(string data)
         {
@@ -114,11 +94,14 @@ namespace BlazorClaw.Core.Services
                     }
                     if (ext == "")
                     {
-                        using var fStrm = File.OpenRead(filename);
-                        var buff = new byte[1024];
-                        fStrm.Read(buff, 0, buff.Length);
-                        var mime = Mimetype.DetectMimeType(buff);
-                        var newExt = Mimetype.GetExtensionFromMimeType(mime);
+                        var newExt = string.Empty;
+                        using (var fStrm = File.OpenRead(filename))
+                        {
+                            var buff = new byte[1024];
+                            fStrm.Read(buff, 0, buff.Length);
+                            var mime = Mimetype.DetectMimeType(buff);
+                            newExt = Mimetype.GetExtensionFromMimeType(mime);
+                        }
                         if (!string.IsNullOrWhiteSpace(newExt) && newExt != ext)
                         {
                             var newFilename = filename + newExt;
@@ -143,7 +126,7 @@ namespace BlazorClaw.Core.Services
         public async Task<string?> SaveMediaFileAsync(Tuple<Stream, string>? tuple)
         {
             if (tuple == null) return null;
-            var ext = GetExtension(tuple.Item2);
+            var ext = Mimetype.GetExtensionFromMimeType(tuple.Item2);
             var filename = Path.Combine(GetMediaFolder(), $"{Guid.NewGuid()}{ext}");
 
             using var s = tuple.Item1;

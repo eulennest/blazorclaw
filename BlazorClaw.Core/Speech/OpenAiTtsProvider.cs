@@ -67,11 +67,12 @@ namespace BlazorClaw.Core.Speech
                 using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "https://api.openai.com/v1/audio/transcriptions");
                 httpRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
 
+                var ext = Mimetype.GetExtensionFromMimeType(contentType);
                 // MultipartFormDataContent für File-Upload
                 using var content = new MultipartFormDataContent();
                 content.Add(new StringContent("whisper-1"), "model");
                 content.Add(new StringContent("de"), "language"); // Optional: Sprache (z.B. "de" für Deutsch)
-                content.Add(new StreamContent(audioStream), "file", $"audio{PathHelper.GetExtension(contentType)}");
+                content.Add(new StreamContent(audioStream), $"file{ext}", contentType);
 
                 httpRequest.Content = content;
 
