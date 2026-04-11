@@ -37,5 +37,5 @@ public class OAuthServer
     [MaxLength(1000)]
     public required string AuthEndpoint { get; set; }
 
-    public virtual ICollection<OAuthToken> OAuthTokens { get; set; } = [];
+    public ICollection<OAuthToken> OAuthTokens { get; set; } = [];
 }
