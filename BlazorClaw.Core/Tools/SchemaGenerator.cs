@@ -1,12 +1,13 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Reflection;
+using System.Text.Json;
 
 namespace BlazorClaw.Core.Tools;
 
 public static class SchemaGenerator
 {
-    public static object Generate(Type type)
+    public static JsonElement Generate(Type type)
     {
         var properties = new Dictionary<string, object>();
         var required = new List<string>();
@@ -90,7 +91,7 @@ public static class SchemaGenerator
             result["required"] = required;
         }
 
-        return result;
+        return JsonSerializer.Deserialize<JsonElement>(JsonSerializer.Serialize(result))!;
     }
 
     private static bool IsDictionaryType(Type type)

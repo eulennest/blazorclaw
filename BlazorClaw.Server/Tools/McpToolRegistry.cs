@@ -5,6 +5,7 @@ using BlazorClaw.Core.VFS;
 using BlazorClaw.Server.Tools.Mcp;
 using ModelContextProtocol.Client;
 using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace BlazorClaw.Server.Tools;
 
@@ -77,7 +78,7 @@ public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
             return ret.StructuredContent?.ToString() ?? string.Empty;
         }
 
-        public object GetSchema()
+        public JsonElement GetSchema()
         {
             return tool.JsonSchema;
         }

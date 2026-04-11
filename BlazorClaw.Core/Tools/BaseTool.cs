@@ -10,7 +10,7 @@ public interface ITool
 {
     string Name { get; }
     string Description { get; }
-    object GetSchema();
+    JsonElement GetSchema();
     object BuildArguments(IDictionary<string, object?>? arguments);
     Task<string> ExecuteAsync(object arguments, MessageContext context);
 }
@@ -20,7 +20,7 @@ public abstract class BaseTool<TParams> : ITool where TParams : class
     public abstract string Name { get; }
     public abstract string Description { get; }
 
-    public object GetSchema() => SchemaGenerator.Generate(typeof(TParams));
+    public JsonElement GetSchema() => SchemaGenerator.Generate(typeof(TParams));
     public object BuildArguments(IDictionary<string, object?>? arguments)
     {
         var str = JsonSerializer.Serialize(arguments, JsonHelper.DefaultOptions);

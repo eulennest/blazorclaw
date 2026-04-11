@@ -278,7 +278,7 @@ namespace BlazorClaw.Server.Services
 
             var opts = new ChatOptions()
             {
-                Tools = sessionState.Tools?.Select(o => o.AsAiTool()).ToList(),
+                Tools = sessionState.Tools?.Select(o => o.AsAiTool(context)).ToList(),
                 ModelId = sessionState.Session.CurrentModel.Split('/', 2)[1],
                 Instructions = string.Join("\n\n", sessionState.SystemPrompts?.Select(o => o.Text) ?? []),
                 AllowMultipleToolCalls = true,
@@ -366,10 +366,12 @@ namespace BlazorClaw.Server.Services
         {
             var msg = message.Text;
 
-            if (msg.Length > 6 && msg[..4].Contains('['))
+            if (msg.Length > 6 && msg[..8].Contains('['))
             {
+                var trimMsg = msg.TrimStart(' ', '\r', '\n', '*', '#', '-');
+
                 // Pattern mit 3-5 Großbuchstaben
-                var match = JsonHelper.MediaTagRegex().Match(msg);
+                var match = JsonHelper.MediaTagRegex().Match(trimMsg);
                 logger.LogInformation(match.ToString());
 
                 if (match.Success)
@@ -402,18 +404,16 @@ namespace BlazorClaw.Server.Services
                             }
 
                             var file = await pathHelper.SaveMediaFileAsync(await ttsp.TextToSpeechAsync(selectedVoiceName, finalPayload, new object()));
-                            if (!string.IsNullOrWhiteSpace(file))
-                            {
-                                message.AdditionalProperties ??= [];
-                                message.AdditionalProperties.Add("media_type", "voice");
-                                message.AdditionalProperties.Add("media_url", pathHelper.GetMediaUrl(file));
-                            }
+                            if (file != null) message.Contents.Add(new UriContent(file, "audio/ogg"));
+
                             break;
                         default:
-                            message.AdditionalProperties ??= [];
-                            message.AdditionalProperties.Add("media_type", tag.ToLowerInvariant());
                             var ft = await GetMediaFileAsync(payload);
-                            message.AdditionalProperties.Add("media_url", ft?.ToString() ?? payload);
+                            if (ft != null)
+                            {
+                                var ext = Path.GetExtension(ft.AbsolutePath).Trim('.');
+                                message.Contents.Add(new UriContent(ft, $"{tag.ToLowerInvariant()}/{ext}"));
+                            }
                             break;
                     }
                 }
