@@ -6,8 +6,8 @@ namespace BlazorClaw.Core.Security;
 public interface IToolPolicyProvider
 {
     Task<IEnumerable<ITool>> FilterToolsAsync(IEnumerable<ITool> allTools, MessageContext context);
-    Task BeforeToolAsync(ITool tool, object parameters, MessageContext context);
-    Task<string> AfterToolAsync(ITool tool, object parameters, string result, MessageContext context);
+    Task BeforeToolAsync(ITool tool, object? parameters, MessageContext context);
+    Task<string> AfterToolAsync(ITool tool, object? parameters, string result, MessageContext context);
 }
 
 public class ToolPolicyAggregator(IEnumerable<IToolPolicyProvider> providers) : IToolPolicyProvider
@@ -22,12 +22,12 @@ public class ToolPolicyAggregator(IEnumerable<IToolPolicyProvider> providers) : 
         return result;
     }
 
-    public async Task BeforeToolAsync(ITool tool, object parameters, MessageContext context)
+    public async Task BeforeToolAsync(ITool tool, object? parameters, MessageContext context)
     {
         foreach (var provider in providers) await provider.BeforeToolAsync(tool, parameters, context);
     }
 
-    public async Task<string> AfterToolAsync(ITool tool, object parameters, string result, MessageContext context)
+    public async Task<string> AfterToolAsync(ITool tool, object? parameters, string result, MessageContext context)
     {
         var finalResult = result;
         foreach (var provider in providers)

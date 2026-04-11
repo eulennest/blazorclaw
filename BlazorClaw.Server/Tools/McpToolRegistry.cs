@@ -63,14 +63,14 @@ public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
         public string Name => $"mcp-{entry.Name}-" + tool.Name.Replace(".", "___");
         public string Description => tool.Description ?? string.Empty;
 
-        public object BuildArguments(object? arguments)
+        public object? BuildArguments(object? arguments)
         {
-            return arguments!;
+            return arguments;
         }
 
-        public async Task<string> ExecuteAsync(object arguments, MessageContext context)
+        public async Task<string> ExecuteAsync(object? arguments, MessageContext context)
         {
-            var args = JsonConvert.DeserializeObject<Dictionary<string, object>>(arguments.ToString() ?? string.Empty) ?? new Dictionary<string, object>();
+            var args = JsonConvert.DeserializeObject<Dictionary<string, object>>(arguments?.ToString() ?? string.Empty) ?? new Dictionary<string, object>();
             var uri = new Uri(entry.ServerUri, UriKind.Absolute);
             var transport = McpToolRegistry.FromUri(uri) ?? throw new Exception(Name + " has invalid transport");
             await using var mcpClient = await McpClient.CreateAsync(transport);

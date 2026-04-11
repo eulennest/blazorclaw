@@ -12,8 +12,8 @@ public interface ITool
     string Name { get; }
     string Description { get; }
     JsonElement GetSchema();
-    object BuildArguments(object? arguments);
-    Task<string> ExecuteAsync(object arguments, MessageContext context);
+    object? BuildArguments(object? arguments);
+    Task<string> ExecuteAsync(object? arguments, MessageContext context);
 }
 
 public abstract class BaseTool<TParams> : ITool where TParams : class
@@ -23,15 +23,25 @@ public abstract class BaseTool<TParams> : ITool where TParams : class
 
     // public JsonElement GetSchema() => SchemaGenerator.Generate(typeof(TParams));
     public JsonElement GetSchema() => AIJsonUtilities.CreateJsonSchema(typeof(TParams));
-    public object BuildArguments(object? arguments)
+    public object? BuildArguments(object? arguments)
     {
-        if (arguments == null) return null!;
-        if (arguments is not string str)
-            str = JsonSerializer.Serialize(arguments, JsonHelper.DefaultOptions);
-        return JsonSerializer.Deserialize<TParams>(str, JsonHelper.DefaultOptions)!;
+        if (arguments == null)
+            return null;
+
+        if (arguments is TParams typed)
+            return typed;
+
+        if (arguments is JsonElement json)
+            return json.Deserialize<TParams>(JsonHelper.DefaultOptions);
+
+        if (arguments is string str)
+            return JsonSerializer.Deserialize<TParams>(str, JsonHelper.DefaultOptions);
+
+        var element = JsonSerializer.SerializeToElement(arguments, JsonHelper.DefaultOptions);
+        return element.Deserialize<TParams>(JsonHelper.DefaultOptions);
     }
 
-    public async Task<string> ExecuteAsync(object arguments, MessageContext context)
+    public async Task<string> ExecuteAsync(object? arguments, MessageContext context)
     {
         if (arguments is not TParams deserializedParams)
             throw new ArgumentException("Invalid arguments provided.");

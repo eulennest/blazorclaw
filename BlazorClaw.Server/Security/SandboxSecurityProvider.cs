@@ -62,7 +62,7 @@ public class SandboxSecurityProvider(IOptionsMonitor<SecurityOptions>? options, 
         return filtered;
     }
 
-    public async Task BeforeToolAsync(ITool tool, object parameters, MessageContext context)
+    public async Task BeforeToolAsync(ITool tool, object? parameters, MessageContext context)
     {
         var opts = options?.CurrentValue;
         if (opts == null) return;
@@ -221,7 +221,7 @@ public class SandboxSecurityProvider(IOptionsMonitor<SecurityOptions>? options, 
         return true;
     }
 
-    public async Task<string> AfterToolAsync(ITool tool, object parameters, string result, MessageContext context)
+    public async Task<string> AfterToolAsync(ITool tool, object? parameters, string result, MessageContext context)
     {
         var opts = options?.CurrentValue;
         if (opts == null) return result;
@@ -304,7 +304,7 @@ public class SandboxSecurityProvider(IOptionsMonitor<SecurityOptions>? options, 
         }
     }
 
-    private async Task SaveAuditLogAsync(MessageContext context, string toolName, object parameters, string result)
+    private async Task SaveAuditLogAsync(MessageContext context, string toolName, object? parameters, string result)
     {
         try
         {
@@ -330,7 +330,7 @@ public class SandboxSecurityProvider(IOptionsMonitor<SecurityOptions>? options, 
         }
     }
 
-    private async Task SendNotificationAsync(string userId, string toolName, object parameters, string result)
+    private async Task SendNotificationAsync(string userId, string toolName, object? parameters, string result)
     {
         try
         {
