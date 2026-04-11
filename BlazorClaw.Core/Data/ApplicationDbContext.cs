@@ -9,6 +9,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<ChatSession> ChatSessions { get; set; }
     public DbSet<ChatSessionParticipant> ChatSessionParticipants { get; set; }
     public DbSet<ModelFavorite> ModelFavorites { get; set; }
+    public DbSet<ApiKey> ApiKeys { get; set; }
+    public DbSet<OAuthToken> OAuthTokens { get; set; }
+    public DbSet<OAuthServer> OAuthServers { get; set; }
 
     public DbSet<RateLimitTracking> RateLimitTrackings { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
@@ -45,6 +48,24 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             entity.HasIndex(a => new { a.Action, a.Timestamp });
             entity.HasIndex(a => a.SessionId);
             entity.HasIndex(a => a.Timestamp); // Für Cleanup
+        });
+
+        builder.Entity<ApiKey>(entity =>
+        {
+            entity.HasIndex(a => new { a.Identifier, a.UserId }).IsUnique();
+            entity.HasOne(a => a.OAuthToken)
+                .WithOne()
+                .HasForeignKey<ApiKey>(a => a.OAuthTokenId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        builder.Entity<OAuthToken>(entity =>
+        {
+            entity.HasIndex(o => o.ServerId);
+            entity.HasOne(o => o.Server)
+                .WithMany(s => s.OAuthTokens)
+                .HasForeignKey(o => o.ServerId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
