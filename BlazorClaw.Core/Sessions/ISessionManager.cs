@@ -18,10 +18,17 @@ public interface ISessionManager
 
 public interface IChannelBot
 {
+    Task StartAsync(CancellationToken cancellationToken = default);
+    Task StopAsync(CancellationToken cancellationToken = default);
+
     string ChannelProvider { get; }
     event Func<IChannelSession, object, Task>? MessageReceived; // channelId, userId, message
     Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default);
     Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default);
+}
+public interface IConfigure<in T>
+{
+    ValueTask<bool> ConfigureAsync(T config); 
 }
 
 public interface IChannelSession : IChannelBot
@@ -83,6 +90,20 @@ public abstract class AbstractChannelBot(string channelProvider) : IChannelBot
     {
         return MessageReceived?.Invoke(channelSession, message) ?? Task.CompletedTask;
     }
+
+    public abstract Task StartAsync(CancellationToken cancellationToken = default);
+    public abstract Task StopAsync(CancellationToken cancellationToken = default);
+}
+
+public abstract class AbstractConfigChannelBot<T>(string channelProvider) : AbstractChannelBot(channelProvider), IConfigure<T>
+{
+    public T? Config { get; protected set; }
+    public ValueTask<bool> ConfigureAsync(T config)
+    {
+        Config = config;
+        return ConfigureAsync();
+    }
+    protected abstract ValueTask<bool> ConfigureAsync();
 }
 
 public interface IMessageDispatcher

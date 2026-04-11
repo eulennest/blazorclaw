@@ -20,6 +20,7 @@ using BlazorClaw.Server.Tools.Mcp;
 using BlazorClaw.Server.Web;
 using BlazorClaw.UI;
 using BlazorClaw.UI.Components.Account;
+using Matrix.Sdk;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
@@ -149,6 +150,8 @@ builder.Services.AddSingleton<ISessionManager, BlazorClaw.Server.Services.Sessio
 builder.Services.AddSingleton<IMessageDispatcher, MessageDispatcher>();
 builder.Services.AddScoped<ISessionQueryService, BlazorClaw.Core.Services.SessionQueryService>();
 
+builder.Services.AddSingleton<MatrixClientFactory>();
+builder.Services.AddSingleton<ChannelRegistry>();
 builder.Services.AddSingleton<CronJobService>();
 builder.Services.AddSingleton<ICronJobService>(sp => sp.GetRequiredService<CronJobService>());
 builder.Services.AddHostedService(sp => sp.GetRequiredService<CronJobService>());
@@ -157,8 +160,8 @@ builder.Services.Configure<BotConfigs<WhatsAppBotEntry>>(builder.Configuration.G
 builder.Services.Configure<BotConfigs<TelegramBotEntry>>(builder.Configuration.GetSection(BotConfigs<TelegramBotEntry>.Section));
 builder.Services.Configure<BotConfigs<MatrixBotEntry>>(builder.Configuration.GetSection(BotConfigs<MatrixBotEntry>.Section));
 
-builder.Services.AddHostedService<TelegramBotHostedService>();
-builder.Services.AddHostedService<MatrixBotHostedService>();
+builder.Services.AddHostedService<BotHostedService<MatrixBotEntry, MatrixChannelBot>>();
+builder.Services.AddHostedService<BotHostedService<TelegramBotEntry, TelegramChannelBot>>();
 builder.Services.AddSingleton<WhatsAppBotHostedService>();
 builder.Services.AddHostedService(sp => sp.GetRequiredService<WhatsAppBotHostedService>());
 
