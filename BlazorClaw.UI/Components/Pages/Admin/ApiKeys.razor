@@ -1,42 +1,319 @@
 @page "/admin/apikeys"
+@using BlazorClaw.Core.Data
+@using BlazorClaw.Core.Models
+@using Microsoft.EntityFrameworkCore
+@inject NavigationManager Navigation
+@inject ApplicationDbContext Db
 
 <PageTitle>Admin - API-Keys</PageTitle>
 
-<h2>API-Keys & Tokens</h2>
-<p class="text-muted">Verwaltung von API-Schlüsseln und Tokens.</p>
-
-<div class="mt-4">
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> Diese Seite ist ein Platzhalter. Implementierung folgt...
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2>API-Key-Verwaltung</h2>
+        <p class="text-muted">Verwaltung von API-Keys, Tokens und später OAuth-Zugängen.</p>
     </div>
-    
-    <h5 class="mt-4">Gespeicherte Keys</h5>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Typ</th>
-                <th>Zuletzt verwendet</th>
-                <th>Aktionen</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>OpenRouter</td>
-                <td><span class="badge bg-warning text-dark">API-Key</span></td>
-                <td>Gerade eben</td>
-                <td><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></td>
-            </tr>
-            <tr>
-                <td>Telegram Bot</td>
-                <td><span class="badge bg-info">Token</span></td>
-                <td>Gerade eben</td>
-                <td><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></td>
-            </tr>
-        </tbody>
-    </table>
-    
-    <button class="btn btn-primary mt-3">
-        <i class="bi bi-plus-lg"></i> Neuer Key
-    </button>
+    <button class="btn btn-secondary" @onclick="GoBack"><i class="bi bi-arrow-left"></i> Zurück</button>
 </div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success">@successMessage</div>
+}
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-key-fill"></i> API-Keys & Tokens</h5>
+        <button class="btn btn-sm btn-success" @onclick="() => LoadEditModal()">
+            <i class="bi bi-plus-circle"></i> Neuer Key
+        </button>
+    </div>
+    <div class="card-body">
+        @if (data.Count == 0)
+        {
+            <div class="alert alert-info">Keine Keys konfiguriert.</div>
+        }
+        else
+        {
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Identifier</th>
+                        <th>Typ</th>
+                        <th>User</th>
+                        <th>Wert</th>
+                        <th>Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var entry in data)
+                    {
+                        <tr>
+                            <td><code>@entry.Identifier</code></td>
+                            <td>
+                                @if (entry.OAuthTokenId != null)
+                                {
+                                    <span class="badge bg-info">OAuth</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">Key</span>
+                                }
+                            </td>
+                            <td><code>@(string.IsNullOrWhiteSpace(entry.UserId) ? "system" : entry.UserId)</code></td>
+                            <td><code>@MaskValue(entry.Value)</code></td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary me-2" @onclick="() => LoadEditModal(entry.Id)">
+                                    <i class="bi bi-pencil"></i> Bearbeiten
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(entry.Id)">
+                                    <i class="bi bi-trash"></i> Löschen
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@if (editModel != null && (formMode == CRUDMode.Create || formMode == CRUDMode.Edit))
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(formMode == CRUDMode.Edit ? "Key bearbeiten" : "Neuer Key")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Identifier</label>
+                        <input type="text" class="form-control" @bind="editModel.Identifier" placeholder="z.B. openrouter-default" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Wert</label>
+                        <input type="text" class="form-control" @bind="editModel.Value" placeholder="API-Key oder Token" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Token Type</label>
+                        <input type="text" class="form-control" @bind="editModel.TokenType" placeholder="z.B. Bearer" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">User ID</label>
+                        <input type="text" class="form-control" @bind="editModel.UserId" placeholder="leer = systemweit" />
+                    </div>
+                    @if (editModel.OAuthTokenId != null)
+                    {
+                        <div class="alert alert-info mb-0">
+                            Dieser Eintrag ist mit einem OAuth-Token verknüpft. Die OAuth-spezifische Verwaltung folgt separat.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Abbrechen</button>
+                    <button class="btn btn-success" @onclick="SaveAccount">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (formMode == CRUDMode.Delete)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Löschen bestätigen</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Möchten Sie den Key wirklich löschen?</p>
+                    <p class="text-muted">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Abbrechen</button>
+                    <button class="btn btn-danger" @onclick="DeleteAccount">Löschen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private enum CRUDMode
+    {
+        None,
+        Create,
+        Edit,
+        Delete
+    }
+
+    private List<ApiKey> data = [];
+    private ApiKey? editModel;
+    private Guid? editModelKey;
+    private CRUDMode formMode;
+    private string? errorMessage, successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        data = await Db.ApiKeys
+            .Include(o => o.OAuthToken)
+            .OrderBy(o => o.Identifier)
+            .ThenBy(o => o.UserId)
+            .ToListAsync();
+    }
+
+    private async Task RefreshData()
+    {
+        await LoadData();
+        try { StateHasChanged(); } catch { }
+    }
+
+    private static string MaskValue(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "-";
+        return value.Length > 8 ? value[..4] + "..." + value[^4..] : "****";
+    }
+
+    private void LoadEditModal(Guid? id = null)
+    {
+        errorMessage = null;
+        successMessage = null;
+        editModelKey = id;
+
+        if (id == null)
+        {
+            editModel = new()
+            {
+                Identifier = string.Empty,
+                Value = string.Empty,
+                TokenType = string.Empty,
+                UserId = null
+            };
+            formMode = CRUDMode.Create;
+            return;
+        }
+
+        var current = data.FirstOrDefault(c => c.Id == id.Value);
+        if (current == null) return;
+
+        editModel = new ApiKey
+        {
+            Id = current.Id,
+            Identifier = current.Identifier,
+            UserId = current.UserId,
+            OAuthTokenId = current.OAuthTokenId,
+            Value = current.Value,
+            TokenType = current.TokenType,
+            CreatedAt = current.CreatedAt,
+            UpdatedAt = current.UpdatedAt
+        };
+
+        formMode = CRUDMode.Edit;
+    }
+
+    private async Task SaveAccount()
+    {
+        if (editModel == null)
+            return;
+
+        errorMessage = null;
+        successMessage = null;
+
+        if (string.IsNullOrWhiteSpace(editModel.Identifier))
+        {
+            errorMessage = "Identifier ist erforderlich.";
+            return;
+        }
+
+        if (formMode == CRUDMode.Create)
+        {
+            var exists = await Db.ApiKeys.AnyAsync(o => o.Identifier == editModel.Identifier && o.UserId == editModel.UserId);
+            if (exists)
+            {
+                errorMessage = "Ein Key mit diesem Identifier und User existiert bereits.";
+                return;
+            }
+
+            editModel.CreatedAt = DateTime.UtcNow;
+            editModel.UpdatedAt = DateTime.UtcNow;
+            Db.ApiKeys.Add(editModel);
+            await Db.SaveChangesAsync();
+            successMessage = $"Key '{editModel.Identifier}' erfolgreich hinzugefügt!";
+        }
+        else if (formMode == CRUDMode.Edit && editModelKey != null)
+        {
+            var model = await Db.ApiKeys.FindAsync(editModelKey.Value);
+            if (model == null)
+            {
+                errorMessage = "Key nicht gefunden.";
+                return;
+            }
+
+            var exists = await Db.ApiKeys.AnyAsync(o => o.Id != model.Id && o.Identifier == editModel.Identifier && o.UserId == editModel.UserId);
+            if (exists)
+            {
+                errorMessage = "Ein anderer Key mit diesem Identifier und User existiert bereits.";
+                return;
+            }
+
+            model.Identifier = editModel.Identifier;
+            model.UserId = string.IsNullOrWhiteSpace(editModel.UserId) ? null : editModel.UserId;
+            model.Value = editModel.Value;
+            model.TokenType = editModel.TokenType;
+            model.UpdatedAt = DateTime.UtcNow;
+
+            await Db.SaveChangesAsync();
+            successMessage = $"Key '{model.Identifier}' erfolgreich aktualisiert!";
+        }
+
+        CloseModal();
+        await RefreshData();
+    }
+
+    private void ConfirmDelete(Guid id)
+    {
+        formMode = CRUDMode.Delete;
+        editModelKey = id;
+        errorMessage = null;
+        successMessage = null;
+    }
+
+    private async Task DeleteAccount()
+    {
+        if (formMode != CRUDMode.Delete || editModelKey == null) return;
+
+        var model = await Db.ApiKeys.FindAsync(editModelKey.Value);
+        if (model == null)
+        {
+            errorMessage = "Key nicht gefunden.";
+            return;
+        }
+
+        Db.ApiKeys.Remove(model);
+        await Db.SaveChangesAsync();
+        successMessage = "Key gelöscht.";
+        CloseModal();
+        await RefreshData();
+    }
+
+    private void CloseModal()
+    {
+        formMode = CRUDMode.None;
+        editModel = null;
+        editModelKey = null;
+    }
+
+    private void GoBack() => Navigation.NavigateTo("/admin");
+}
