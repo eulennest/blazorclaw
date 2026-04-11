@@ -449,7 +449,12 @@ namespace BlazorClaw.Server.Services
             foreach (var item in message.Contents.OfType<UriContent>())
             {
                 var f = await GetMediaFileAsync(item.Uri.ToString());
-                if (f != null) item.Uri = f;
+                if (f != null)
+                {
+                    item.Uri = f;
+                    var mt = Mimetype.GetMimeTypeFromExtension(f.AbsolutePath);
+                    if (mt?.Contains('/') ?? false) item.MediaType = mt; 
+                }
             }
         }
 
