@@ -348,6 +348,8 @@
     }
     private string Printable(object oj)
     {
+        if(oj is IDictionary<string,object?> dict)
+            return string.Join("\n", dict.Select(kv => $"{kv.Key}: {kv.Value}"));
         return Newtonsoft.Json.JsonConvert.SerializeObject(oj, Newtonsoft.Json.Formatting.Indented);
     }
     private async Task SendMessage()
