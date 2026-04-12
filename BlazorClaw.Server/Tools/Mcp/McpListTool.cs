@@ -29,7 +29,7 @@ public class McpListTool(McpToolRegistry mcpToolRegistry) : BaseTool<McpListTool
 
     protected override async Task<string> ExecuteInternalAsync(McpListToolParams p, MessageContext context)
     {
-        if ((mcpToolRegistry.ToolsReg?.Count ?? 0) > 0)
+        if ((mcpToolRegistry.ToolsReg?.Count ?? 0) <= 0)
             return "Keine MCP-Server konfiguriert.";
 
         var result = new System.Text.StringBuilder();
