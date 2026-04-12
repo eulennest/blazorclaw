@@ -16,7 +16,7 @@ public class ChatSessionState
     public required IChatClient Provider { get; set; }
     public List<ChatMessage> MessageHistory { get; set; } = [];
     public List<ChatMessage> SystemPrompts { get; set; } = [];
-    public List<ITool> Tools { get; set; } = [];
+    public List<ITool>? Tools { get; set; }
     public TokenUsage? LastUsage { get; set; }
     public double Costs { get; set; }
     public double Tokens { get; set; }

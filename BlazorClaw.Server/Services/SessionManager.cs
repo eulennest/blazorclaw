@@ -218,16 +218,10 @@ namespace BlazorClaw.Server.Services
             var provMan = sessionState.Services.GetRequiredService<IProviderManager>();
             sessionState.Provider = await provMan.GetChatClientAsync(sessionState.Session.CurrentModel) ?? sessionState.Provider;
 
-            var toolRegistry = sessionState.Services.GetRequiredService<IToolProvider>();
-            var policyProvider = sessionState.Services.GetRequiredService<IToolPolicyProvider>();
 
             if ((sessionState.Tools?.Count ?? 0) == 0)
             {
-
-                var filtered = await policyProvider.FilterToolsAsync(await toolRegistry.GetAllToolsAsync().ToListAsync(), context);
-                // 2. Tools filtern und hinzufügen
-                sessionState.Tools = filtered.ToList();
-
+                await LoadSessionToolsAsync(sessionState, context);
             }
 
             sessionState.SystemPrompts = [];
@@ -296,7 +290,7 @@ namespace BlazorClaw.Server.Services
                 hasTool = false;
                 iterations++;
                 count = 0;
-                await foreach (var msg in InternalDispatchToLLMAsync(chatClient, opts, sessionState, context, toolRegistry, policyProvider, logger))
+                await foreach (var msg in InternalDispatchToLLMAsync(chatClient, opts, sessionState, context, logger))
                 {
                     count++;
                     if (msg.Role == ChatRole.Tool) hasTool = true;
@@ -314,7 +308,7 @@ namespace BlazorClaw.Server.Services
             }
         }
 
-        private async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(IChatClient chatClient, ChatOptions opts, ChatSessionState sessionState, MessageContext context, IToolProvider toolRegistry, IToolPolicyProvider policyProvider, ILogger logger)
+        private async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(IChatClient chatClient, ChatOptions opts, ChatSessionState sessionState, MessageContext context, ILogger logger)
         {
             var messages = sessionState.MessageHistory.Select(o => o.Clone());
             foreach (var message in messages)
@@ -322,10 +316,12 @@ namespace BlazorClaw.Server.Services
                 foreach (var item in message.Contents.OfType<UriContent>().ToList())
                 {
                     message.Contents.Remove(item);
-                    message.Contents.Add(new TextContent($"[MEDIA:{item.Uri} Type={item.MediaType}]"));
+                    message.Contents.Add(new TextContent($"[MEDIA:{item.Uri}]"));// Type={item.MediaType}]"));
                 }
             }
 
+            if (sessionState.Tools == null)
+                await LoadSessionToolsAsync(sessionState, context);
 
             var content = await chatClient.GetResponseAsync(messages, opts);
 
@@ -343,6 +339,7 @@ namespace BlazorClaw.Server.Services
                 var calls = message.Contents.OfType<FunctionCallContent>().ToList();
                 if (calls.Count > 0)
                 {
+                    var policyProvider = sessionState.Services.GetRequiredService<IToolPolicyProvider>();
                     var msg = new ChatMessage(ChatRole.Tool, new List<AIContent>()) { CreatedAt = DateTimeOffset.UtcNow };
                     foreach (var call in calls)
                     {
@@ -351,7 +348,7 @@ namespace BlazorClaw.Server.Services
                         object? result = null;
                         try
                         {
-                            var tool = toolRegistry.GetTool(call.Name) ?? throw new ToolNotFoundException(call.Name);
+                            var tool = sessionState.Tools?.FirstOrDefault(o => o.Name.Equals(call.Name)) ?? throw new ToolNotFoundException(call.Name);
                             var args = tool.BuildArguments(call.Arguments);
 
                             await policyProvider.BeforeToolAsync(tool, args, context);
@@ -372,7 +369,6 @@ namespace BlazorClaw.Server.Services
                 }
             }
         }
-
 
         public async Task ConvertMediaFilesAsync(MessageContext context, ChatMessage message)
         {
@@ -453,7 +449,7 @@ namespace BlazorClaw.Server.Services
                 {
                     item.Uri = f;
                     var mt = Mimetype.GetMimeTypeFromExtension(f.AbsolutePath);
-                    if (mt?.Contains('/') ?? false) item.MediaType = mt; 
+                    if (mt?.Contains('/') ?? false) item.MediaType = mt;
                 }
             }
         }
@@ -469,11 +465,20 @@ namespace BlazorClaw.Server.Services
         {
             sessionState.VFS = await PathUtils.BuildVFSAsync(sessionState.Services);
         }
-    }
 
-    public class JsonSessionStorage
-    {
-        public ChatSession Session { get; set; } = default!;
-        public List<ChatMessage> MessageHistory { get; set; } = [];
+        public static async Task LoadSessionToolsAsync(ChatSessionState sessionState, MessageContext context)
+        {
+            var toolRegistry = sessionState.Services.GetRequiredService<IToolProvider>();
+            var policyProvider = sessionState.Services.GetRequiredService<IToolPolicyProvider>();
+            var filtered = await policyProvider.FilterToolsAsync(await toolRegistry.GetAllToolsAsync().ToListAsync(), context);
+            // 2. Tools filtern und hinzufügen
+            sessionState.Tools = filtered.ToList();
+        }
+
+        public class JsonSessionStorage
+        {
+            public ChatSession Session { get; set; } = default!;
+            public List<ChatMessage> MessageHistory { get; set; } = [];
+        }
     }
 }

@@ -46,7 +46,7 @@ public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
             var uri = new Uri(reg.ServerUri, UriKind.Absolute);
             var transport = FromUri(uri);
             if (transport == null) continue;
-            await using var mcpClient = await McpClient.CreateAsync(transport);
+            var mcpClient = await McpClient.CreateAsync(transport);
             var tools = await mcpClient.ListToolsAsync();
             ret[reg.Name] = new McpServer(reg) { McpClient = mcpClient, ClientTools = tools };
         }
@@ -69,7 +69,7 @@ public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
 
     private class McpTool(McpServer entry, McpClientTool tool) : AIFunction, ITool
     {
-        public override string Name => $"mcp-{entry.Entry.Name}-" + tool.Name.Replace(".", "_");
+        public override string Name => $"mcp_{entry.Entry.Name}_" + tool.Name.Replace(".", "_");
         public override string Description => tool.Description ?? string.Empty;
         public override JsonElement JsonSchema => tool.JsonSchema;
         public override JsonElement? ReturnJsonSchema => tool.ReturnJsonSchema;
