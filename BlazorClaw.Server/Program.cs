@@ -52,7 +52,6 @@ builder.Services.AddHttpContextAccessor();
 // Add HttpClient for WebSearchProvider
 builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
 builder.Services.AddHttpClient<BlazorClaw.Server.Tools.ImageGenerationTool>();
-builder.Services.AddHttpClient<McpCallTool>();
 
 // Add HttpClients for HttpRequestTool (normal + insecure for self-signed certs)
 builder.Services.AddHttpClient("HttpClient")
