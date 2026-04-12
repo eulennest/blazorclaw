@@ -316,7 +316,7 @@ namespace BlazorClaw.Server.Services
                 foreach (var item in message.Contents.OfType<UriContent>().ToList())
                 {
                     message.Contents.Remove(item);
-                    message.Contents.Add(new TextContent($"[MEDIA:{item.Uri}]"));// Type={item.MediaType}]"));
+                    message.Contents.Insert(0, new TextContent($"[MEDIA:{item.Uri}]"));// Type={item.MediaType}]"));
                 }
             }
 
