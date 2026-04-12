@@ -1,39 +1,7 @@
 using BlazorClaw.Core.Sessions;
 
 namespace BlazorClaw.Channels.Services
-{
-    /// <summary>
-    /// WhatsApp client abstraction - decouples from Baileys.NET implementation
-    /// Inherits from IChannelBot for dispatcher compatibility
-    /// </summary>
-    public interface IWhatsAppClient : IChannelBot
-    {
-        /// <summary>
-        /// Account identifier (e.g., "default", "business")
-        /// </summary>
-        string AccountId { get; }
-
-        /// <summary>
-        /// Connect to WhatsApp servers and authenticate via QR code
-        /// </summary>
-        Task ConnectAsync(CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// Disconnect from WhatsApp servers
-        /// </summary>
-        ValueTask DisconnectAsync(CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// Send a message to a JID (user or group)
-        /// </summary>
-        Task SendMessage(string jid, object messageContent, CancellationToken cancellationToken = default);
-
-        /// <summary>
-        /// Send read receipt for a message
-        /// </summary>
-        Task SendReadReceipt(string jid, string messageId, CancellationToken cancellationToken = default);
-    }
-
+{ 
     /// <summary>
     /// WhatsApp account configuration
     /// </summary>

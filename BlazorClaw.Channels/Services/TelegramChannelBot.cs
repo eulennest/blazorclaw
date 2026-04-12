@@ -52,6 +52,7 @@ namespace BlazorClaw.Channels.Services
 
         public override async Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
         {
+            if (Client == null) throw new InvalidOperationException("Not configured");
             var content = message.Text;
 
             foreach (var item in message.Contents)

@@ -3,22 +3,22 @@ using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.VFS;
 using BlazorClaw.Server.Tools.Mcp;
+using Microsoft.Extensions.AI;
 using ModelContextProtocol.Client;
-using Newtonsoft.Json;
 using System.Text.Json;
 
 namespace BlazorClaw.Server.Tools;
 
 public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
 {
-    private Dictionary<McpServerEntry, IList<McpClientTool>>? ToolsReg;
+    private Dictionary<McpServer, IList<McpClientTool>>? ToolsReg;
     private List<ITool>? Tools;
     public async IAsyncEnumerable<ITool> GetAllToolsAsync()
     {
         if (Tools == null)
         {
             ToolsReg ??= await BuildAllToolsAsync();
-            Tools = [.. ToolsReg.SelectMany(kv => kv.Value.Select(u => Tuple.Create(kv.Key, u))).Select(tool => (ITool)new McpTool(tool.Item1, tool.Item2))];
+            Tools = [.. ToolsReg.Where(o => o.Key.Active).SelectMany(kv => kv.Value.Select(u => Tuple.Create(kv.Key, u))).Select(tool => (ITool)new McpTool(tool.Item1, tool.Item2))];
         }
 
         foreach (var item in Tools ?? [])
@@ -27,9 +27,9 @@ public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
         }
     }
 
-    public async Task<Dictionary<McpServerEntry, IList<McpClientTool>>> BuildAllToolsAsync()
+    public async Task<Dictionary<McpServer, IList<McpClientTool>>> BuildAllToolsAsync()
     {
-        var ret = new Dictionary<McpServerEntry, IList<McpClientTool>>();
+        var ret = new Dictionary<McpServer, IList<McpClientTool>>();
         var regs = await McpRegistry.LoadRegistryAsync(vfs, PathUtils.VfsMcpUser);
         foreach (var reg in regs.Servers)
         {
@@ -38,7 +38,7 @@ public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
             if (transport == null) continue;
             await using var mcpClient = await McpClient.CreateAsync(transport);
             var tools = await mcpClient.ListToolsAsync();
-            ret[reg] = tools;
+            ret[new(reg)] = tools;
         }
         return ret;
     }
@@ -58,29 +58,54 @@ public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
         return null;
     }
 
-    private class McpTool(McpServerEntry entry, McpClientTool tool) : ITool
+    private class McpTool(McpServer entry, McpClientTool tool) : AIFunction, ITool
     {
-        public string Name => $"mcp-{entry.Name}-" + tool.Name.Replace(".", "___");
-        public string Description => tool.Description ?? string.Empty;
+        public override string Name => $"mcp-{entry.Entry.Name}-" + tool.Name.Replace(".", "___");
+        public override string Description => tool.Description ?? string.Empty;
+        public override JsonElement JsonSchema => tool.JsonSchema;
+        public override JsonElement? ReturnJsonSchema => tool.ReturnJsonSchema;
 
         public object? BuildArguments(object? arguments)
         {
-            return arguments;
+            if (arguments == null)
+                return null;
+
+            if (arguments is AIFunctionArguments typed)
+                return typed;
+
+            if (arguments is JsonElement json)
+                return json.Deserialize<AIFunctionArguments>(JsonHelper.DefaultOptions);
+
+            if (arguments is string str)
+                return JsonSerializer.Deserialize<AIFunctionArguments>(str, JsonHelper.DefaultOptions);
+
+            var element = JsonSerializer.SerializeToElement(arguments, JsonHelper.DefaultOptions);
+            return element.Deserialize<AIFunctionArguments>(JsonHelper.DefaultOptions);
         }
 
         public async Task<string> ExecuteAsync(object? arguments, MessageContext context)
         {
-            var args = JsonConvert.DeserializeObject<Dictionary<string, object>>(arguments?.ToString() ?? string.Empty) ?? new Dictionary<string, object>();
-            var uri = new Uri(entry.ServerUri, UriKind.Absolute);
-            var transport = McpToolRegistry.FromUri(uri) ?? throw new Exception(Name + " has invalid transport");
-            await using var mcpClient = await McpClient.CreateAsync(transport);
-            var ret = await mcpClient.CallToolAsync(tool.Name, args);
-            return ret.StructuredContent?.ToString() ?? string.Empty;
+            var args = BuildArguments(arguments) as AIFunctionArguments;
+            var ret = await InvokeCoreAsync(args ?? [], CancellationToken.None);
+            return ret?.ToString() ?? string.Empty;
         }
 
         public JsonElement GetSchema()
         {
             return tool.JsonSchema;
         }
+
+        protected override ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)
+        {
+            return tool.InvokeAsync(arguments, cancellationToken);
+        }
     }
 }
+public class McpServer(McpServerEntry server)
+{
+    public McpServerEntry Entry { get; } = server;
+    public bool Active { get; set; } = server.Enabled;
+}
+
+
+

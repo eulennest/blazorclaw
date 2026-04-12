@@ -18,11 +18,9 @@ namespace BlazorClaw.Channels.Services
     /// <summary>
     /// WhatsApp channel handler - sends messages to WhatsApp
     /// </summary>
-    public class WhatsAppChannelBot(ILogger<WhatsAppChannelBot> logger) : AbstractConfigChannelBot<WhatsAppBotEntry>("WhatsApp"), IWhatsAppClient
+    public class WhatsAppChannelBot(ILogger<WhatsAppChannelBot> logger) : AbstractConfigChannelBot<WhatsAppBotEntry>("WhatsApp")
     {
         private WhatsAppClient? client;
-
-        public string AccountId => Key;
         public WhatsAppQRCodeData? CurrentQRCode { get; private set; }
 
         public event EventHandler<QrCodeEventArgs>? OnQRCode;
@@ -56,18 +54,18 @@ namespace BlazorClaw.Channels.Services
         {
             CurrentQRCode = new WhatsAppQRCodeData
             {
-                AccountId = AccountId,
+                AccountId = Key,
                 QRCode = e.QrData,
                 GeneratedAt = DateTime.UtcNow
             };
-            logger.LogWarning("📱 WhatsApp QR Code for '{AccountId}':\n{QR}", AccountId, e.QrData);
+            logger.LogWarning("📱 WhatsApp QR Code for '{Key}':\n{QR}", Key, e.QrData);
             OnQRCode?.Invoke(this, e);
         }
 
         private void Client_OnConnectionUpdate(object? sender, Baileys.Types.ConnectionUpdateEventArgs e)
         {
             var status = e.Connection?.ToString().ToLowerInvariant();
-            logger.LogInformation("WhatsApp '{AccountId}' connection: {Status}", AccountId, status);
+            logger.LogInformation("WhatsApp '{Key}' connection: {Status}", Key, status);
 
             if (status == "open" || status == "paired")
             {
@@ -90,9 +88,7 @@ namespace BlazorClaw.Channels.Services
         {
             CurrentQRCode = null;
             if (client != null)
-            {
                 await client.DisconnectAsync();
-            }
         }
 
         public override async Task SendChannelAsync(
@@ -124,28 +120,6 @@ namespace BlazorClaw.Channels.Services
             CancellationToken cancellationToken = default)
         {
             return SendChannelAsync(channelId, message, cancellationToken);
-        }
-
-        // IWhatsAppClient implementation
-        public Task ConnectAsync(CancellationToken cancellationToken = default)
-        {
-            if (client == null) throw new InvalidOperationException("Not configured");
-            return client.ConnectAsync(cancellationToken);
-        }
-
-        public ValueTask DisconnectAsync(CancellationToken cancellationToken = default)
-        {
-            CurrentQRCode = null;
-            return client?.DisconnectAsync() ?? ValueTask.CompletedTask;
-        }
-
-        public Task SendMessage(string jid, object messageContent, CancellationToken cancellationToken = default)
-        {
-            if (messageContent is string text && client != null)
-            {
-                return client.SendMessageAsync(jid, text, cancellationToken);
-            }
-            return Task.CompletedTask;
         }
 
         public Task SendReadReceipt(string jid, string messageId, CancellationToken cancellationToken = default)

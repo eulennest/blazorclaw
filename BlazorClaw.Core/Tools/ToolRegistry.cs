@@ -24,5 +24,9 @@ public class ToolRegistry : IToolProvider
 
 public static class ToolExtensions
 {
-    public static AITool AsAiTool(this ITool tool, MessageContext context) => new AIToolWrapper(tool, context);
+    public static AITool AsAiTool(this ITool tool, MessageContext context)
+    {
+        if (tool is AITool ait) return ait;
+        return new AIToolWrapper(tool, context);
+    }
 }

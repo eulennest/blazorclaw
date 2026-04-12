@@ -16,6 +16,7 @@ using BlazorClaw.Core.Web;
 using BlazorClaw.Server;
 using BlazorClaw.Server.Security.Vault;
 using BlazorClaw.Server.Services;
+using BlazorClaw.Server.Tools;
 using BlazorClaw.Server.Tools.Mcp;
 using BlazorClaw.Server.Web;
 using BlazorClaw.UI;
@@ -98,7 +99,13 @@ builder.Services.TryAddScoped<IVfsSystem>(sp =>
     return PathUtils.BuildVFSAsync(sp).GetAwaiter().GetResult();
 });
 // Tool registry
-builder.Services.TryAddScoped<IToolProvider>(sp => new ToolAggregator(PluginUtils.BuildPlugins<IToolProvider>(sp, typeof(ToolAggregator))));
+builder.Services.TryAddScoped<McpToolRegistry>();
+builder.Services.TryAddScoped<IToolProvider>(sp =>
+{
+    var pl = PluginUtils.BuildPlugins<IToolProvider>(sp, typeof(ToolAggregator), typeof(McpToolRegistry));
+    var mcp = sp.GetRequiredService<McpToolRegistry>();
+    return new ToolAggregator(pl.Concat([mcp]));
+});
 
 // Security
 builder.Services.TryAddScoped<IToolPolicyProvider>(sp => new ToolPolicyAggregator(PluginUtils.BuildPlugins<IToolPolicyProvider>(sp, typeof(ToolPolicyAggregator))));
