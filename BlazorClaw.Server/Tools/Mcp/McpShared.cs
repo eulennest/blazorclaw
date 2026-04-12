@@ -23,8 +23,8 @@ public class McpServerEntry
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 
-    [JsonPropertyName("enabled")]
-    public bool Enabled { get; set; } = true;
+    [JsonPropertyName("access")]
+    public AccessState Access { get; set; } = AccessState.Enabled;
 
     [JsonPropertyName("addedAt")]
     public DateTime AddedAt { get; set; } = DateTime.UtcNow;
@@ -33,7 +33,7 @@ public class McpServerEntry
 public class McpRegistry
 {
     [JsonPropertyName("servers")]
-    public List<McpServerEntry> Servers { get; set; } = new();
+    public List<McpServerEntry> Servers { get; set; } = [];
 
     public static Task<McpRegistry> LoadRegistryAsync(IVfsSystem vfs, VfsPath path) => LoadRegistryAsync(new VfsEntity(vfs, path));
     public static async Task<McpRegistry> LoadRegistryAsync(VfsEntity vfs)
@@ -70,4 +70,12 @@ public class McpRegistry
         await JsonSerializer.SerializeAsync(stream, registry, options);
 
     }
+}
+
+
+public enum AccessState
+{
+    Disabled = 0,
+    Enabled = 1,
+    Autostart = 2
 }

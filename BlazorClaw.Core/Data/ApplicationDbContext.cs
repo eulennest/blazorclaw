@@ -68,4 +68,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }
+
+    public async Task<string?> GetApiKeyAsync(string? id)
+    {
+        if (!Guid.TryParse(id, out var guidId)) return null;
+        var apiKey = await ApiKeys.Include(o => o.OAuthToken).FirstOrDefaultAsync(o => o.Id == guidId);
+        if (apiKey?.OAuthTokenId == null) return apiKey?.Value;
+        return apiKey.OAuthToken?.AccessToken;
+    }
 }

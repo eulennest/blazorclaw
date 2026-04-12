@@ -94,10 +94,7 @@ builder.Services.TryAddScoped<IVaultProvider, JsonVaultProvider>();
 
 builder.Services.TryAddScoped<SessionStateAccessor>();
 builder.Services.TryAddScoped<MessageContextAccessor>();
-builder.Services.TryAddScoped<IVfsSystem>(sp =>
-{
-    return PathUtils.BuildVFSAsync(sp).GetAwaiter().GetResult();
-});
+builder.Services.TryAddScoped<IVfsSystem>(sp => PathUtils.BuildVFSAsync(sp).GetAwaiter().GetResult());
 // Tool registry
 builder.Services.TryAddScoped<McpToolRegistry>();
 builder.Services.TryAddScoped<IToolProvider>(sp =>

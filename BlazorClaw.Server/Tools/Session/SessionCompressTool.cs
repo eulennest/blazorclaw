@@ -34,7 +34,6 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
         sess.MessageHistory.Clear();
         sess.MessageHistory.Add(new(ChatRole.System, sb.ToString()) { CreatedAt = DateTimeOffset.UtcNow });
 
-        var hasasist = false;
         foreach (var msg in last)
         {
             if (msg.Role == ChatRole.Assistant)
@@ -58,7 +57,7 @@ public class SessionCompressTool : BaseTool<SessionCompressParams>
                 foreach (var item in msg.Contents.OfType<FunctionResultContent>())
                 {
                     var txt = Convert.ToString(item.Result);
-                    if (txt?.Length > 100)
+                    if (txt?.Length > 125)
                     {
                         item.Result = $"{txt[..100]}... [GEKÜRZT {txt.Length} Zeichen]";
                     }

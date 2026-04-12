@@ -1,7 +1,5 @@
 using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Tools;
-using BlazorClaw.Core.Utils;
-using BlazorClaw.Core.VFS;
 using System.ComponentModel;
 
 namespace BlazorClaw.Server.Tools.Mcp;
@@ -12,8 +10,7 @@ public class McpListToolParams : BaseToolParams
     public bool OnlyEnabled { get; set; } = true;
 }
 
-public class McpListTool(IVfsSystem vfs)
-    : BaseTool<McpListToolParams>
+public class McpListTool(McpToolRegistry mcpToolRegistry) : BaseTool<McpListToolParams>
 {
     public override string Name => "mcp_list";
     public override string Description => """
@@ -21,7 +18,6 @@ public class McpListTool(IVfsSystem vfs)
                 
         Ausgabe:
         - name: Server-Name (eindeutig)
-        - serverUri: Verbindungs-URI (http://, ws://, npx://, etc.)
         - authType: Authentifizierung (none, bearer, basic)
         - description: Beschreibung
         - enabled: Aktiviert/Deaktiviert
@@ -33,32 +29,26 @@ public class McpListTool(IVfsSystem vfs)
 
     protected override async Task<string> ExecuteInternalAsync(McpListToolParams p, MessageContext context)
     {
-        var registry = await McpRegistry.LoadRegistryAsync(vfs, PathUtils.VfsMcpUser);
-
-        var servers = registry.Servers
-            .Where(s => !p.OnlyEnabled || s.Enabled)
-            .OrderBy(s => s.Name)
-            .ToList();
-
-        if (!servers.Any())
+        if ((mcpToolRegistry.ToolsReg?.Count ?? 0) > 0)
             return "Keine MCP-Server konfiguriert.";
 
         var result = new System.Text.StringBuilder();
-        result.AppendLine($"=== MCP Server Registry ({servers.Count}) ===\n");
+        result.AppendLine($"=== MCP Server Registry ===\n");
 
-        foreach (var server in servers)
+        foreach (var keyval in mcpToolRegistry.ToolsReg!)
         {
-            result.AppendLine($"📌 {server.Name}");
-            result.AppendLine($"   URI: {server.ServerUri}");
-            result.AppendLine($"   Auth: {server.AuthType}");
-            if (!string.IsNullOrWhiteSpace(server.Description))
-                result.AppendLine($"   Info: {server.Description}");
-            result.AppendLine($"   Status: {(server.Enabled ? "✅ Enabled" : "❌ Disabled")}");
-            result.AppendLine($"   Added: {server.AddedAt:G}");
+            var server = keyval.Value;
+            if (p.OnlyEnabled && !server.Active) continue;
+
+            result.AppendLine($"📌 {server.Entry.Name}");
+            result.AppendLine($"   Auth: {server.Entry.AuthType}");
+            if (!string.IsNullOrWhiteSpace(server.Entry.Description))
+                result.AppendLine($"   Info: {server.Entry.Description}");
+            result.AppendLine($"   Status: {(server.Active ? "✅ Enabled" : "❌ Disabled")}");
+            result.AppendLine($"   Added: {server.Entry.AddedAt:G}");
             result.AppendLine();
         }
 
         return result.ToString();
-
     }
 }

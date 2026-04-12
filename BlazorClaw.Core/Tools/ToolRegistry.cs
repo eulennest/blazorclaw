@@ -6,7 +6,7 @@ namespace BlazorClaw.Core.Tools;
 
 public class ToolRegistry : IToolProvider
 {
-    private readonly Dictionary<string, ITool> _tools = new();
+    private readonly Dictionary<string, ITool> _tools = [];
 
     public ToolRegistry(IServiceProvider sp)
     {

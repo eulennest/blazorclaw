@@ -55,7 +55,6 @@ namespace BlazorClaw.Server.Services
             return rootCommand;
         }
 
-
         public async Task DispatchMessageAsync(IChannelSession channelSession, object message)
         {
             try

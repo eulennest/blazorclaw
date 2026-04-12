@@ -1,4 +1,5 @@
-﻿using BlazorClaw.Core.Services;
+﻿using BlazorClaw.Core.Data;
+using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Utils;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -7,14 +8,15 @@ using System.Text.Json;
 
 namespace BlazorClaw.Core.Speech
 {
-    public class OpenAiTtsProvider(PathHelper pathHelper, HttpClient httpClient, IConfiguration conf, ILogger<OpenAiTtsProvider> logger) : ITextToSpeechProvider, ISpeechToTextProvider
+    public class OpenAiTtsProvider( ApplicationDbContext db, PathHelper pathHelper, HttpClient httpClient, IConfiguration conf, ILogger<OpenAiTtsProvider> logger) : ITextToSpeechProvider, ISpeechToTextProvider
     {
         public string Name => "OpenAI";
         public string Description => "OpenAI Text-to-Speech API";
 
         public async Task<Tuple<Stream, string>?> TextToSpeechAsync(string voiceName, string text, object options)
         {
-            var apiKey = conf.GetValue<string>("TTS:OpenAI:ApiKey");
+            var apiKeyId = conf.GetValue<string>("TTS:OpenAI:ApiKey");
+            var apiKey = (await db.GetApiKeyAsync(apiKeyId)) ?? apiKeyId;
             if (string.IsNullOrEmpty(apiKey)) return null;
             var request = new
             {
