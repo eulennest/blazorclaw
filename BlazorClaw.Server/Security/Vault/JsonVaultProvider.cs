@@ -77,9 +77,7 @@ public class JsonVaultProvider(
     {
         var filePath = GetFilePath();
         if (!await filePath.VFS.ExistsAsync(filePath.Path))
-            await vfs.CreateDirectoryRecursiveAsync(filePath.Path.ParentPath);
-        using var sourceStream = await filePath.OpenAsync(FileMode.Open, FileAccess.Read);
-
+            await filePath.VFS.CreateDirectoryRecursiveAsync(filePath.Path.ParentPath);
         var userId = mca.Context?.UserId ?? string.Empty;
         using var tempStream = new MemoryStream();
         await JsonSerializer.SerializeAsync(tempStream, data);
