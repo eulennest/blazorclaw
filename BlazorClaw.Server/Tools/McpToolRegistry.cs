@@ -10,7 +10,7 @@ using System.Text.Json;
 
 namespace BlazorClaw.Server.Tools;
 
-public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
+public class McpToolRegistry(IVfsSystem vfs, ILogger<McpToolRegistry> logger) : IToolProvider
 {
     public ConcurrentDictionary<string, McpServer>? ToolsReg { get; private set; }
 
@@ -34,21 +34,30 @@ public class McpToolRegistry(IVfsSystem vfs) : IToolProvider
         var regs = await McpRegistry.LoadRegistryAsync(vfs, PathUtils.VfsMcpUser);
         foreach (var reg in regs.Servers)
         {
-            if (reg.Access == AccessState.Disabled)
+            try
             {
-                if (ret.TryRemove(reg.Name, out var t))
-                    if (t.McpClient != null) await t.McpClient.DisposeAsync();
-                continue;
+
+
+                if (reg.Access == AccessState.Disabled)
+                {
+                    if (ret.TryRemove(reg.Name, out var t))
+                        if (t.McpClient != null) await t.McpClient.DisposeAsync();
+                    continue;
+                }
+
+                if (ret.ContainsKey(reg.Name)) continue;
+
+                var uri = new Uri(reg.ServerUri, UriKind.Absolute);
+                var transport = FromUri(uri);
+                if (transport == null) continue;
+                var mcpClient = await McpClient.CreateAsync(transport);
+                var tools = await mcpClient.ListToolsAsync();
+                ret[reg.Name] = new McpServer(reg) { McpClient = mcpClient, ClientTools = tools };
             }
-
-            if (ret.ContainsKey(reg.Name)) continue;
-
-            var uri = new Uri(reg.ServerUri, UriKind.Absolute);
-            var transport = FromUri(uri);
-            if (transport == null) continue;
-            var mcpClient = await McpClient.CreateAsync(transport);
-            var tools = await mcpClient.ListToolsAsync();
-            ret[reg.Name] = new McpServer(reg) { McpClient = mcpClient, ClientTools = tools };
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error while building MCP tools for server {ServerName}", reg.Name);
+            }
         }
         return ret;
     }
