@@ -48,9 +48,9 @@ public class McpToggleTool(McpToolRegistry mcpToolRegistry)
             regi.McpClient = await McpClient.CreateAsync(transport);
             regi.ClientTools = await regi.McpClient.ListToolsAsync();
         }
-
+        var names = regi.ClientTools?.Select(o => $"mcp_{regi.Entry.Name}_{o.Name}").ToList() ?? [];
         var sess = context.Provider.GetRequiredService<SessionStateAccessor>().SessionState;
         if (sess != null) sess.Tools = null;
-        return $"MCP Server '{regi.Entry.Name}' wurde {(p.Active ? "aktiviert" : "deaktiviert")}.\nWeitere Tools (mcp_{regi.Entry.Name}_*) sind nun verfügbar.";
+        return $"MCP Server '{regi.Entry.Name}' wurde {(p.Active ? "aktiviert" : "deaktiviert")}.\nFolgende weitere Tools sind nun verfügbar: {string.Join(", ", names)}";
     }
 }
