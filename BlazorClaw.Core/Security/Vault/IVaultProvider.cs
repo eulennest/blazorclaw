@@ -9,47 +9,63 @@ public interface IVaultProvider
 
 public interface IVaultKey
 {
-    string Key { get; set; }
-    string Title { get; set; }
+    string Key { get; }
+    string Title { get; }
 }
 public interface IVaultEntry : IVaultKey
 {
-    string Secret { get; set; }
-    string Notes { get; set; }
+    string Secret { get; }
+    string Notes { get; }
 }
 
-
-public class VaultAggregator(IEnumerable<IVaultProvider> provider) : IVaultProvider
+public interface IProviderVaultKey : IVaultKey
 {
-    private readonly List<IVaultProvider> Providers = [.. provider];
+    string Provider { get; }
+}
 
-    private Dictionary<string, IVaultProvider> keysAll = [];
-    public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
-    {
-        Dictionary<string, IVaultProvider> keys = [];
-        foreach (var prov in Providers)
-        {
-            await foreach (var item in prov.GetKeysAsync())
-            {
-                keys.TryAdd(item.Key, prov);
-                yield return item;
-            }
-        }
-        keysAll = keys;
+public interface IProviderVaultEntry : IVaultEntry, IProviderVaultKey
+{
+}
 
-    }
+public interface IVaultManager
+{
+    IEnumerable<IVaultProviderInfo> GetProviders();
+    IVaultProviderInfo? GetProvider(string provider);
+    IAsyncEnumerable<IProviderVaultKey> GetKeysAsync(string? provider = null);
+    Task<IProviderVaultEntry?> GetSecretAsync(string key, string? provider = null);
+    Task<string> SetSecretAsync(string provider, string title, string secret, string? note = null, string? key = null);
+}
 
-    public Task<IVaultEntry?> GetSecretAsync(string key)
-    {
-        if (keysAll.TryGetValue(key, out var prov))
-            return prov.GetSecretAsync(key);
-        return Task.FromResult<IVaultEntry?>(null);
-    }
+public interface IVaultProviderInfo
+{
+    string Id { get; }
+    string Type { get; }
+    string Title { get; }
+    string? Description { get; }
+    bool CanWrite { get; }
+}
 
-    public Task<string> SetSecretAsync(string title, string secret, string? note = null, string? key = null)
-    {
-        if (!string.IsNullOrWhiteSpace(key) && keysAll.TryGetValue(key, out var prov))
-            return prov.SetSecretAsync(title, secret, note, key);
-        return Providers.First().SetSecretAsync(title, secret, note, key);
-    }
+public class VaultProviderInfo : IVaultProviderInfo
+{
+    public required string Id { get; init; }
+    public required string Type { get; init; }
+    public required string Title { get; init; }
+    public string? Description { get; init; }
+    public bool CanWrite { get; init; }
+    public required IVaultProvider Provider { get; init; }
+}
+
+public class ProviderVaultKey(string provider, IVaultKey inner) : IProviderVaultKey
+{
+    protected IVaultKey Inner { get; } = inner;
+    public string Provider { get; } = provider;
+    public string Key => Inner.Key;
+    public string Title => Inner.Title;
+}
+
+public class ProviderVaultEntry(string provider, IVaultEntry inner) : ProviderVaultKey(provider, inner), IProviderVaultEntry
+{
+    protected IVaultEntry Entry { get; } = inner;
+    public string Secret => Entry.Secret;
+    public string Notes => Entry.Notes;
 }

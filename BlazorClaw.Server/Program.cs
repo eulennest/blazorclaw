@@ -89,7 +89,19 @@ builder.Services.TryAddScoped<IVariableResolver, VariableResolver>();
 builder.Services.TryAddScoped<VariableResolverHelper>();
 
 builder.Services.Configure<JsonVaultOptions>(builder.Configuration.GetSection(JsonVaultOptions.Section));
-builder.Services.TryAddScoped<IVaultProvider, JsonVaultProvider>();
+builder.Services.Configure<BitwardenOptions>(builder.Configuration.GetSection(BitwardenOptions.Section));
+builder.Services.TryAddScoped<JsonVaultProvider>();
+builder.Services.TryAddScoped<BitwardenVaultProvider>();
+builder.Services.TryAddScoped<VaultProviderInfo>(sp => new VaultProviderInfo
+{
+    Id = "json-main",
+    Type = "json",
+    Title = "JSON Vault",
+    Description = "Lokaler verschlüsselter JSON-Vault",
+    CanWrite = true,
+    Provider = sp.GetRequiredService<JsonVaultProvider>()
+});
+builder.Services.TryAddScoped<IVaultManager, VaultManager>();
 
 builder.Services.TryAddScoped<SessionStateAccessor>();
 builder.Services.TryAddScoped<MessageContextAccessor>();

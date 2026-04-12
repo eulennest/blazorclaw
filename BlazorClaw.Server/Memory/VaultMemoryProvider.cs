@@ -9,17 +9,17 @@ namespace BlazorClaw.Server.Memory
         public async IAsyncEnumerable<string> SearchAsync(string[] queries, int maxResults, MessageContext? context)
         {
             if (context == null) yield break;
-            var vaultProvider = context.Provider.GetRequiredService<IVaultProvider>();
+            var vaultManager = context.Provider.GetRequiredService<IVaultManager>();
             var results = 0;
 
-            await foreach (var key in vaultProvider.GetKeysAsync())
+            await foreach (var key in vaultManager.GetKeysAsync())
             {
                 foreach (var query in queries)
                 {
                     if (key.Title.Contains(query, StringComparison.OrdinalIgnoreCase) || key.Key.Contains(query, StringComparison.OrdinalIgnoreCase))
                     {
                         results++;
-                        yield return $"[Vault: {key.Key}]\nTitle:{key.Title}\nuse vault_get('{key.Key}')"; break;
+                        yield return $"[Vault: {key.Provider}:{key.Key}]\nTitle:{key.Title}\nuse vault_get(provider='{key.Provider}', key='{key.Key}')"; break;
                     }
                 }
                 if (results >= maxResults) break;

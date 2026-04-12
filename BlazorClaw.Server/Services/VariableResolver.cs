@@ -18,7 +18,7 @@ public class VariableResolver : IVariableResolver
 
     /// <summary>
     /// Resolve a variable from Vault or Environment
-    /// Format: "vault:ItemName" or "env:VAR_NAME"
+    /// Format: "vault:ItemName", "vault:provider:ItemName" or "env:VAR_NAME"
     /// </summary>
     public async Task<string> ResolveAsync(string source, MessageContext context)
     {
@@ -71,20 +71,22 @@ public class VariableResolver : IVariableResolver
     }
 
     /// <summary>
-    /// Resolve from Vault (Bitwarden)
-    /// Implementation TBD - will use bw CLI or Vault API
+    /// Resolve from Vault.
     /// </summary>
     private async Task<string> ResolveFromVaultAsync(string itemName, MessageContext context)
     {
-        _logger.LogInformation("Resolving from Vault: {ItemName}", itemName);
-        var vp = context.Provider.GetRequiredService<IVaultProvider>();
-        var secret = await vp.GetSecretAsync(itemName).ConfigureAwait(false);
-        if (secret == null)
+        string? provider = null;
+        var key = itemName;
+        var parts = itemName.Split(':', 2);
+        if (parts.Length == 2)
         {
-            var sk = await vp.GetKeysAsync().FirstOrDefaultAsync(o => itemName.Equals(o.Title, StringComparison.InvariantCultureIgnoreCase));
-            if (sk != null)
-                secret = await vp.GetSecretAsync(sk.Key);
+            provider = parts[0];
+            key = parts[1];
         }
+
+        _logger.LogInformation("Resolving from Vault: {Provider}:{ItemName}", provider, key);
+        var vm = context.Provider.GetRequiredService<IVaultManager>();
+        var secret = await vm.GetSecretAsync(key, provider).ConfigureAwait(false);
         return secret?.Secret ?? string.Empty;
     }
 
