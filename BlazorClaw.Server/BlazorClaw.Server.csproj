@@ -25,6 +25,8 @@
     <ProjectReference Include="..\BlazorClaw.Core\BlazorClaw.Core.csproj" />
     <ProjectReference Include="..\BlazorClaw.Channels\BlazorClaw.Channels.csproj" />
     <ProjectReference Include="..\BlazorClaw.UI\BlazorClaw.UI.csproj" />
+    <ProjectReference Include="..\vendor\vaultwarden\src\Apigen.Vaultwarden.Client\Apigen.Vaultwarden.Client.csproj" />
+    <ProjectReference Include="..\vendor\vaultwarden\src\Apigen.Vaultwarden.Models\Apigen.Vaultwarden.Models.csproj" />
   </ItemGroup>
 
 </Project>

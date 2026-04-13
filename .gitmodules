@@ -1,0 +1,3 @@
+[submodule "vendor/vaultwarden"]
+	path = vendor/vaultwarden
+	url = git@github.com:eulennest/vaultwarden.git
