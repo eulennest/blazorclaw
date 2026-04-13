@@ -279,8 +279,7 @@ public class BitwardenVaultProvider(
     private static byte[] DeriveStretchedKey(string email, string masterPassword, PasswordPreloginResponseModel prelogin)
     {
         var passwordBytes = Encoding.UTF8.GetBytes(masterPassword);
-        var salt = prelogin.Salt ?? email.ToLowerInvariant();
-        var saltBytes = Encoding.UTF8.GetBytes(salt);
+        var saltBytes = Encoding.UTF8.GetBytes(email.ToLowerInvariant());
         var iterations = prelogin.KdfIterations ?? 600000;
 
         if ((prelogin.Kdf ?? KdfType.Pbkdf2Sha256) != KdfType.Pbkdf2Sha256)
@@ -295,8 +294,7 @@ public class BitwardenVaultProvider(
     private static string HashMasterPassword(string email, string masterPassword, PasswordPreloginResponseModel prelogin)
     {
         var passwordBytes = Encoding.UTF8.GetBytes(masterPassword);
-        var salt = prelogin.Salt ?? email.ToLowerInvariant();
-        var saltBytes = Encoding.UTF8.GetBytes(salt);
+        var saltBytes = Encoding.UTF8.GetBytes(email.ToLowerInvariant());
         var iterations = prelogin.KdfIterations ?? 600000;
 
         if ((prelogin.Kdf ?? KdfType.Pbkdf2Sha256) != KdfType.Pbkdf2Sha256)
