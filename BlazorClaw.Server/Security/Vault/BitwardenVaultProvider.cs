@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Bitwarden.Sdk;
 using BlazorClaw.Core.Security.Vault;
@@ -15,11 +14,11 @@ public class BitwardenOptions : BitwardenSettings
 
 public class BitwardenVaultProvider(
     IOptions<BitwardenOptions> options,
-    IEnumerable<VaultProviderInfo> providers,
+    IServiceProvider services,
     ILogger<BitwardenVaultProvider> logger) : IVaultProvider
 {
     private readonly BitwardenOptions _options = options.Value;
-    private readonly List<VaultProviderInfo> _providers = providers.ToList();
+    private readonly IServiceProvider _services = services;
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private BitwardenClient? _client;
     private BitwardenOptions? _resolvedOptions;
@@ -103,14 +102,16 @@ public class BitwardenVaultProvider(
         if (HasDirectConfig(_options))
             return _options;
 
-        foreach (var provider in _providers.Where(o => o.Id.StartsWith("db-", StringComparison.InvariantCultureIgnoreCase)))
+        var vm = _services.GetRequiredService<IVaultManager>();
+
+        foreach (var provider in vm.GetProviders().Where(o => o.Id.StartsWith("db-", StringComparison.InvariantCultureIgnoreCase)))
         {
-            await foreach (var key in provider.Provider.GetKeysAsync())
+            await foreach (var key in vm.GetKeysAsync(provider.Id))
             {
                 if (!key.Title.Contains("vaultwarden", StringComparison.InvariantCultureIgnoreCase))
                     continue;
 
-                var entry = await provider.Provider.GetSecretAsync(key.Key);
+                var entry = await vm.GetSecretAsync(key.Key, provider.Id);
                 if (entry == null || string.IsNullOrWhiteSpace(entry.Secret))
                     continue;
 
