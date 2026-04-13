@@ -16,19 +16,19 @@ public class VaultManager(IEnumerable<VaultProviderInfo> providers) : IVaultMana
         return ret;
     }
 
-    public async IAsyncEnumerable<IProviderVaultKey> GetKeysAsync(string? provider = null)
+    public async IAsyncEnumerable<IProviderVaultKey> GetKeysAsync(string? provider = null, string? searchQuery = null)
     {
         if (!string.IsNullOrWhiteSpace(provider))
         {
             var item = RequireProvider(provider);
-            await foreach (var key in item.Provider.GetKeysAsync())
+            await foreach (var key in item.Provider.GetKeysAsync(searchQuery))
                 yield return new ProviderVaultKey(item.Id, key);
             yield break;
         }
 
         foreach (var item in _providers.Values.OrderBy(o => o.Id))
         {
-            await foreach (var key in item.Provider.GetKeysAsync())
+            await foreach (var key in item.Provider.GetKeysAsync(searchQuery))
                 yield return new ProviderVaultKey(item.Id, key);
         }
     }

@@ -29,21 +29,31 @@ public class BitwardenVaultProvider(
     private readonly SemaphoreSlim _initLock = new(1, 1);
     private BitwardenSession? _session;
 
-    public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
+    public async IAsyncEnumerable<IVaultKey> GetKeysAsync(string? searchQuery = null)
     {
         var session = await GetSessionAsync();
         if (session.UserSymmetricKey.Length == 0) yield break;
         var sync = await GetSyncAsync(session);
+        var query = searchQuery?.Trim();
 
         foreach (var cipher in sync.Ciphers?.Where(o => o.DeletedDate == null) ?? [])
         {
             var key = GetCipherId(cipher);
             if (key == null) continue;
 
+            var title = TryDecryptCipherName(cipher, session);
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var entry = ToEntry(cipher, session);
+                if (!title.Contains(query, StringComparison.InvariantCultureIgnoreCase)
+                    && !entry.Notes.Contains(query, StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+            }
+
             yield return new VaultKey
             {
                 Key = key,
-                Title = TryDecryptCipherName(cipher, session)
+                Title = title
             };
         }
     }

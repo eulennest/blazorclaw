@@ -22,13 +22,19 @@ public class JsonVaultProvider(
         return new VfsFile(vfs, VfsPath.Parse(VfsPath.Parse("/~secure/"), options.FilePath, VfsPathParseMode.File));
     }
 
-    public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
+    public async IAsyncEnumerable<IVaultKey> GetKeysAsync(string? searchQuery = null)
     {
         var data = await ReadAsync();
+        var query = searchQuery?.Trim();
 
         if (data != null)
             foreach (var item in data)
             {
+                if (!string.IsNullOrWhiteSpace(query)
+                    && !item.Value.Title.Contains(query, StringComparison.InvariantCultureIgnoreCase)
+                    && !item.Value.Notes.Contains(query, StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+
                 yield return new VaultKey() { Key = item.Key, Title = item.Value.Title };
             }
     }

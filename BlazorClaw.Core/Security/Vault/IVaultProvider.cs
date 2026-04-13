@@ -2,7 +2,7 @@ namespace BlazorClaw.Core.Security.Vault;
 
 public interface IVaultProvider
 {
-    IAsyncEnumerable<IVaultKey> GetKeysAsync();
+    IAsyncEnumerable<IVaultKey> GetKeysAsync(string? searchQuery = null);
     Task<IVaultEntry?> GetSecretAsync(string key);
     Task<string> SetSecretAsync(string title, string secret, string? note = null, string? key = null);
     Task RemoveSecretAsync(string key);
@@ -32,7 +32,7 @@ public interface IVaultManager
 {
     IEnumerable<IVaultProviderInfo> GetProviders();
     IVaultProviderInfo? GetProvider(string provider);
-    IAsyncEnumerable<IProviderVaultKey> GetKeysAsync(string? provider = null);
+    IAsyncEnumerable<IProviderVaultKey> GetKeysAsync(string? provider = null, string? searchQuery = null);
     Task<IProviderVaultEntry?> GetSecretAsync(string key, string? provider = null);
     Task<string> SetSecretAsync(string provider, string title, string secret, string? note = null, string? key = null);
     Task RemoveSecretAsync(string provider, string key);

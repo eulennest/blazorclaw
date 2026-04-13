@@ -100,29 +100,7 @@ public class VaultListTool : BaseTool<VaultListParams>
     protected override async Task<string> ExecuteInternalAsync(VaultListParams p, MessageContext context)
     {
         var vm = context.Provider.GetRequiredService<IVaultManager>();
-        var list = await vm.GetKeysAsync(p.Provider).ToListAsync();
-
-        if (!string.IsNullOrWhiteSpace(p.SearchQuery))
-        {
-            var query = p.SearchQuery.Trim();
-            var filtered = new List<IProviderVaultKey>();
-
-            foreach (var item in list)
-            {
-                if (item.Title.Contains(query, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    filtered.Add(item);
-                    continue;
-                }
-
-                var secret = await vm.GetSecretAsync(item.Key, item.Provider);
-                if (secret?.Notes?.Contains(query, StringComparison.InvariantCultureIgnoreCase) == true)
-                    filtered.Add(item);
-            }
-
-            list = filtered;
-        }
-
+        var list = await vm.GetKeysAsync(p.Provider, p.SearchQuery).ToListAsync();
         return string.Join(Environment.NewLine, list.Select(o => $"{o.Provider}: {o.Key}: {o.Title}"));
     }
 }

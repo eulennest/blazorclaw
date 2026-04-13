@@ -8,11 +8,19 @@ namespace BlazorClaw.Server.Security.Vault;
 
 public class DbUserApiKeyVaultProvider(ApplicationDbContext db, MessageContextAccessor mca) : IVaultProvider
 {
-    public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
+    public async IAsyncEnumerable<IVaultKey> GetKeysAsync(string? searchQuery = null)
     {
         var userId = GetRequiredUserId();
-        var items = await db.ApiKeys
-            .Where(o => o.UserId == userId && o.OAuthTokenId == null)
+        var query = db.ApiKeys
+            .Where(o => o.UserId == userId && o.OAuthTokenId == null);
+
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            var sq = searchQuery.Trim();
+            query = query.Where(o => o.Identifier.Contains(sq) || ((o.TokenType ?? string.Empty).Contains(sq)));
+        }
+
+        var items = await query
             .OrderBy(o => o.Identifier)
             .ToListAsync();
 
@@ -103,13 +111,24 @@ public class DbUserApiKeyVaultProvider(ApplicationDbContext db, MessageContextAc
 
 public class DbReadonlyApiKeyVaultProvider(ApplicationDbContext db, MessageContextAccessor mca) : IVaultProvider
 {
-    public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
+    public async IAsyncEnumerable<IVaultKey> GetKeysAsync(string? searchQuery = null)
     {
         var userId = mca.Context?.UserId;
-        var items = await db.ApiKeys
+        var query = db.ApiKeys
             .Include(o => o.OAuthToken)
                 .ThenInclude(o => o!.Server)
-            .Where(o => o.UserId == null || (userId != null && o.UserId == userId && o.OAuthTokenId != null))
+            .Where(o => o.UserId == null || (userId != null && o.UserId == userId && o.OAuthTokenId != null));
+
+        if (!string.IsNullOrWhiteSpace(searchQuery))
+        {
+            var sq = searchQuery.Trim();
+            query = query.Where(o => o.Identifier.Contains(sq)
+                || ((o.TokenType ?? string.Empty).Contains(sq))
+                || (o.UserId != null && o.UserId.Contains(sq))
+                || (o.OAuthToken != null && o.OAuthToken.Server != null && o.OAuthToken.Server.Name.Contains(sq)));
+        }
+
+        var items = await query
             .OrderBy(o => o.Identifier)
             .ToListAsync();
 
