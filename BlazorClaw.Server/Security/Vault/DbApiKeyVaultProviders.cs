@@ -22,9 +22,11 @@ public class DbUserApiKeyVaultProvider(ApplicationDbContext db, MessageContextAc
 
     public async Task<IVaultEntry?> GetSecretAsync(string key)
     {
+        if(!Guid.TryParse(key, out var keyGuid))
+            throw new ArgumentException($"Ungültiger Schlüssel: '{key}'", nameof(key));
         var userId = GetRequiredUserId();
         var item = await db.ApiKeys
-            .FirstOrDefaultAsync(o => o.UserId == userId && o.OAuthTokenId == null && o.Id.ToString() == key);
+            .FirstOrDefaultAsync(o => o.UserId == userId && o.OAuthTokenId == null && o.Id == keyGuid);
         return item == null ? null : ToEntry(item);
     }
 
@@ -34,7 +36,10 @@ public class DbUserApiKeyVaultProvider(ApplicationDbContext db, MessageContextAc
         ApiKey? item = null;
         if (!string.IsNullOrWhiteSpace(key))
         {
-            item = await db.ApiKeys.FirstOrDefaultAsync(o => o.Id.ToString() == key && o.UserId == userId && o.OAuthTokenId == null)
+            if (!Guid.TryParse(key, out var keyGuid))
+                throw new ArgumentException($"Ungültiger Schlüssel: '{key}'", nameof(key));
+
+            item = await db.ApiKeys.FirstOrDefaultAsync(o => o.Id == keyGuid && o.UserId == userId && o.OAuthTokenId == null)
                 ?? throw new KeyNotFoundException($"API-Key '{key}' nicht gefunden oder nicht schreibbar.");
         }
         else
@@ -69,8 +74,11 @@ public class DbUserApiKeyVaultProvider(ApplicationDbContext db, MessageContextAc
 
     public async Task RemoveSecretAsync(string key)
     {
+        if (!Guid.TryParse(key, out var keyGuid))
+            throw new ArgumentException($"Ungültiger Schlüssel: '{key}'", nameof(key));
+
         var userId = GetRequiredUserId();
-        var item = await db.ApiKeys.FirstOrDefaultAsync(o => o.Id.ToString() == key && o.UserId == userId && o.OAuthTokenId == null)
+        var item = await db.ApiKeys.FirstOrDefaultAsync(o => o.Id == keyGuid && o.UserId == userId && o.OAuthTokenId == null)
             ?? throw new KeyNotFoundException($"API-Key '{key}' nicht gefunden oder nicht löschbar.");
         db.ApiKeys.Remove(item);
         await db.SaveChangesAsync();
@@ -111,11 +119,14 @@ public class DbReadonlyApiKeyVaultProvider(ApplicationDbContext db, MessageConte
 
     public async Task<IVaultEntry?> GetSecretAsync(string key)
     {
+        if (!Guid.TryParse(key, out var keyGuid))
+            throw new ArgumentException($"Ungültiger Schlüssel: '{key}'", nameof(key));
+
         var userId = mca.Context?.UserId;
         var item = await db.ApiKeys
             .Include(o => o.OAuthToken)
                 .ThenInclude(o => o!.Server)
-            .FirstOrDefaultAsync(o => o.Id.ToString() == key && (o.UserId == null || (userId != null && o.UserId == userId && o.OAuthTokenId != null)));
+            .FirstOrDefaultAsync(o => o.Id == keyGuid && (o.UserId == null || (userId != null && o.UserId == userId && o.OAuthTokenId != null)));
         return item == null ? null : ToEntry(item);
     }
 
