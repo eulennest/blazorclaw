@@ -17,7 +17,6 @@ using BlazorClaw.Server;
 using BlazorClaw.Server.Security.Vault;
 using BlazorClaw.Server.Services;
 using BlazorClaw.Server.Tools;
-using BlazorClaw.Server.Tools.Mcp;
 using BlazorClaw.Server.Web;
 using BlazorClaw.UI;
 using BlazorClaw.UI.Components.Account;
@@ -120,6 +119,16 @@ builder.Services.AddScoped<VaultProviderInfo>(sp => new VaultProviderInfo
     Description = "System- und OAuth-Keys aus der Datenbank (read-only)",
     CanWrite = false,
     Provider = sp.GetRequiredService<DbReadonlyApiKeyVaultProvider>()
+});
+
+builder.Services.AddScoped<VaultProviderInfo>(sp => new VaultProviderInfo
+{
+    Id = "vaultwarden",
+    Type = "Vaultwarden",
+    Title = "Vaultwarden",
+    Description = "Vaultwarden Vault",
+    CanWrite = false,
+    Provider = sp.GetRequiredService<BitwardenVaultProvider>()
 });
 builder.Services.TryAddScoped<IVaultManager, VaultManager>();
 

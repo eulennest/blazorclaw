@@ -32,6 +32,7 @@ public class BitwardenVaultProvider(
     public async IAsyncEnumerable<IVaultKey> GetKeysAsync()
     {
         var session = await GetSessionAsync();
+        if (session.UserSymmetricKey.Length == 0) yield break;
         var sync = await GetSyncAsync(session);
 
         foreach (var cipher in sync.Ciphers?.Where(o => o.DeletedDate == null) ?? [])
@@ -50,6 +51,8 @@ public class BitwardenVaultProvider(
     public async Task<IVaultEntry?> GetSecretAsync(string key)
     {
         var session = await GetSessionAsync();
+        if (session.UserSymmetricKey.Length == 0) return null;
+
         var sync = await GetSyncAsync(session);
         var cipher = sync.Ciphers?.FirstOrDefault(o => string.Equals(o.Id?.ToString(), key, StringComparison.InvariantCultureIgnoreCase));
         if (cipher == null) return null;
@@ -63,6 +66,8 @@ public class BitwardenVaultProvider(
     public async Task RemoveSecretAsync(string key)
     {
         var session = await GetSessionAsync();
+        if (session.UserSymmetricKey.Length == 0) return;
+
         await session.Client.Ciphers.DeleteAsync(key);
         session.Sync = null;
     }
@@ -79,6 +84,12 @@ public class BitwardenVaultProvider(
             var cfg = await ResolveLoginConfigAsync();
             _session = await CreateSessionAsync(cfg);
             logger.LogInformation("Bitwarden/Vaultwarden session initialized against {BaseUrl} for {Email}", cfg.BaseUrl, cfg.Email);
+            return _session;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Fehler bei der Initialisierung der Bitwarden/Vaultwarden Session: {Message}", ex.Message);
+            _session = new(null!, [], []);
             return _session;
         }
         finally
