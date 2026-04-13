@@ -286,8 +286,8 @@ public class BitwardenVaultProvider(
             throw new NotSupportedException("Aktuell wird nur PBKDF2-SHA256 für Vaultwarden Login unterstützt.");
 
         byte[] masterKey = Rfc2898DeriveBytes.Pbkdf2(passwordBytes, saltBytes, iterations, HashAlgorithmName.SHA256, 32);
-        byte[] encKey = HKDF.DeriveKey(HashAlgorithmName.SHA256, masterKey, 32, info: Encoding.UTF8.GetBytes("enc"));
-        byte[] macKey = HKDF.DeriveKey(HashAlgorithmName.SHA256, masterKey, 32, info: Encoding.UTF8.GetBytes("mac"));
+        byte[] encKey = HKDF.Expand(HashAlgorithmName.SHA256, masterKey, 32, Encoding.UTF8.GetBytes("enc"));
+        byte[] macKey = HKDF.Expand(HashAlgorithmName.SHA256, masterKey, 32, Encoding.UTF8.GetBytes("mac"));
         return [.. encKey, .. macKey];
     }
 
