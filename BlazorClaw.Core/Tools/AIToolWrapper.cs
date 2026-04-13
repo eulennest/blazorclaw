@@ -9,6 +9,8 @@ public class AIToolWrapper(ITool tool, MessageContext context) : AIFunction
     public override string Name => tool.Name;
     public override string Description => tool.Description;
 
+    public override string ToString() => $"{Name}: {Description}";
+
     public override JsonElement JsonSchema => tool.GetSchema();
 
     protected override async ValueTask<object?> InvokeCoreAsync(AIFunctionArguments arguments, CancellationToken cancellationToken)

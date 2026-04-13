@@ -21,6 +21,8 @@ public abstract class BaseTool<TParams> : ITool where TParams : class
     public abstract string Name { get; }
     public abstract string Description { get; }
 
+    public override string ToString() => $"{Name}: {Description}";
+
     // public JsonElement GetSchema() => SchemaGenerator.Generate(typeof(TParams));
     public JsonElement GetSchema() => AIJsonUtilities.CreateJsonSchema(typeof(TParams));
     public object? BuildArguments(object? arguments)

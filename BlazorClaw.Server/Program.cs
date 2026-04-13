@@ -92,7 +92,9 @@ builder.Services.Configure<JsonVaultOptions>(builder.Configuration.GetSection(Js
 builder.Services.Configure<BitwardenOptions>(builder.Configuration.GetSection(BitwardenOptions.Section));
 builder.Services.TryAddScoped<JsonVaultProvider>();
 builder.Services.TryAddScoped<BitwardenVaultProvider>();
-builder.Services.TryAddScoped<VaultProviderInfo>(sp => new VaultProviderInfo
+builder.Services.TryAddScoped<DbUserApiKeyVaultProvider>();
+builder.Services.TryAddScoped<DbReadonlyApiKeyVaultProvider>();
+builder.Services.AddScoped<VaultProviderInfo>(sp => new VaultProviderInfo
 {
     Id = "json-main",
     Type = "json",
@@ -100,6 +102,24 @@ builder.Services.TryAddScoped<VaultProviderInfo>(sp => new VaultProviderInfo
     Description = "Lokaler verschlüsselter JSON-Vault",
     CanWrite = true,
     Provider = sp.GetRequiredService<JsonVaultProvider>()
+});
+builder.Services.AddScoped<VaultProviderInfo>(sp => new VaultProviderInfo
+{
+    Id = "db-userkeys",
+    Type = "dbkeys",
+    Title = "DB User Keys",
+    Description = "Normale benutzerbezogene API-Keys aus der Datenbank (schreibbar)",
+    CanWrite = true,
+    Provider = sp.GetRequiredService<DbUserApiKeyVaultProvider>()
+});
+builder.Services.AddScoped<VaultProviderInfo>(sp => new VaultProviderInfo
+{
+    Id = "db-readonly",
+    Type = "dbkeys",
+    Title = "DB Readonly Keys",
+    Description = "System- und OAuth-Keys aus der Datenbank (read-only)",
+    CanWrite = false,
+    Provider = sp.GetRequiredService<DbReadonlyApiKeyVaultProvider>()
 });
 builder.Services.TryAddScoped<IVaultManager, VaultManager>();
 

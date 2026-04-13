@@ -53,6 +53,8 @@ public class VaultProviderInfo : IVaultProviderInfo
     public string? Description { get; init; }
     public bool CanWrite { get; init; }
     public required IVaultProvider Provider { get; init; }
+
+    public override string ToString() => $"{Title} [{Id}]";
 }
 
 public class ProviderVaultKey(string provider, IVaultKey inner) : IProviderVaultKey
@@ -61,6 +63,8 @@ public class ProviderVaultKey(string provider, IVaultKey inner) : IProviderVault
     public string Provider { get; } = provider;
     public string Key => Inner.Key;
     public string Title => Inner.Title;
+
+    public override string ToString() => $"{Title} ({Key}) @ {Provider}";
 }
 
 public class ProviderVaultEntry(string provider, IVaultEntry inner) : ProviderVaultKey(provider, inner), IProviderVaultEntry
@@ -68,4 +72,6 @@ public class ProviderVaultEntry(string provider, IVaultEntry inner) : ProviderVa
     protected IVaultEntry Entry { get; } = inner;
     public string Secret => Entry.Secret;
     public string Notes => Entry.Notes;
+
+    public override string ToString() => $"{Title} ({Key}) @ {Provider}";
 }
