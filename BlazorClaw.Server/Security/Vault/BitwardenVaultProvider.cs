@@ -70,8 +70,34 @@ public class BitwardenVaultProvider(
         return ToEntry(cipher, session);
     }
 
-    public Task<string> SetSecretAsync(string title, string secret, string? note = null, string? key = null)
-        => throw new NotSupportedException("Bitwarden/Vaultwarden Schreiben ist über den Apigen-Provider noch nicht implementiert.");
+    public async Task<string> SetSecretAsync(string title, string secret, string? note = null, string? key = null)
+    {
+        var session = await GetSessionAsync();
+        if (session.UserSymmetricKey.Length == 0)
+            throw new InvalidOperationException("Vaultwarden Session ist nicht initialisiert.");
+
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            var request = new CipherCreateRequestModel
+            {
+                Cipher = BuildCipherRequest(title, secret, note, session.UserSymmetricKey)
+            };
+
+            var created = await session.Client.Ciphers.CiphersPostCreateAsync(request);
+            session.Sync = null;
+            return created.Id?.ToString() ?? throw new InvalidOperationException("Vaultwarden Create lieferte keine Id.");
+        }
+
+        var sync = await GetSyncAsync(session);
+        var existing = sync.Ciphers?.FirstOrDefault(o => string.Equals(o.Id?.ToString(), key, StringComparison.InvariantCultureIgnoreCase))
+            ?? throw new KeyNotFoundException($"Vaultwarden-Eintrag '{key}' nicht gefunden.");
+
+        var itemKey = ResolveItemKey(existing, session);
+        var requestModel = BuildCipherRequest(title, secret, note, itemKey, existing);
+        var updated = await session.Client.Ciphers.UpdateAsync(key, requestModel);
+        session.Sync = null;
+        return updated.Id?.ToString() ?? key;
+    }
 
     public async Task RemoveSecretAsync(string key)
     {
@@ -271,6 +297,40 @@ public class BitwardenVaultProvider(
         return baseKey;
     }
 
+    private static CipherRequestModel BuildCipherRequest(string title, string secret, string? note, byte[] itemKey, CipherDetailsResponseModel? existing = null)
+    {
+        return new CipherRequestModel
+        {
+            Type = CipherType.Login,
+            OrganizationId = existing?.OrganizationId?.ToString(),
+            FolderId = existing?.FolderId?.ToString(),
+            Favorite = existing?.Favorite ?? false,
+            Reprompt = existing?.Reprompt,
+            Key = existing?.Key,
+            Name = EncryptString(title, itemKey),
+            Notes = string.IsNullOrWhiteSpace(note) ? null : EncryptString(note, itemKey),
+            Fields = existing?.Fields,
+            PasswordHistory = existing?.PasswordHistory,
+            Login = new CipherLoginModel
+            {
+                Username = existing?.Login?.Username,
+                Password = EncryptString(secret, itemKey),
+                PasswordRevisionDate = DateTime.UtcNow,
+                Uris = existing?.Login?.Uris,
+                Uri = existing?.Login?.Uri,
+                Totp = existing?.Login?.Totp,
+                AutofillOnPageLoad = existing?.Login?.AutofillOnPageLoad,
+                Fido2Credentials = existing?.Login?.Fido2Credentials
+            },
+            Card = null,
+            Identity = null,
+            SecureNote = null,
+            SshKey = null,
+            LastKnownRevisionDate = existing?.RevisionDate,
+            ArchivedDate = existing?.ArchivedDate
+        };
+    }
+
     private static string? GetCipherId(CipherDetailsResponseModel cipher) => cipher.Id?.ToString();
 
     private static string TryDecrypt(string? encString, byte[] key)
@@ -313,6 +373,25 @@ public class BitwardenVaultProvider(
         byte[] masterKey = Rfc2898DeriveBytes.Pbkdf2(passwordBytes, saltBytes, iterations, HashAlgorithmName.SHA256, 32);
         byte[] masterPasswordHash = Rfc2898DeriveBytes.Pbkdf2(masterKey, passwordBytes, 1, HashAlgorithmName.SHA256, 32);
         return Convert.ToBase64String(masterPasswordHash);
+    }
+
+    private static string EncryptString(string value, byte[] key)
+    {
+        byte[] plain = Encoding.UTF8.GetBytes(value);
+        byte[] iv = RandomNumberGenerator.GetBytes(16);
+        byte[] ek = key[..32];
+        byte[] mk = key[32..64];
+
+        using var aes = Aes.Create();
+        aes.Key = ek;
+        aes.IV = iv;
+        aes.Mode = CipherMode.CBC;
+        aes.Padding = PaddingMode.PKCS7;
+        byte[] ct = aes.CreateEncryptor().TransformFinalBlock(plain, 0, plain.Length);
+
+        byte[] macData = [.. iv, .. ct];
+        byte[] mac = HMACSHA256.HashData(mk, macData);
+        return $"2.{Convert.ToBase64String(iv)}|{Convert.ToBase64String(ct)}|{Convert.ToBase64String(mac)}";
     }
 
     private static byte[] DecryptRsa(string encString, RSA rsa)
