@@ -123,15 +123,20 @@ public class BitwardenVaultProvider(
             {
                 if (!key.Title.Contains("vaultwarden", StringComparison.InvariantCultureIgnoreCase))
                     continue;
+                logger.LogInformation("Found Secret {key}", key);
 
                 var entry = await vm.GetSecretAsync(key.Key, provider.Id);
                 if (entry == null || string.IsNullOrWhiteSpace(entry.Secret))
                     continue;
+                logger.LogInformation("Load Secret {entry}", entry);
 
                 var url = TryParseUrl(entry.Notes);
+                if (!string.IsNullOrWhiteSpace(url))
+                    logger.LogInformation("-Found URL {url}", url);
                 var email = TryParseNamedValue(entry.Notes, "email", "username", "user", "login");
                 if (string.IsNullOrWhiteSpace(url) || string.IsNullOrWhiteSpace(email))
                     continue;
+                logger.LogInformation("-Found EMAIL {email}", email);
 
                 logger.LogInformation("Bitwarden provider bootstrapped from {ProviderId} using key {Title}", provider.Id, entry.Title);
                 return new BitwardenLoginConfig(url, email, entry.Secret);
