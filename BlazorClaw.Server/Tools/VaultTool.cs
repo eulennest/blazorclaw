@@ -42,6 +42,9 @@ public class VaultListParams
 {
     [Description("Optionaler Vault-Provider. Wenn leer, werden alle Provider angezeigt")]
     public string? Provider { get; set; }
+
+    [Description("Optionaler Suchbegriff. Filtert nach Title und Notes")]
+    public string? SearchQuery { get; set; }
 }
 
 public class VaultRemoveParams
@@ -92,12 +95,34 @@ public class VaultSetTool : BaseTool<VaultSetParams>
 public class VaultListTool : BaseTool<VaultListParams>
 {
     public override string Name => "vault_list";
-    public override string Description => "Listet alle Schlüssel in einem Vault oder providerübergreifend auf";
+    public override string Description => "Listet alle Schlüssel in einem Vault oder providerübergreifend auf, optional gefiltert nach Title und Notes";
 
     protected override async Task<string> ExecuteInternalAsync(VaultListParams p, MessageContext context)
     {
         var vm = context.Provider.GetRequiredService<IVaultManager>();
         var list = await vm.GetKeysAsync(p.Provider).ToListAsync();
+
+        if (!string.IsNullOrWhiteSpace(p.SearchQuery))
+        {
+            var query = p.SearchQuery.Trim();
+            var filtered = new List<IProviderVaultKey>();
+
+            foreach (var item in list)
+            {
+                if (item.Title.Contains(query, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    filtered.Add(item);
+                    continue;
+                }
+
+                var secret = await vm.GetSecretAsync(item.Key, item.Provider);
+                if (secret?.Notes?.Contains(query, StringComparison.InvariantCultureIgnoreCase) == true)
+                    filtered.Add(item);
+            }
+
+            list = filtered;
+        }
+
         return string.Join(Environment.NewLine, list.Select(o => $"{o.Provider}: {o.Key}: {o.Title}"));
     }
 }
