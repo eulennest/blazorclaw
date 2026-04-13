@@ -67,6 +67,15 @@ public class DbUserApiKeyVaultProvider(ApplicationDbContext db, MessageContextAc
         return item.Id.ToString();
     }
 
+    public async Task RemoveSecretAsync(string key)
+    {
+        var userId = GetRequiredUserId();
+        var item = await db.ApiKeys.FirstOrDefaultAsync(o => o.Id.ToString() == key && o.UserId == userId && o.OAuthTokenId == null)
+            ?? throw new KeyNotFoundException($"API-Key '{key}' nicht gefunden oder nicht löschbar.");
+        db.ApiKeys.Remove(item);
+        await db.SaveChangesAsync();
+    }
+
     private string GetRequiredUserId()
     {
         var userId = mca.Context?.UserId;
@@ -112,6 +121,9 @@ public class DbReadonlyApiKeyVaultProvider(ApplicationDbContext db, MessageConte
 
     public Task<string> SetSecretAsync(string title, string secret, string? note = null, string? key = null)
         => throw new InvalidOperationException("Readonly DB-Key-Vault unterstützt kein Schreiben.");
+
+    public Task RemoveSecretAsync(string key)
+        => throw new InvalidOperationException("Readonly DB-Key-Vault unterstützt kein Löschen.");
 
     private static VaultEntry ToEntry(ApiKey item)
     {

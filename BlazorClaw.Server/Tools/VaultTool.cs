@@ -44,6 +44,17 @@ public class VaultListParams
     public string? Provider { get; set; }
 }
 
+public class VaultRemoveParams
+{
+    [Required]
+    [Description("Vault-Provider, aus dem gelöscht werden soll")]
+    public string Provider { get; set; } = string.Empty;
+
+    [Required]
+    [Description("Der Schlüssel des Geheimnisses, das gelöscht werden soll")]
+    public string Key { get; set; } = string.Empty;
+}
+
 public class VaultGetTool : BaseTool<VaultGetParams>
 {
     public override string Name => "vault_get";
@@ -88,6 +99,19 @@ public class VaultListTool : BaseTool<VaultListParams>
         var vm = context.Provider.GetRequiredService<IVaultManager>();
         var list = await vm.GetKeysAsync(p.Provider).ToListAsync();
         return string.Join(Environment.NewLine, list.Select(o => $"{o.Provider}: {o.Key}: {o.Title}"));
+    }
+}
+
+public class VaultRemoveTool : BaseTool<VaultRemoveParams>
+{
+    public override string Name => "vault_rm";
+    public override string Description => "Löscht ein Geheimnis aus einem bestimmten schreibbaren Vault-Provider";
+
+    protected override async Task<string> ExecuteInternalAsync(VaultRemoveParams p, MessageContext context)
+    {
+        var vm = context.Provider.GetRequiredService<IVaultManager>();
+        await vm.RemoveSecretAsync(p.Provider, p.Key);
+        return $"Removed: {p.Provider}: {p.Key}";
     }
 }
 

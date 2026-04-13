@@ -54,6 +54,14 @@ public class JsonVaultProvider(
         return key;
     }
 
+    public async Task RemoveSecretAsync(string key)
+    {
+        var data = (await ReadAsync()) ?? [];
+        if (!data.Remove(key))
+            throw new KeyNotFoundException($"Vault-Eintrag '{key}' nicht gefunden.");
+        await SaveAsync(data);
+    }
+
     private async Task<Dictionary<string, VaultEntry>?> ReadAsync()
     {
         try

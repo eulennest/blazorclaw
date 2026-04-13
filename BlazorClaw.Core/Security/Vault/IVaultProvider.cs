@@ -5,6 +5,7 @@ public interface IVaultProvider
     IAsyncEnumerable<IVaultKey> GetKeysAsync();
     Task<IVaultEntry?> GetSecretAsync(string key);
     Task<string> SetSecretAsync(string title, string secret, string? note = null, string? key = null);
+    Task RemoveSecretAsync(string key);
 }
 
 public interface IVaultKey
@@ -34,6 +35,7 @@ public interface IVaultManager
     IAsyncEnumerable<IProviderVaultKey> GetKeysAsync(string? provider = null);
     Task<IProviderVaultEntry?> GetSecretAsync(string key, string? provider = null);
     Task<string> SetSecretAsync(string provider, string title, string secret, string? note = null, string? key = null);
+    Task RemoveSecretAsync(string provider, string key);
 }
 
 public interface IVaultProviderInfo

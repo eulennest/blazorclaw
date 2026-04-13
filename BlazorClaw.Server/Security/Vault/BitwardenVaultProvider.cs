@@ -65,4 +65,10 @@ public class BitwardenVaultProvider : IVaultProvider
             return await Task.Run(() => _client.Secrets.Update(uid, title, secret, note ?? string.Empty, orgaId, []).Id.ToString());
         }
     }
+
+    public async Task RemoveSecretAsync(string key)
+    {
+        var uid = Guid.Parse(key);
+        await Task.Run(() => _client.Secrets.Delete(new[] { uid }));
+    }
 }

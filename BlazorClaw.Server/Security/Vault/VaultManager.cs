@@ -59,6 +59,14 @@ public class VaultManager(IEnumerable<VaultProviderInfo> providers) : IVaultMana
         return item.Provider.SetSecretAsync(title, secret, note, key);
     }
 
+    public Task RemoveSecretAsync(string provider, string key)
+    {
+        var item = RequireProvider(provider);
+        if (!item.CanWrite)
+            throw new InvalidOperationException($"Vault provider '{item.Id}' ist read-only.");
+        return item.Provider.RemoveSecretAsync(key);
+    }
+
     private VaultProviderInfo RequireProvider(string provider)
     {
         if (!_providers.TryGetValue(provider, out var item))
