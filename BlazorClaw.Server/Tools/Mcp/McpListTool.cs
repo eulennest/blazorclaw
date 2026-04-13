@@ -4,13 +4,8 @@ using System.ComponentModel;
 
 namespace BlazorClaw.Server.Tools.Mcp;
 
-public class McpListToolParams : BaseToolParams
-{
-    [Description("Nur aktivierte Server anzeigen (optional, default: true)")]
-    public bool OnlyActive { get; set; } = false;
-}
 
-public class McpListTool(McpToolRegistry mcpToolRegistry) : BaseTool<McpListToolParams>
+public class McpListTool(McpToolRegistry mcpToolRegistry) : BaseTool<EmptyParams>
 {
     public override string Name => "mcp_list";
     public override string Description => """
@@ -27,7 +22,7 @@ public class McpListTool(McpToolRegistry mcpToolRegistry) : BaseTool<McpListTool
         - OnlyActive: Nur aktive anzeigen (default: false)
         """;
 
-    protected override async Task<string> ExecuteInternalAsync(McpListToolParams p, MessageContext context)
+    protected override async Task<string> ExecuteInternalAsync(EmptyParams p, MessageContext context)
     {
         if ((mcpToolRegistry.ToolsReg?.Count ?? 0) <= 0)
             return "Keine MCP-Server konfiguriert.";
@@ -38,7 +33,6 @@ public class McpListTool(McpToolRegistry mcpToolRegistry) : BaseTool<McpListTool
         foreach (var keyval in mcpToolRegistry.ToolsReg!)
         {
             var server = keyval.Value;
-            if (p.OnlyActive && !server.Active) continue;
 
             result.AppendLine($"📌 {server.Entry.Name}");
             result.AppendLine($"   Auth: {server.Entry.AuthType}");
