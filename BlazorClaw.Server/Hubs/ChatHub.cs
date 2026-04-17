@@ -47,7 +47,10 @@ public class ChatHub : Hub, IChannelBot
 
         try
         {
-            await OnMessageReceivedAsync(canid, message);
+            await Task.WhenAny(OnMessageReceivedAsync(canid, message), Task.Delay(2000));
+        }
+        catch (TaskCanceledException)
+        {
         }
         catch (Exception ex)
         {
