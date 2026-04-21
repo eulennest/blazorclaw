@@ -1,4 +1,3 @@
-using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Sessions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
@@ -21,6 +20,7 @@ public class ChatHub : Hub, IChannelBot
     }
 
     public string ChannelProvider => "WebChat";
+    public string BotId => "default";
 
     public event Func<IChannelSession, object, Task>? MessageReceived;
 

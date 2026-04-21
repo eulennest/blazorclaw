@@ -18,6 +18,8 @@ public interface ISessionManager
 
 public interface IChannelBot
 {
+    string BotId { get; }
+
     Task StartAsync(CancellationToken cancellationToken = default);
     Task StopAsync(CancellationToken cancellationToken = default);
 
@@ -44,6 +46,7 @@ public interface IChannelSession : IChannelBot
 public class ChannelSession(IChannelBot bot, string channelId, string? senderId = null) : IChannelSession
 {
     public string ChannelProvider => bot.ChannelProvider;
+    public string BotId => bot.BotId;
     public string ChannelId { get; } = channelId;
     public string SenderId { get; } = senderId ?? channelId;
     public Guid SessionId { get; set; }
@@ -88,6 +91,7 @@ public class ChannelSession(IChannelBot bot, string channelId, string? senderId 
 public abstract class AbstractChannelBot(string channelProvider) : IChannelBot
 {
     public virtual string ChannelProvider { get; protected set; } = channelProvider;
+    public virtual string BotId { get; protected set; }
 
     public event Func<IChannelSession, object, Task>? MessageReceived;
 
@@ -105,12 +109,11 @@ public abstract class AbstractChannelBot(string channelProvider) : IChannelBot
 
 public abstract class AbstractConfigChannelBot<T>(string channelProvider) : AbstractChannelBot(channelProvider), IKeyedConfigure<T>
 {
-    public string Key { get; protected set; } = string.Empty;
+    public string Key => BotId;
     public T? Config { get; protected set; }
-
     public ValueTask<bool> ConfigureAsync(string key, T config)
     {
-        Key = key;
+        BotId = key;
         Config = config;
         return ConfigureAsync();
     }
