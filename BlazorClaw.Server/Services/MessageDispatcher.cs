@@ -55,8 +55,11 @@ namespace BlazorClaw.Server.Services
             return rootCommand;
         }
 
-        public async Task DispatchMessageAsync(IChannelSession channelSession, object message)
+        public async void DispatchMessage(object? sender, Core.Sessions.MessageReceiveEventArgs e)
         {
+            var channelSession = e.Channel;
+            var message = e.Message;
+
             try
             {
                 var userManager = Scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
@@ -149,13 +152,14 @@ namespace BlazorClaw.Server.Services
 
         public void Register(IChannelBot bot)
         {
-            bot.MessageReceived -= DispatchMessageAsync;
-            bot.MessageReceived += DispatchMessageAsync;
+            bot.MessageReceived -= DispatchMessage;
+            bot.MessageReceived += DispatchMessage;
         }
+
 
         public void Unregister(IChannelBot bot)
         {
-            bot.MessageReceived -= DispatchMessageAsync;
+            bot.MessageReceived -= DispatchMessage;
         }
     }
 }

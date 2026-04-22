@@ -3,11 +3,7 @@ using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Utils;
 using Microsoft.Extensions.AI;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System.CommandLine;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
@@ -30,16 +26,16 @@ namespace BlazorClaw.Channels.Services
                 return text;
 
             return text
-                .Replace("_", "\\_")
-                .Replace("*", "\\*")
+                //.Replace("_", "\\_")
+                //         .Replace("*", "\\*")
                 .Replace("[", "\\[")
                 .Replace("]", "\\]")
                 .Replace("(", "\\(")
                 .Replace(")", "\\)")
-                .Replace("~", "\\~")
-                .Replace("`", "\\`")
+                //.Replace("~", "\\~")
+                //         .Replace("`", "\\`")
                 .Replace(">", "\\>")
-                .Replace("#", "\\#")
+                //.Replace("#", "\\#")
                 .Replace("+", "\\+")
                 .Replace("-", "\\-")
                 .Replace("=", "\\=")
@@ -62,7 +58,7 @@ namespace BlazorClaw.Channels.Services
                     var uriStr = uri.Uri.ToString();
                     if ("audio/ogg".Equals(uri.MediaType))
                     {
-                        await Client.SendVoice(channelId.ChannelId, uriStr, cancellationToken: cancellationToken);
+                        await Client.SendVoice(channelId.ChannelId, await GetMediaFileAsync(uriStr), cancellationToken: cancellationToken);
                     }
                     else if (uri.MediaType.StartsWith("image/"))
                     {
@@ -90,8 +86,14 @@ namespace BlazorClaw.Channels.Services
 
             if (!string.IsNullOrWhiteSpace(content))
             {
-                var text = EscapeMarkdownV2(content);
-                await Client.SendMessage(channelId.ChannelId, text, ParseMode.MarkdownV2, cancellationToken: cancellationToken);
+                var i = 0;
+                foreach (var item in SplitMessageHybrid(content))
+                {
+                    if (i++ > 0) await Task.Delay(1000);
+                    var text = EscapeMarkdownV2(item);
+                    await Client.SendMessage(channelId.ChannelId, text, ParseMode.MarkdownV2, cancellationToken: cancellationToken);
+                }
+
             }
         }
 
@@ -177,15 +179,15 @@ namespace BlazorClaw.Channels.Services
                 if (update.Message?.Voice != null)
                 {
                     var ret = await DownloadVoiceMessage(botClient, update.Message.Voice.FileId);
-                    if (ret != null) await OnMessageReceivedAsync(new ChannelSession(this, telegramId), ret);
+                    if (ret != null) OnMessageReceived(new ChannelSession(this, telegramId), ret);
                 }
                 else if (update.Message?.Text != null)
                 {
-                    await OnMessageReceivedAsync(new ChannelSession(this, telegramId), update.Message.Text);
+                    OnMessageReceived(new ChannelSession(this, telegramId), update.Message.Text);
                 }
                 else if (update.CallbackQuery != null)
                 {
-                    await OnMessageReceivedAsync(new ChannelSession(this, telegramId), update.CallbackQuery.Data ?? string.Empty);
+                    OnMessageReceived(new ChannelSession(this, telegramId), update.CallbackQuery.Data ?? string.Empty);
                 }
             }
             catch (Exception ex)

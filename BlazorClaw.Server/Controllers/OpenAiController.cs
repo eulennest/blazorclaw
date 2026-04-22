@@ -31,7 +31,7 @@ public class OpenAiController(IMessageDispatcher md, ILogger<OpenAiController> l
                 ?? throw new ArgumentException("Keine Benutzernachricht in der Anfrage gefunden");
             var text = Convert.ToString(lastUserMessage.Content)!.Trim();
 
-            await bot.OnMessageReceivedAsync(bot, text);
+            bot.OnMessageReceived(bot, text);
 
             foreach (var item in bot.ReceivedMessages)
             {

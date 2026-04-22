@@ -65,7 +65,7 @@ namespace BlazorClaw.Channels.Services
             try
             {
                 await Client!.SendTypingSignal(roomId, true);
-                await OnMessageReceivedAsync(new ChannelSession(this, roomId, senderUserId), message);
+                OnMessageReceived(new ChannelSession(this, roomId, senderUserId), message);
             }
             catch (Exception ex)
             {

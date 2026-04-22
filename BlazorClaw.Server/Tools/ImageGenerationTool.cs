@@ -1,10 +1,10 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Data;
 using BlazorClaw.Core.DTOs;
 using BlazorClaw.Core.Providers;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Tools;
-using BlazorClaw.Core.Utils;
-using Microsoft.Extensions.AI;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
@@ -50,10 +50,13 @@ public class ImageGenerationTool(
 
     protected override async Task<string> ExecuteInternalAsync(ImageGenerationParams p, MessageContext context)
     {
-        var provider = configuration["Tools:ImageGen:Provider"] ?? providerManager.GetProviders().FirstOrDefault()?.Id;
-        if (string.IsNullOrWhiteSpace(provider)) throw new Exception("No Image Provider found!");
-        var chatClient = await providerManager.GetChatClientAsync(provider);
+        var db = context.Provider.GetRequiredService<ApplicationDbContext>();
+        var key = await db.ApiKeys.FirstOrDefaultAsync(o => o.UserId == null && o.Value.StartsWith("sk-or-v1-"));
+        if (key == null) throw new Exception("No OpenRouter Key found!");
 
+        using var httpClient = context.Provider.GetRequiredService<HttpClient>();
+        httpClient.BaseAddress = new Uri("https://openrouter.ai/api/v1/");
+        httpClient.DefaultRequestHeaders.Authorization = new("Bearer", key.Value);
 
         var prompt = p.Prompt;
         var modelKey = string.IsNullOrEmpty(p.Model) ? _models.Keys.First() : p.Model;
@@ -69,6 +72,8 @@ public class ImageGenerationTool(
             return $"Error: Invalid model '{modelKey}'. Available: {string.Join(", ", _models.Keys)}";
         }
 
+        logger.LogInformation("Generating image with {Model}: {Prompt}", modelName, prompt);
+
         // Convert size to aspect_ratio (OpenRouter format)
         var aspectRatio = size switch
         {
@@ -78,40 +83,50 @@ public class ImageGenerationTool(
             _ => "1:1"
         };
 
-        logger.LogInformation("Generating image with {Model}: {Prompt}", modelName, prompt);
-        var chatHistory = new List<Microsoft.Extensions.AI.ChatMessage>
+        var request = new
         {
-            new(ChatRole.User, prompt)
-        };
-        var opts = new ChatOptions()
-        {
-            ModelId = modelName,
-            AdditionalProperties = new(new Dictionary<string, object?>
+            model = modelName,
+            messages = new[]
             {
-                ["stream"] = false,
-                ["modalities"] = new[] { "image", "text" },
-                ["image_config"] = new { aspect_ratio = aspectRatio }
-            })
+                    new { role = "user", content = prompt }
+                },
+            modalities = new[] { "image", "text" },
+            stream = false,
+            image_config = new { aspect_ratio = aspectRatio }
         };
 
-        var response = await chatClient.GetResponseAsync(chatHistory, opts);
-        var imageUrl = response.Messages.FirstOrDefault()?.Contents.OfType<UriContent>().FirstOrDefault()?.Uri ??
-        throw new Exception("Error: No Image URL in response");
+        using var response = await httpClient.PostAsJsonAsync("chat/completions", request);
+        var responseJson = await response.Content.ReadAsStringAsync();
 
+        if (!response.IsSuccessStatusCode)
+        {
+            logger.LogError("Image generation error: {StatusCode} - {Error}", response.StatusCode, responseJson);
+            throw new Exception($"{responseJson} (response.StatusCode)");
+        }
 
-        var mediaFile = await env.SaveMediaFileAsync(imageUrl.ToString());
-        if (string.IsNullOrWhiteSpace(mediaFile))
-            throw new Exception("Error: Saving Image failed");
-        logger.LogInformation("Image saved to {Path}", mediaFile);
+        var responseData = JsonSerializer.Deserialize<ChatCompletionResponse>(responseJson, _jsonOptions);
 
-        var mediaUri = env.GetMediaUrl(mediaFile);
-        var sb = new StringBuilder();
-        sb.AppendLine($"✅ Bild generiert mit {modelKey}");
-        sb.AppendLine($"**URL:** {mediaUri}");
-        sb.AppendLine($"**Prompt:** {prompt}");
-        sb.AppendLine($"**Size:** {size}");
-        sb.AppendLine($"INFO: You can embed the image in markdown for webchat.");
-        sb.AppendLine($"Or you can use [IMAGE:{mediaUri}] in start of your message");
-        return sb.ToString();
+        if (responseData?.Choices?.Count > 0 && responseData.Choices[0].Message?.Images?.Count > 0)
+        {
+            var imageUrl = responseData.Choices[0].Message!.Images![0].ImageUrl?.Url ??
+                throw new Exception("Error: No Image URL in response");
+
+            var mediaFile = await env.SaveMediaFileAsync(imageUrl);
+            if (string.IsNullOrWhiteSpace(mediaFile))
+                throw new Exception("Error: Saving Image failed");
+            logger.LogInformation("Image saved to {Path}", mediaFile);
+
+            var mediaUri = env.GetMediaUrl(mediaFile);
+            var sb = new StringBuilder();
+            sb.AppendLine($"✅ Bild generiert mit {modelKey}");
+            sb.AppendLine($"**URL:** {mediaUri}");
+            sb.AppendLine($"**Prompt:** {prompt}");
+            sb.AppendLine($"**Size:** {size}");
+            sb.AppendLine($"INFO: You can embed the image in markdown for webchat.");
+            sb.AppendLine($"Or you can use [IMAGE:{mediaUri}] in start of your message");
+            return sb.ToString();
+        }
+
+        throw new Exception("Error: No Image in response");
     }
 }

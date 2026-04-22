@@ -96,7 +96,7 @@ public class ChannelCommand : ISystemCommand, ISystemCommandExecutor
             user.ChannelRegisterToken = Guid.NewGuid().ToString("N");
             user.ChannelRegisterTokenExpiredAt = DateTime.UtcNow.AddMinutes(10);
             await db.SaveChangesAsync();
-            return $"Registrierungstoken: {user.ChannelRegisterToken} (gültig für 10 Min)";
+            return $"Registrierungstoken: {user.ChannelRegisterToken} (gültig für 10 Min)\r\nUse `/register {user.ChannelRegisterToken}`";
         }
         else if (result.CommandResult.Command.Name == "list")
         {

@@ -73,9 +73,9 @@ namespace BlazorClaw.Channels.Services
             }
         }
 
-        private async void Client_OnMessage(object? sender, MessageReceiveEventArgs e)
+        private async void Client_OnMessage(object? sender, WhatsApp.MessageReceiveEventArgs e)
         {
-            await OnMessageReceivedAsync(new ChannelSession(this, e.From), e.Message);
+            OnMessageReceived(new ChannelSession(this, e.From), e.Message);
         }
 
         public override async Task StartAsync(CancellationToken cancellationToken = default)

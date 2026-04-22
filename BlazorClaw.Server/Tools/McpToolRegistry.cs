@@ -1,4 +1,5 @@
 using BlazorClaw.Core.Commands;
+using BlazorClaw.Core.Data;
 using BlazorClaw.Core.Tools;
 using BlazorClaw.Core.Utils;
 using BlazorClaw.Core.VFS;
@@ -10,7 +11,7 @@ using System.Text.Json;
 
 namespace BlazorClaw.Server.Tools;
 
-public class McpToolRegistry(IVfsSystem vfs, ILogger<McpToolRegistry> logger) : IToolProvider
+public class McpToolRegistry(IVfsSystem vfs, ILogger<McpToolRegistry> logger, ApplicationDbContext db) : IToolProvider
 {
     public ConcurrentDictionary<string, McpServer>? ToolsReg { get; private set; }
 
@@ -48,7 +49,7 @@ public class McpToolRegistry(IVfsSystem vfs, ILogger<McpToolRegistry> logger) : 
                 if (ret.ContainsKey(reg.Name)) continue;
 
                 var uri = new Uri(reg.ServerUri, UriKind.Absolute);
-                var transport = FromUri(uri);
+                var transport = FromUri(reg, uri);
                 if (transport == null) continue;
                 var mcpClient = await McpClient.CreateAsync(transport);
                 var tools = await mcpClient.ListToolsAsync();
@@ -64,16 +65,37 @@ public class McpToolRegistry(IVfsSystem vfs, ILogger<McpToolRegistry> logger) : 
 
     public ITool? GetTool(string name) => Tools?.FirstOrDefault(o => o.Name.Equals(name));
 
-    internal static IClientTransport? FromUri(Uri uri)
+    internal IClientTransport? FromUri(McpServerEntry reg, Uri uri)
     {
         if (uri.Scheme == "http" || uri.Scheme == "https")
         {
-            return new HttpClientTransport(new()
+
+            var opts = new HttpClientTransportOptions()
             {
-                Endpoint = uri
-            });
+                Endpoint = uri,
+            };
+            if (reg.AuthType.Equals("oauth", StringComparison.InvariantCultureIgnoreCase))
+            {
+                opts.OAuth = new()
+                {
+                    RedirectUri = new Uri($"http://localhost:1179/mcp/{reg.Name}/callback"),
+                    AuthorizationRedirectDelegate = HandleAuthorizationUrlAsync,
+                    DynamicClientRegistration = new()
+                    {
+                        ClientName = "ProtectedMcpClient",
+                    },
+                };
+            }
+
+
+            return new HttpClientTransport(opts);
         }
         return null;
+    }
+
+    private async Task<string?> HandleAuthorizationUrlAsync(Uri authorizationUri, Uri redirectUri, CancellationToken cancellationToken)
+    {
+        throw new NotImplementedException();
     }
 
     private class McpTool(McpServer entry, McpClientTool tool) : AIFunction, ITool

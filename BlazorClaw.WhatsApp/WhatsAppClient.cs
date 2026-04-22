@@ -4,9 +4,7 @@ using Baileys.Session;
 using Baileys.Socket;
 using Baileys.Types;
 using Baileys.Utils;
-using BlazorClaw.WhatsApp.Protocol;
 using Microsoft.Extensions.Logging;
-using Proto;
 using MsILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace BlazorClaw.WhatsApp
@@ -94,38 +92,39 @@ namespace BlazorClaw.WhatsApp
             return DisconnectAsync();
         }
     }
-}
-
-/// <summary>
-/// WhatsApp Client Configuration
-/// </summary>
-public class WhatsAppConfig
-{
-    public string AccountId { get; set; } = "default";
-    public string WebSocketUrl { get; set; } = "wss://web.whatsapp.com:5222/ws/chat";
-    public string? PhoneNumber { get; set; }
-    public string? PushName { get; set; }
-}
 
 
-public class QrCodeEventArgs : EventArgs
-{
-    public string QrData { get; }
-    public QrCodeEventArgs(string qrData)
+    /// <summary>
+    /// WhatsApp Client Configuration
+    /// </summary>
+    public class WhatsAppConfig
     {
-        QrData = qrData;
+        public string AccountId { get; set; } = "default";
+        public string WebSocketUrl { get; set; } = "wss://web.whatsapp.com:5222/ws/chat";
+        public string? PhoneNumber { get; set; }
+        public string? PushName { get; set; }
     }
-}
 
 
-public class MessageReceiveEventArgs : EventArgs
-{
-    public string From { get; }
-    public string Message { get; }
-    public MessageReceiveEventArgs(string from, string message)
+    public class QrCodeEventArgs : EventArgs
     {
-        From = from;
-        Message = message;
+        public string QrData { get; }
+        public QrCodeEventArgs(string qrData)
+        {
+            QrData = qrData;
+        }
     }
-}
 
+
+    public class MessageReceiveEventArgs : EventArgs
+    {
+        public string From { get; }
+        public string Message { get; }
+        public MessageReceiveEventArgs(string from, string message)
+        {
+            From = from;
+            Message = message;
+        }
+    }
+
+}

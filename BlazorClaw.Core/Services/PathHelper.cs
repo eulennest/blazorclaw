@@ -70,7 +70,7 @@ namespace BlazorClaw.Core.Services
                     // Split the string to escape the real data
 
                     var b64 = data.Split(",".ToCharArray(), 2);
-                    var mime = b64[0];
+                    var mime = b64[0].Substring(5).Split(';').First();
                     // Convert the base 64 String to byte array
                     byte[] byteArray = Convert.FromBase64String(b64[1]);
                     if (string.IsNullOrEmpty(mime) || !mime.Contains('/'))

@@ -1,28 +1,60 @@
 using BlazorClaw.Core.Sessions;
+using BlazorClaw.Server.Services;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.AI;
+using System.Collections.Concurrent;
 using System.Security.Claims;
 
 namespace BlazorClaw.Server.Hubs;
 
-public class ChatHub : Hub, IChannelBot
+public class ChatHub : Hub
 {
-    private readonly IMessageDispatcher md;
+    private readonly WebChatChannelBot bot;
     private readonly ISessionManager sessionManager;
     private readonly ILogger<ChatHub> logger;
 
-    public ChatHub(IMessageDispatcher md, ISessionManager sessionManager, ILogger<ChatHub> logger)
+    // Simple in-memory mapping example
+    private static readonly ConcurrentDictionary<string, HashSet<string>> _connectionGroups = new();
+
+    public async Task JoinGroupAsync(string groupName)
     {
-        this.md = md;
-        this.sessionManager = sessionManager;
-        this.logger = logger;
-        md.Register(this);
+        await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+
+        // Add to our manual tracking
+        _connectionGroups.AddOrUpdate(Context.ConnectionId,
+            [groupName],
+            (key, set) => { set.Add(groupName); return set; });
     }
 
-    public string ChannelProvider => "WebChat";
-    public string BotId => "default";
+    public async Task RemoveGroupAsync(string groupName)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
 
-    public event Func<IChannelSession, object, Task>? MessageReceived;
+        // Add to our manual tracking
+        _connectionGroups.AddOrUpdate(Context.ConnectionId,
+            [groupName],
+            (key, set) => { set.Remove(groupName); return set; });
+    }
+
+    public override Task OnDisconnectedAsync(Exception? exception)
+    {
+        // Clean up tracking on disconnect
+        _connectionGroups.TryRemove(Context.ConnectionId, out _);
+        return base.OnDisconnectedAsync(exception);
+    }
+
+    // Method to get groups for a connection
+    public static IEnumerable<string> GetGroupsForConnection(string connectionId)
+    {
+        return _connectionGroups.TryGetValue(connectionId, out var groups) ? groups : (IEnumerable<string>)[];
+    }
+
+    public ChatHub(WebChatChannelBot bot, ISessionManager sessionManager, ILogger<ChatHub> logger)
+    {
+        this.bot = bot;
+        this.logger = logger;
+        this.sessionManager = sessionManager;
+    }
 
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
@@ -39,15 +71,15 @@ public class ChatHub : Hub, IChannelBot
         var userIdString = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString();
         logger.LogInformation("Received message for session {SessionId} from user {userIdString}", sessionId, userIdString);
 
-        var canid = new ChannelSession(this, sessionId.ToString(), userIdString)
+        var canid = new ChannelSession(bot, sessionId.ToString(), userIdString)
         {
             SessionId = sessionId
         };
-        await SendChannelAsync(canid, new(ChatRole.User, message) { CreatedAt = DateTimeOffset.UtcNow });
+        await bot.SendChannelAsync(canid, new(ChatRole.User, message) { CreatedAt = DateTimeOffset.UtcNow }).ConfigureAwait(false);
 
         try
         {
-            await Task.WhenAny(OnMessageReceivedAsync(canid, message), Task.Delay(2000));
+            await Task.WhenAny(bot.HandelIncomingAsync(sessionId, userIdString, message), Task.Delay(1000)).ConfigureAwait(false);
         }
         catch (TaskCanceledException)
         {
@@ -55,7 +87,7 @@ public class ChatHub : Hub, IChannelBot
         catch (Exception ex)
         {
             logger.LogError(ex, "Error: {Message}", ex);
-            await SendUserAsync(canid, new(new("error"), ex.Message) { CreatedAt = DateTimeOffset.UtcNow });
+            await bot.SendChannelAsync(canid, new(new("error"), ex.Message) { CreatedAt = DateTimeOffset.UtcNow }).ConfigureAwait(false);
         }
     }
 
@@ -63,11 +95,17 @@ public class ChatHub : Hub, IChannelBot
     {
         try
         {
+            var grps = GetGroupsForConnection(Context.ConnectionId);
+            foreach (var grp in grps)
+            {
+                await RemoveGroupAsync(grp);
+            }
+            await JoinGroupAsync(sessionId.ToString());
+
             var state = await sessionManager.GetSessionAsync(sessionId);
             if (state != null)
             {
                 var msgs = state.MessageHistory;
-                await Groups.AddToGroupAsync(Context.ConnectionId, sessionId.ToString());
                 await Clients.Caller.SendAsync("HistoryLoaded", sessionId, msgs);
             }
         }
@@ -75,21 +113,5 @@ public class ChatHub : Hub, IChannelBot
         {
             logger.LogError(ex, "Error loading history for session {SessionId}", sessionId);
         }
-    }
-
-    public Task SendChannelAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
-    {
-        logger.LogInformation("Sending message to channel {ChannelId} in session {SessionId}", channelId.ChannelId, channelId.SessionId);
-        return Clients.Group(channelId.ChannelId).SendAsync("ReceiveMessage", channelId.SessionId, message, cancellationToken: cancellationToken);
-    }
-    public Task SendUserAsync(IChannelSession channelId, ChatMessage message, CancellationToken cancellationToken = default)
-    {
-        logger.LogInformation("Sending message to user {UserId} in session {SessionId}", channelId.SenderId, channelId.SessionId);
-        return Clients.Caller.SendAsync("ReceiveMessage", channelId.SessionId, message, cancellationToken: cancellationToken);
-    }
-
-    public Task OnMessageReceivedAsync(IChannelSession channelSession, object message)
-    {
-        return MessageReceived?.Invoke(channelSession, message) ?? Task.CompletedTask;
     }
 }

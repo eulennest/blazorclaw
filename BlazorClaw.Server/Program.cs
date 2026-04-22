@@ -50,7 +50,6 @@ builder.Services.AddHttpContextAccessor();
 
 // Add HttpClient for WebSearchProvider
 builder.Services.AddHttpClient<IWebSearchProvider, BraveSearchProvider>();
-builder.Services.AddHttpClient<BlazorClaw.Server.Tools.ImageGenerationTool>();
 
 // Add HttpClients for HttpRequestTool (normal + insecure for self-signed certs)
 builder.Services.AddHttpClient("HttpClient")
@@ -207,6 +206,8 @@ builder.Services.Configure<BotConfigs<MatrixBotEntry>>(builder.Configuration.Get
 builder.Services.AddHostedService<BotHostedService<MatrixBotEntry, MatrixChannelBot>>();
 builder.Services.AddHostedService<BotHostedService<TelegramBotEntry, TelegramChannelBot>>();
 builder.Services.AddHostedService<BotHostedService<WhatsAppBotEntry, WhatsAppChannelBot>>();
+builder.Services.AddSingleton<WebChatChannelBot>();
+builder.Services.AddHostedService<WebChatBotHostedService>();
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {

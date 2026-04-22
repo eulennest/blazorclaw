@@ -41,11 +41,13 @@ namespace BlazorClaw.Server.Services
             sb.AppendLine($"Time: {DateTime.UtcNow:u}");
             sb.AppendLine($"Model: {context.Session?.CurrentModel} | OS: {RuntimeInformation.OSDescription}");
             sb.AppendLine($"Session: {context.Session?.Title} ({context.Session?.Id})");
-            sb.AppendLine($"Channel: {context.Channel?.ChannelProvider} | User: {context.UserId}");
+            sb.AppendLine($"Channel: {context.Channel?.ChannelProvider}:{context.Channel?.BotId}:{context.Channel?.ChannelId}  (Provider:BotId:ChannelId)");
 
             if (uinfo != null)
+            {
+                sb.AppendLine($"User-ID: {uinfo.Id}");
                 sb.AppendLine($"Account: {uinfo.FirstName} {uinfo.LastName} <{uinfo.Email}>");
-
+            }
             sb.AppendLine($"Tokens: {state.LastUsage?.PromptTokens}/{maxtoken / 1000}k ({tokenProz:F1}%)");
 
             if (tokenProz > warningThreshold)

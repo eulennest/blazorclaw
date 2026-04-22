@@ -216,8 +216,9 @@ namespace BlazorClaw.Server.Services
                         logger.LogWarning("No message context available for session {SessionId}", sessionId);
                         continue;
                     }
+                    var e = new MessageReceiveEventArgs(cmdContext.Channel!, new ChatMessage(job.System ? ChatRole.System : ChatRole.User, fullMessage) { CreatedAt = DateTimeOffset.UtcNow });
 
-                    await dispatcher.DispatchMessageAsync(cmdContext.Channel!, new ChatMessage(job.System ? ChatRole.System : ChatRole.User, fullMessage) { CreatedAt = DateTimeOffset.UtcNow }).NoThrow();
+                    dispatcher.DispatchMessage(this, e);
                 }
                 catch (Exception ex)
                 {

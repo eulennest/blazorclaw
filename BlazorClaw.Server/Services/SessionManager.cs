@@ -63,7 +63,6 @@ namespace BlazorClaw.Server.Services
                     Session = sess,
                     Provider = await scope.ServiceProvider.GetRequiredService<IProviderManager>().GetChatClientAsync(model) ?? throw new Exception($"No provider found for model {model}")
                 };
-                await SetVFSAsync(state);
                 scope.ServiceProvider.GetRequiredService<SessionStateAccessor>().SetSessionState(state);
 
                 _sessions.TryAdd(sessionId, state);
@@ -214,7 +213,6 @@ namespace BlazorClaw.Server.Services
         public async IAsyncEnumerable<ChatMessage> DispatchToLLMAsync(ChatSessionState sessionState, MessageContext context)
         {
             logger.LogInformation("Dispatching LLM request for session {SessionId}", sessionState.Session.Id);
-            using var httpClient = sessionState.Services.GetRequiredService<HttpClient>();
             var provMan = sessionState.Services.GetRequiredService<IProviderManager>();
             sessionState.Provider = await provMan.GetChatClientAsync(sessionState.Session.CurrentModel) ?? sessionState.Provider;
 
@@ -310,6 +308,8 @@ namespace BlazorClaw.Server.Services
 
         private async IAsyncEnumerable<ChatMessage> InternalDispatchToLLMAsync(IChatClient chatClient, ChatOptions opts, ChatSessionState sessionState, MessageContext context, ILogger logger)
         {
+            logger.LogInformation("InternalDispatchToLLMAsync LLM request for session {SessionId}", sessionState.Session.Id);
+
             var messages = sessionState.MessageHistory.Select(o => o.Clone());
             foreach (var message in messages)
             {
@@ -323,7 +323,7 @@ namespace BlazorClaw.Server.Services
             if (sessionState.Tools == null)
                 await LoadSessionToolsAsync(sessionState, context);
 
-            var content = await chatClient.GetResponseAsync(messages, opts);
+            var content = await chatClient.GetResponseAsync(messages, opts).ConfigureAwait(false);
 
             //sessionState.LastUsage = content!.Usage ?? sessionState.LastUsage;
             //sessionState.Costs += content.Usage?.PromptCost ?? 0;
@@ -334,7 +334,12 @@ namespace BlazorClaw.Server.Services
             {
                 await ConvertMediaFilesAsync(context, message);
                 sessionState.MessageHistory.Add(message); // Assistant Call
+                sessionState.LastUsage ??= new();
+                sessionState.LastUsage.TotalTokens = content.Usage?.TotalTokenCount ?? sessionState.LastUsage.TotalTokens;
+                sessionState.LastUsage.CompletionTokens = content.Usage?.OutputTokenCount ?? sessionState.LastUsage.CompletionTokens;
+                sessionState.LastUsage.PromptTokens = content.Usage?.InputTokenCount ?? sessionState.LastUsage.PromptTokens;
                 yield return message;
+
 
                 var calls = message.Contents.OfType<FunctionCallContent>().ToList();
                 if (calls.Count > 0)

@@ -2,6 +2,7 @@ using BlazorClaw.Core.Commands;
 using BlazorClaw.Core.Services;
 using BlazorClaw.Core.Sessions;
 using BlazorClaw.Core.Tools;
+using BlazorClaw.Server.Services;
 using Microsoft.Extensions.AI;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
@@ -22,6 +23,9 @@ public class MsgSendTool : BaseTool<MsgSendTool.Params>
 
         var scs = new ChannelSession(bot, p.Reciepient);
         var msg = new ChatMessage(ChatRole.Assistant, p.Message);
+        var sm = context.Provider.GetRequiredService<ISessionManager>() as SessionManager;
+        if (sm != null) await sm.ConvertMediaFilesAsync(context, msg);
+
         await bot.SendUserAsync(scs, msg);
         return "Message send.";
     }
