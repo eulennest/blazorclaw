@@ -6,7 +6,7 @@ using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 
-namespace BlazorClaw.Server.Tools.Memory;
+namespace BlazorClaw.Server.Tools.FS;
 
 public class MvTool : BaseTool<MvTool.Params>
 {
